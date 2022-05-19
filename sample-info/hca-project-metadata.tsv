@@ -1,0 +1,3 @@
+project_name	source_id	tissue_group	files_directory	metadata_filename
+HumanBrainSubstantiaNigra	5afd43d9-bfbf-43d7-b904-3ad94e7e87d9	brain	S3://ccdl-scpca-data/human_cell_atlas_data/brain/	HumanBrainSubstantiaNigra_2022-05-14_06.36.tsv
+Oligodendrocyte_MS	deb0ddec-b8c0-40e2-a2c2-695b171628e5	Brain	S3://ccdl-scpca-data/human_cell_atlas_data/brain/	Oligodendrocyte_MS_2022-05-14_08.26.tsv
