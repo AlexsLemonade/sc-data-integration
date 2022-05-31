@@ -1,43 +1,17 @@
 biomaterial_id	project_name	tissue_group	diagnosis	organ_part		
 SRX7129196	HumanBrainSubstantiaNigra	brain	normal	cortex		
-SRX7129192	HumanBrainSubstantiaNigra	brain	normal	cortex		
-SRX7129198	HumanBrainSubstantiaNigra	brain	normal	cortex		
-SRX7129202	HumanBrainSubstantiaNigra	brain	normal	cortex		
-SRX7129200	HumanBrainSubstantiaNigra	brain	normal	cortex		
+SRX7129192	HumanBrainSubstantiaNigra	brain	normal	cortex				
 Control_CO28_NS	Oligodendrocyte_MS	brain	normal	NA		
-Control_CO14_NS	Oligodendrocyte_MS	brain	normal	NA		
-Control_SD48/16_NS	Oligodendrocyte_MS	brain	normal	NA		
-Control_CO39_NS	Oligodendrocyte_MS	brain	normal	NA		
-Control_CO25_NS	Oligodendrocyte_MS	brain	normal	NA		
+Control_CO14_NS	Oligodendrocyte_MS	brain	normal	NA				
 4_BM6_cells	1M_Immune_Cells	blood	immune system	bone marrow		
-8_BM5_cells	1M_Immune_Cells	blood	immune system	bone marrow		
-7_BM5_cells	1M_Immune_Cells	blood	immune system	bone marrow		
-8_BM7_cells	1M_Immune_Cells	blood	immune system	bone marrow		
-3_BM7_cells	1M_Immune_Cells	blood	immune system	bone marrow		
+8_BM5_cells	1M_Immune_Cells	blood	immune system	bone marrow			
 313C_bone_marrow_cells	AdultHemOrgans	blood	bone marrow	NA		
-207B_bone_marrow_cells	AdultHemOrgans	blood	bone marrow	NA		
-313C_bone_marrow_cells	AdultHemOrgans	blood	bone marrow	NA		
-207B_bone_marrow_cells	AdultHemOrgans	blood	bone marrow	NA		
 207B_bone_marrow_cells	AdultHemOrgans	blood	bone marrow	NA		
 PP003_suspension	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow		
-PP012_suspension	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow		
-PP004_suspension	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow		
-PP011_suspension	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow		
-F03-KID-3p-CD45neg	FetalLiverHaematopoiesis	kidney	kidney	NA		
-F06-KID-3p-CD45pos	FetalLiverHaematopoiesis	kidney	kidney	NA		
-F04-KID-3p-CD45neg	FetalLiverHaematopoiesis	kidney	kidney	NA		
-F03-KID-3p-CD45pos	FetalLiverHaematopoiesis	kidney	kidney	NA		
-F06-KID-3p-CD45neg	FetalLiverHaematopoiesis	kidney	kidney	NA		
-F06-KID-3p-live	FetalLiverHaematopoiesis	kidney	kidney	NA		
-F04-KID-3p-CD45pos	FetalLiverHaematopoiesis	kidney	kidney	NA		
+PP012_suspension	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow			
+F06-KID-3p-CD45pos	FetalLiverHaematopoiesis	kidney	kidney	NA				
+F03-KID-3p-CD45pos	FetalLiverHaematopoiesis	kidney	kidney	NA				
 FCAImmP7555849_F41_KI_45P	KidneySingleCellAtlas	kidney	kidney	NA		
-FCAImmP7462242_F35_KI_45P	KidneySingleCellAtlas	kidney	kidney	NA		
-4834STDY7002875_F16_KI_45P	KidneySingleCellAtlas	kidney	kidney	NA		
-4834STDY7002881_F17_KI_TOT	KidneySingleCellAtlas	kidney	kidney	NA		
-4834STDY7002886_F17_KI_45N	KidneySingleCellAtlas	kidney	kidney	NA		
+FCAImmP7462242_F35_KI_45P	KidneySingleCellAtlas	kidney	kidney	NA			
 SRX5897026	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex		
-SRX5897034	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex		
-SRX5897030	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex		
-SRX5897031	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex		
-SRX5897025	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex		
-SRX5897029	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex		
+SRX5897034	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex			
