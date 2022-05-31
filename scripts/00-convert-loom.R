@@ -69,23 +69,21 @@ if(!dir.exists(opt$sce_output_dir)){
   dir.create(opt$sce_output_dir, recursive = TRUE)
 }
 
-downstream_analysis_file <- file.path()
-
 # read in metadata file 
 all_metadata_df <- readr::read_tsv(opt$metadata_file)
 
 # identify datasets to be converted
 # read in library file and find intersection between metadata and library file 
 library_id <- readr::read_tsv(opt$library_file) %>%
-  dplyr::pull(biomaterial_id)
+  dplyr::pull(library_biomaterial_id)
 
 # get a metadata with just libraries to be processed
 # add file info for sce and loom filepaths
 process_metadata_df <- all_metadata_df %>%
-  dplyr::filter(biomaterial_id %in% library_id) %>%
+  dplyr::filter(library_biomaterial_id %in% library_id) %>%
   dplyr::mutate(local_loom_files = file.path(opt$loom_dir, loom_file),
                 # first make filename for sce file
-                local_sce_file = paste0(biomaterial_id, "_sce.rds"),
+                local_sce_file = paste0(library_biomaterial_id, "_sce.rds"),
                 # then make complete path to sce file
                 output_folder = file.path(opt$sce_output_dir,
                                           tissue_group,
