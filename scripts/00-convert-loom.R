@@ -69,6 +69,9 @@ if(!dir.exists(opt$sce_output_dir)){
   dir.create(opt$sce_output_dir, recursive = TRUE)
 }
 
+# s3 output directory 
+s3_output <- file.path(opt$s3_bucket, "sce_objects")
+
 # read in metadata file 
 all_metadata_df <- readr::read_tsv(opt$metadata_file)
 
@@ -81,14 +84,16 @@ library_id <- readr::read_tsv(opt$library_file) %>%
 # add file info for sce and loom filepaths
 process_metadata_df <- all_metadata_df %>%
   dplyr::filter(library_biomaterial_id %in% library_id) %>%
-  dplyr::mutate(local_loom_files = file.path(opt$loom_dir, loom_file),
-                # first make filename for sce file
-                local_sce_file = paste0(library_biomaterial_id, "_sce.rds"),
-                # then make complete path to sce file
+  # first make filename for sce file
+  dplyr::mutate(local_sce_file = file.path(tissue_group,
+                                           project_name,
+                                           paste0(library_biomaterial_id, "_sce.rds")),
+                # get path to output folder needed for creating directories 
                 output_folder = file.path(opt$sce_output_dir,
                                           tissue_group,
                                           project_name),
-                local_sce_path = file.path(output_folder,
+                # then make complete path to sce file
+                local_sce_path = file.path(opt$sce_output_dir,
                                            local_sce_file))
 
 # create output folders for each tissue group/project for sce results 
@@ -128,11 +133,11 @@ loom_to_sce <- function(loom_file,
 ######## Grab loom and convert to SCE ##########################################
 
 # get list of sce paths 
-local_sce_files <- process_metadata_df %>%
+local_sce_paths <- process_metadata_df %>%
   dplyr::pull(local_sce_path)
 
 # list of missing sce files 
-missing_sce_files <- local_sce_files[which(!file.exists(local_sce_files))]
+missing_sce_files <- local_sce_paths[which(!file.exists(local_sce_paths))]
 
 # check if any libraries are missing a corresponding sce 
 if(length(missing_sce_files) != 0){
@@ -140,7 +145,7 @@ if(length(missing_sce_files) != 0){
   # list of all loom files that correspond to missing sce files
   loom_missing_sce <- process_metadata_df %>%
     dplyr::filter(local_sce_path %in% missing_sce_files) %>%
-    dplyr::pull(local_loom_files)
+    dplyr::pull(loom_file)
   
   # if any loom files don't exist for missing SCE's then grab those from AWS S3
   if(!any(file.exists(loom_missing_sce))){
@@ -150,16 +155,23 @@ if(length(missing_sce_files) != 0){
     aws_includes <- paste("--include '", aws_local_copy, sep = '', collapse = ' ')
     
     # build one sync call to copy all missing loom files 
-    sync_call <- paste('aws s3 cp', opt$s3_bucket, loom_missing_sce, 
-                       '--exclude "*"', includes, '--recursive', sep = " ")
+    sync_call <- paste('aws s3 cp', opt$s3_bucket, opt$loom_dir, 
+                       '--exclude "*"', aws_includes, '--recursive', sep = " ")
     
     system(sync_call, ignore.stdout = TRUE)
   }
   
   # convert to sce objects and write files 
-  sce_list <- purrr::map2(loom_missing_sce,
+  sce_list <- purrr::map2(file.path(opt$loom_dir, loom_missing_sce),
                           missing_sce_files, 
                           loom_to_sce)
+  
+  # sync sce output to S3 
+  all_sce_files <- unique(process_metadata_df$local_sce_file)
+  aws_includes <- paste("--include '", all_sce_files, sep = '', collapse = ' ')
+  sync_call <- paste('aws s3 sync', opt$s3_bucket, opt$sce_output_dir, 
+                     '--exclude "*"', aws_includes, '--recursive', sep = " ")
+  
 }
 
 ###### Output metadata file ####################################################
@@ -172,4 +184,3 @@ process_metadata_df %>%
   dplyr::mutate(filetering_method = "miQC") %>%
   dplyr::relocate(local_sce_path, .after = filtering_method) %>%
   readr::write_tsv(opt$output_metadata_file, col_names = FALSE)
-
