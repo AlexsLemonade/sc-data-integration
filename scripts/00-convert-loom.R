@@ -41,7 +41,7 @@ option_list <- list(
   make_option(
     opt_str = c("--s3_sce_bucket"),
     type = "character",
-    default = "s3://sc-data-integration/sce",
+    default = "s3://sc-data-integration/human_cell_atlas/sce",
     help = "Bucket on s3 where loom data is stored"
   )
 )
@@ -131,7 +131,7 @@ loom_to_sce <- function(loom_file,
 
 # grab all library ID's that should have SCE's copied over
 libraries_include <- paste("--include '", "*", library_id, "*", sep = '', collapse = ' ')
-sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_dir, 
+sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_output_dir, 
                    '--exclude "*"', libraries_include, '--recursive', sep = " ")
 system(sync_call, ignore.stdout = TRUE)
 
@@ -155,8 +155,11 @@ if(length(missing_sce_files) != 0){
     dplyr::filter(local_sce_path %in% missing_sce_files) %>%
     dplyr::pull(loom_file)
   
+  # construct full loom path 
+  loom_file_paths <- file.path(opt$loom_dir, loom_missing_sce)
+  
   # if any loom files don't exist for missing SCE's then grab those from AWS S3
-  if(!any(file.exists(loom_missing_sce))){
+  if(!all(file.exists(loom_file_paths))){
     
     # get list of folders inside s3 directory to include in copying
     aws_local_copy <- loom_missing_sce[which(!file.exists(loom_missing_sce))]
@@ -170,7 +173,7 @@ if(length(missing_sce_files) != 0){
   }
   
   # convert to sce objects and write files 
-  sce_list <- purrr::map2(file.path(opt$loom_dir, loom_missing_sce),
+  sce_list <- purrr::map2(loom_file_paths,
                           missing_sce_files, 
                           loom_to_sce)
   
