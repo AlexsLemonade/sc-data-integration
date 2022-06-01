@@ -40,3 +40,6 @@ Each row in this file corresponds to a library and contains the following column
 | `selected_cell_types`| Identifies the group of cells selected for prior to sequencing, otherwise NA                       |
 | `s3_files_dir`    | files directory on S3                                              |    
 | `loom_file`       | loom file name in the format `tissue_group/project_name/bundle_uuid/filename`                            |
+
+3. `hca-processed-libraries.tsv`: This file contains the list of libraries from each project that are being used for testing data integration. 
+This file is used as input to the script, `scripts/00-convert-loom.R`, used for converting loom to `SingleCellExperiment` objects and writing out the metadata file needed for input to the core pipeline in `scpca-downstream-analyses`. 
