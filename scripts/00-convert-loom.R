@@ -35,13 +35,13 @@ option_list <- list(
   make_option(
     opt_str = c("--s3_loom_bucket"),
     type = "character",
-    default = "s3://sc-data-integration/loom",
+    default = "s3://sc-data-integration/human_cell_atlas_data/loom",
     help = "Bucket on s3 where loom data is stored"
   ),
   make_option(
     opt_str = c("--s3_sce_bucket"),
     type = "character",
-    default = "s3://sc-data-integration/human_cell_atlas/sce",
+    default = "s3://sc-data-integration/human_cell_atlas_data/sce",
     help = "Bucket on s3 where loom data is stored"
   )
 )
@@ -130,7 +130,7 @@ loom_to_sce <- function(loom_file,
 ####### Grab existing SCE from S3 ##############################################
 
 # grab all library ID's that should have SCE's copied over
-libraries_include <- paste("--include '", "*", library_id, "*", sep = '', collapse = ' ')
+libraries_include <- paste("--include '", "*", library_id,"'", "*", sep = '', collapse = ' ')
 sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_output_dir, 
                    '--exclude "*"', libraries_include, '--recursive', sep = " ")
 system(sync_call, ignore.stdout = TRUE)
@@ -162,8 +162,8 @@ if(length(missing_sce_files) != 0){
   if(!all(file.exists(loom_file_paths))){
     
     # get list of folders inside s3 directory to include in copying
-    aws_local_copy <- loom_missing_sce[which(!file.exists(loom_missing_sce))]
-    aws_includes <- paste("--include '", aws_local_copy, sep = '', collapse = ' ')
+    aws_local_copy <- loom_missing_sce[which(!file.exists(loom_file_paths))]
+    aws_includes <- paste("--include '", aws_local_copy, "'", sep = '', collapse = ' ')
     
     # build one sync call to copy all missing loom files 
     sync_call <- paste('aws s3 cp', opt$s3_loom_bucket, opt$loom_dir, 
@@ -179,7 +179,7 @@ if(length(missing_sce_files) != 0){
   
   # sync sce output to S3 
   all_sce_files <- unique(process_metadata_df$local_sce_file)
-  aws_includes <- paste("--include '", all_sce_files, sep = '', collapse = ' ')
+  aws_includes <- paste("--include '", all_sce_files, "'", sep = '', collapse = ' ')
   sync_call <- paste('aws s3 sync', opt$s3_sce_bucket, opt$sce_output_dir, 
                      '--exclude "*"', aws_includes, '--recursive', sep = " ")
   system(sync_call, ignore.stdout = TRUE)
