@@ -33,16 +33,16 @@ option_list <- list(
     help = "path to folder where all output sce objects should be stored"
   ),
   make_option(
-    opt_str = c("--s3_bucket"),
+    opt_str = c("--s3_loom_bucket"),
     type = "character",
-    default = "s3://ccdl-scpca-data/human_cell_atlas_data",
-    help = "Bucket on s3 where data is stored"
+    default = "s3://sc-data-integration/loom",
+    help = "Bucket on s3 where loom data is stored"
   ),
   make_option(
-    opt_str = c("--output_metadata_file"),
+    opt_str = c("--s3_sce_bucket"),
     type = "character",
-    default = "../sample-info/hca-downstream-analysis-metadata.tsv",
-    help = "Path to write out metadata file to be used as input for downstream analysis."
+    default = "s3://sc-data-integration/sce",
+    help = "Bucket on s3 where loom data is stored"
   )
 )
 
@@ -69,9 +69,6 @@ if(!dir.exists(opt$sce_output_dir)){
   dir.create(opt$sce_output_dir, recursive = TRUE)
 }
 
-# s3 output directory 
-s3_output <- file.path(opt$s3_bucket, "sce_objects")
-
 # read in metadata file 
 all_metadata_df <- readr::read_tsv(opt$metadata_file)
 
@@ -81,7 +78,7 @@ library_id <- readr::read_tsv(opt$library_file) %>%
   dplyr::pull(library_biomaterial_id)
 
 # get a metadata with just libraries to be processed
-# add file info for sce and loom filepaths
+# add file info for sce filepaths
 process_metadata_df <- all_metadata_df %>%
   dplyr::filter(library_biomaterial_id %in% library_id) %>%
   # first make filename for sce file
@@ -130,17 +127,28 @@ loom_to_sce <- function(loom_file,
   return(sce)
 }
 
+####### Grab existing SCE from S3 ##############################################
+
+# grab all library ID's that should have SCE's copied over
+libraries_include <- paste("--include '", "*", library_id, "*", sep = '', collapse = ' ')
+sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_dir, 
+                   '--exclude "*"', libraries_include, '--recursive', sep = " ")
+system(sync_call, ignore.stdout = TRUE)
+
 ######## Grab loom and convert to SCE ##########################################
 
-# get list of sce paths 
+# get list of all expected sce paths 
 local_sce_paths <- process_metadata_df %>%
   dplyr::pull(local_sce_path)
 
-# list of missing sce files 
+# list of sce files that need to be created 
 missing_sce_files <- local_sce_paths[which(!file.exists(local_sce_paths))]
 
-# check if any libraries are missing a corresponding sce 
+# if any libraries are missing a corresponding sce, then create that sce 
 if(length(missing_sce_files) != 0){
+  
+  # first need to see if the loom file is present to create the SCE 
+  # if the loom file isn't there, grab it from AWS before converting
   
   # list of all loom files that correspond to missing sce files
   loom_missing_sce <- process_metadata_df %>%
@@ -155,7 +163,7 @@ if(length(missing_sce_files) != 0){
     aws_includes <- paste("--include '", aws_local_copy, sep = '', collapse = ' ')
     
     # build one sync call to copy all missing loom files 
-    sync_call <- paste('aws s3 cp', opt$s3_bucket, opt$loom_dir, 
+    sync_call <- paste('aws s3 cp', opt$s3_loom_bucket, opt$loom_dir, 
                        '--exclude "*"', aws_includes, '--recursive', sep = " ")
     
     system(sync_call, ignore.stdout = TRUE)
@@ -169,18 +177,8 @@ if(length(missing_sce_files) != 0){
   # sync sce output to S3 
   all_sce_files <- unique(process_metadata_df$local_sce_file)
   aws_includes <- paste("--include '", all_sce_files, sep = '', collapse = ' ')
-  sync_call <- paste('aws s3 sync', opt$s3_bucket, opt$sce_output_dir, 
+  sync_call <- paste('aws s3 sync', opt$s3_sce_bucket, opt$sce_output_dir, 
                      '--exclude "*"', aws_includes, '--recursive', sep = " ")
+  system(sync_call, ignore.stdout = TRUE)
   
 }
-
-###### Output metadata file ####################################################
-
-# create downstream analysis input file
-process_metadata_df %>%
-  dplyr::select(sample_biomaterial_id,
-                library_biomaterial_id,
-                local_sce_path) %>%
-  dplyr::mutate(filetering_method = "miQC") %>%
-  dplyr::relocate(local_sce_path, .after = filtering_method) %>%
-  readr::write_tsv(opt$output_metadata_file, col_names = FALSE)
