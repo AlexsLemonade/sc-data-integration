@@ -180,8 +180,8 @@ if(length(missing_sce_files) != 0){
   # sync sce output to S3 
   all_sce_files <- unique(process_metadata_df$local_sce_file)
   aws_includes <- paste("--include '", all_sce_files, "'", sep = '', collapse = ' ')
-  sync_call <- paste('aws s3 sync', opt$s3_sce_bucket, opt$sce_output_dir, 
-                     '--exclude "*"', aws_includes, '--recursive', sep = " ")
+  sync_call <- paste('aws s3 sync', opt$sce_output_dir, opt$s3_sce_bucket, 
+                     '--exclude "*"', aws_includes, sep = " ")
   system(sync_call, ignore.stdout = TRUE)
   
 }
