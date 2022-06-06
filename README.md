@@ -27,19 +27,19 @@ Each row in this file corresponds to a library and contains the following column
 | column_id         | contents                                                           |
 |-------------------|--------------------------------------------------------------------|
 | `sample_biomaterial_id`    | Unique ID associated with the individual sample           |
-| `library_biomaterial_id`   | Unique ID associated with the individual library that was sequenced                             |
+| `library_biomaterial_id`   | Unique ID associated with the individual library that was sequenced |
 | `bundle_uuid`    | UUID for the individual folder containing each loom file |
 | `project_name` | The shorthand project name assigned by the HCA                        |
 | `source_id`| Unique ID associated with the project                                     |
 | `tissue_group`    | Tissue group the project belongs to (e.g. blood, brain, or kidney) |
-| `technology`       | Unique ID associated with the project                             |
-| `seq_unit`    | The shorthand project name assigned by the HCA                         |
-| `diagnosis`       | Unique ID associated with the project                              |
+| `technology`       |  Sequencing/library technology used (e.g. 10Xv2, 10Xv3, etc.)          |
+| `seq_unit`    | Sequencing unit (cell or nucleus)                         |
+| `diagnosis`       | Indicates if the sample came from diseasead or normal tissue       |
 | `organ`    | Specified tissue by the HCA where the sample was obtained from            |
 | `organ_part` | Specified tissue region by the HCA where the sample was obtained from                                              |
-| `selected_cell_types`| Identifies the group of cells selected for prior to sequencing, otherwise NA                       |
+| `selected_cell_types`| Identifies the group of cells selected for prior to sequencing, otherwise NA |
 | `s3_files_dir`    | files directory on S3                                              |    
-| `loom_file`       | loom file name in the format `tissue_group/project_name/bundle_uuid/filename`                            |
+| `loom_file`       | loom file name in the format `tissue_group/project_name/bundle_uuid/filename` |
 
 3. `hca-processed-libraries.tsv`: This file contains the list of libraries from each project that are being used for testing data integration. 
 This file is used as input to the script, `scripts/00-convert-loom.R`, used for converting loom to `SingleCellExperiment` objects and saving those objects to S3. 
