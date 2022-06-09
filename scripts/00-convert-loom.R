@@ -1,4 +1,4 @@
-# Script used to convert data in loom format from the HCA to SCE objects
+# Script used to convert HCA data from loom format to SCE objects
 # Grabs files from AWS if not already present locally 
 
 # import libraries
