@@ -1,5 +1,25 @@
 # Script used to convert HCA data from loom format to SCE objects
-# Grabs files from AWS if not already present locally 
+
+# This script reads in a metadata file containing the desired libraries to convert 
+# from loom format to SCE objects as RDS files. If the RDS files already exist 
+# for the desired libraries, they are copied from an S3 bucket to a specified local 
+# data directory. For libraries that do not have corresponding SCE objects as 
+# RDS files, the loom file will be read in and converted to an SCE object before 
+# saving the RDS file. If the loom file is not present locally, the file will be 
+# grabbed from the S3 bucket. All SCE objects will then be synced back to S3. 
+
+# Option descriptions: 
+# 
+# --metadata_file: The path to the metadata file for all libraries. This file must 
+#   contain columns for `library_biomaterial_id`, `tissue_group`, `project_name`,
+#   and `loom_file`
+# --library_file: The path to the file listing all libraries that should be included 
+#   in the conversion from loom to SCE. This file must contain the 
+#   `library_biomaterial_id` column
+# --loom_dir: Path to the folder where all loom files should be stored locally 
+# --sce_output_dir: Path to the folder where all SCE objects should be saved locally 
+# --s3_loom_bucket: Bucket on S3 where loom data can be found 
+# --s3_sce_bucket: Bucket on S3 where SCE objects are stored
 
 # import libraries
 library(magrittr)
@@ -42,7 +62,7 @@ option_list <- list(
     opt_str = c("--s3_sce_bucket"),
     type = "character",
     default = "s3://sc-data-integration/human_cell_atlas_data/sce",
-    help = "Bucket on s3 where loom data is stored"
+    help = "Bucket on s3 where SCE objects are stored"
   )
 )
 
@@ -104,8 +124,16 @@ for (folder in 1:length(sce_output_folders)){
 
 # Function for converting loom files -------------------------------------------
 
+#' Reads in loom files, converts to SCE objects and saves as RDS file
+#'
+#' @param loom_file Path to loom file containing SingleCellLoomExperiment
+#' @param sce_file Path containing `.rds` extension to save SCE object
+#'
+#' @return SingleCellExperiment object
+#'
 loom_to_sce <- function(loom_file,
                         sce_file){
+  
  
   # import loom file as SingleCellLoomExperiment
   loom <- import(loom_file, type= "SingleCellLoomExperiment")
