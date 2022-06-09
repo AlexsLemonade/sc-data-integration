@@ -49,7 +49,7 @@ option_list <- list(
 # Parse options
 opt <- parse_args(OptionParser(option_list = option_list))
 
-######## File set up ###########################################################
+# File set up ------------------------------------------------------------------
 
 # checks that provided metadata files exist
 if(!file.exists(opt$metadata_file)){
@@ -102,7 +102,7 @@ for (folder in 1:length(sce_output_folders)){
 }
 
 
-######### Function for converting loom files ###################################
+# Function for converting loom files -------------------------------------------
 
 loom_to_sce <- function(loom_file,
                         sce_file){
@@ -127,7 +127,7 @@ loom_to_sce <- function(loom_file,
   return(sce)
 }
 
-####### Grab existing SCE from S3 ##############################################
+# Grab existing SCE from S3 ----------------------------------------------------
 
 # grab all library ID's that should have SCE's copied over
 libraries_include <- paste("--include '", "*", library_id,"'", "*", sep = '', collapse = ' ')
@@ -135,7 +135,7 @@ sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_output_dir,
                    '--exclude "*"', libraries_include, '--recursive', sep = " ")
 system(sync_call, ignore.stdout = TRUE)
 
-######## Grab loom and convert to SCE ##########################################
+# grab loom and convert to SCE --------------------------------------------------
 
 # get list of all expected sce paths 
 local_sce_paths <- process_metadata_df %>%
