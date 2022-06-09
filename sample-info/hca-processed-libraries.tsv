@@ -1,17 +1,17 @@
-biomaterial_id	project_name	tissue_group	diagnosis	organ_part		
-SRX7129196	HumanBrainSubstantiaNigra	brain	normal	cortex		
-SRX7129192	HumanBrainSubstantiaNigra	brain	normal	cortex				
-Control_CO28_NS	Oligodendrocyte_MS	brain	normal	NA		
-Control_CO14_NS	Oligodendrocyte_MS	brain	normal	NA				
-4_BM6_cells	1M_Immune_Cells	blood	immune system	bone marrow		
-8_BM5_cells	1M_Immune_Cells	blood	immune system	bone marrow			
-313C_bone_marrow_cells	AdultHemOrgans	blood	bone marrow	NA		
-207B_bone_marrow_cells	AdultHemOrgans	blood	bone marrow	NA		
-PP003_suspension	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow		
-PP012_suspension	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow			
-F06-KID-3p-CD45pos	FetalLiverHaematopoiesis	kidney	kidney	NA				
-F03-KID-3p-CD45pos	FetalLiverHaematopoiesis	kidney	kidney	NA				
-FCAImmP7555849_F41_KI_45P	KidneySingleCellAtlas	kidney	kidney	NA		
-FCAImmP7462242_F35_KI_45P	KidneySingleCellAtlas	kidney	kidney	NA			
-SRX5897026	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex		
-SRX5897034	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex			
+library_biomaterial_id	project_name	tissue_group	diagnosis	organ_part
+SRX7129196	HumanBrainSubstantiaNigra	brain	normal	cortex
+SRX7129192	HumanBrainSubstantiaNigra	brain	normal	cortex
+Control_CO28_NS	Oligodendrocyte_MS	brain	normal	NA
+Control_CO14_NS	Oligodendrocyte_MS	brain	normal	NA
+4_BM6_cells	1M_Immune_Cells	blood	immune system	bone marrow
+8_BM5_cells	1M_Immune_Cells	blood	immune system	bone marrow
+313C_bone_marrow_cells	AdultHemOrgans	blood	bone marrow	NA
+207B_bone_marrow_cells	AdultHemOrgans	blood	bone marrow	NA
+PP003_suspension	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow
+PP012_suspension	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow
+F06-KID-3p-CD45pos	FetalLiverHaematopoiesis	kidney	kidney	NA
+F03-KID-3p-CD45pos	FetalLiverHaematopoiesis	kidney	kidney	NA
+FCAImmP7555849_F41_KI_45P	KidneySingleCellAtlas	kidney	kidney	NA
+FCAImmP7462242_F35_KI_45P	KidneySingleCellAtlas	kidney	kidney	NA
+SRX5897026	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex
+SRX5897034	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex
