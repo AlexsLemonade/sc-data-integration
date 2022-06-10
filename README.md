@@ -11,8 +11,8 @@ You may need to run `renv::restore()` upon opening the project to ensure the `re
 Each time you install or use new packages, you will want to run `renv::snapshot()` to update the `renv.lock` file with any added package and dependencies necessary to run the analyses and scripts in this repo.
 
 If there are dependencies you want to include that are not captured automatically by `renv::snapshot()`, add them to `components/dependencies.R` with a call to `library()` and an explanatory comment.
-   For example, if `dplyr` were recommended but not required by a package and you wanted to make sure to include it in the lockfile, you would add `library(dplyr)` to `components/dependencies.R`.
-   Then rerun `renv::snapshot()`.
+For example, if `dplyr` were recommended but not required by a package and you wanted to make sure to include it in the lockfile, you would add `library(dplyr)` to `components/dependencies.R`.
+Then rerun `renv::snapshot()`.
 
 ## Metadata 
 
