@@ -21,6 +21,10 @@
 # --s3_loom_bucket: Bucket on S3 where loom data can be found 
 # --s3_sce_bucket: Bucket on S3 where SCE objects are stored
 
+# load the R project by finding the root directory using `here::here()`
+project_root <- here::here()
+renv::load(project_root)
+
 # import libraries
 library(magrittr)
 library(optparse)
@@ -31,25 +35,25 @@ option_list <- list(
   make_option(
     opt_str = c("-m", "--metadata_file"),
     type = "character",
-    default = "../sample-info/hca-library-metadata.tsv",
+    default = file.path(project_root, "sample-info", "hca-library-metadata.tsv"),
     help = "path to library metadata file where each row is a library"
   ),
   make_option(
     opt_str = c("-l", "--library_file"),
     type = "character",
-    default = "../sample-info/hca-processed-libraries.tsv",
+    default = file.path(project_root, "sample-info", "hca-processed-libraries.tsv"),
     help = "path to file listing all libraries that are to be converted"
   ),
   make_option(
     opt_str = c("--loom_dir"),
     type = "character",
-    default = "../data/human_cell_atlas/loom",
+    default = file.path(project_root, "data", "human_cell_atlas", "loom"),
     help = "path to folder where all loom files should be stored"
   ),
   make_option(
     opt_str = c("--sce_output_dir"),
     type = "character",
-    default = "../data/human_cell_atlas/sce",
+    default = file.path(project_dir, "data", "human_cell_atlas", "sce"),
     help = "path to folder where all output sce objects should be stored"
   ),
   make_option(
@@ -213,3 +217,4 @@ if(length(missing_sce_files) != 0){
   system(sync_call, ignore.stdout = TRUE)
   
 }
+
