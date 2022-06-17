@@ -17,7 +17,7 @@
 #   `library_biomaterial_id` column
 # --full_metadata_file: The path to the metadata file for all libraries. This file must 
 #   contain columns for `library_biomaterial_id` and `sample_biomaterial_id`
-# --sce_output_dir: Path to the folder where all SCE objects are saved locally 
+# --sce_dir: Path to the folder where all SCE objects are saved locally 
 # --output_metadata: Path to write metadata file to be used to run 
 #   scpca-downstream-analyses
 
