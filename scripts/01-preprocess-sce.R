@@ -44,7 +44,7 @@ option_list <- list(
     help = "path to library metadata file where each row is a library"
   ),
   make_option(
-    opt_str = c("--sce_output_dir"),
+    opt_str = c("--sce_dir"),
     type = "character",
     default = file.path(project_root, "data", "human_cell_atlas" , "sce"),
     help = "path to folder where all output sce objects should be stored"
@@ -83,7 +83,7 @@ full_metadata_df <- readr::read_tsv(opt$full_metadata_file)
 # with library ID in the sce file name in the provided sce directory 
 # first create a regular expression from processed library IDs
 library_search <- paste(library_id, collapse="|")
-sce_files <- list.files(opt$sce_output_dir, 
+sce_files <- list.files(opt$sce_dir, 
                         pattern = library_search, 
                         recursive = TRUE)
 
