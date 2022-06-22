@@ -7,7 +7,7 @@ set -euo pipefail
 
 # Usage, note that the --snakefile option is required as there is no default set
 # bash run-downstream-analyses.sh \
-#  --snakefile "full path to Snakefile from scpca downstream analyses"
+#  --downstream_repo "full path to scpca-downstream-analyses repo"
 
 # Other parameters include: 
 # --processed_library_df: The path to the file listing all libraries that should be included 
@@ -19,6 +19,9 @@ set -euo pipefail
 # --downstream_metadata_file: Path to write metadata file to be used to run 
 #   scpca-downstream-analyses
 # --results_dir: Path to save results from running scpca-downstream-analyses 
+# --mito_file: Path to file with list of mitochondrial genes to use. 
+#   If not specified, the mitochondrial file for Ensembl-104 present in 
+#   scpca-downstream-analyses will be used.
 
 ###############################################################################
 
@@ -44,6 +47,9 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+# use mito file provided in scpca-downstream-analyses if not provided
+mito_file=${mito_file:-"${downstream_repo}/reference-files/Homo_sapiens.GRCh38.104.mitogenes.txt"}
+
 # run Rscript to generate metadata file 
 Rscript --vanilla 01-preprocess-sce.R \
   --library_file $processed_library_df \
@@ -60,6 +66,8 @@ mkdir -p $results_dir
 source $CONDA_PREFIX/etc/profile.d/conda.sh
 conda activate snakemake
 snakemake --cores 2 \
-  -s $snakefile \
-  --config results_dir=$results_dir project_metadata=$downstream_metadata_file
+  -s $downstream_repo/Snakefile \
+  --config results_dir=$results_dir \
+  project_metadata=$downstream_metadata_file \
+  mito_file=$mito_file
   
