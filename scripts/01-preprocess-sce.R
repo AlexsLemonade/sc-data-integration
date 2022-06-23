@@ -46,7 +46,7 @@ option_list <- list(
   make_option(
     opt_str = c("--sce_dir"),
     type = "character",
-    default = file.path(project_root, "data", "human_cell_atlas" , "sce"),
+    default = "data/human_cell_atlas/sce",
     help = "path to folder where all output sce objects should be stored"
   ),
   make_option(
@@ -77,15 +77,25 @@ library_id <- readr::read_tsv(opt$library_file) %>%
   dplyr::pull(library_biomaterial_id)
 
 # read in full metadata file to use later to grab sample ID
-full_metadata_df <- readr::read_tsv(opt$full_metadata_file)
+full_metadata_df <- readr::read_tsv(opt$full_metadata_file) %>%
+  # we only will need the library and sample ID columns
+  dplyr::select(library_biomaterial_id, sample_biomaterial_id) %>%
+  # remove any duplicates that may be present
+  dplyr::distinct()
 
 # get relative sce file paths by identifying all sce files 
 # with library ID in the sce file name in the provided sce directory 
-# first create a regular expression from processed library IDs
+# first create a regular expression corresponding to processed library IDs
 library_search <- paste(library_id, collapse="|")
-sce_files <- list.files(opt$sce_dir, 
+# paths to sce files relative to the root directory
+sce_files <- list.files(project_root, 
                         pattern = library_search, 
                         recursive = TRUE)
+
+# only keep sce files that contain the provided sce directory as part of the path
+# this check makes sure that if any results files with the 
+# library ID in the filename exist already they are not included in the sce file list
+sce_files <- sce_files[grep(opt$sce_dir, sce_files)]
 
 # check that all libraries have SCE files, 
 # if not stop and warn that SCE file first must be created or synced from S3
