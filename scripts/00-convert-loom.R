@@ -20,6 +20,8 @@
 # --sce_output_dir: Path to the folder where all SCE objects should be saved locally 
 # --s3_loom_bucket: Bucket on S3 where loom data can be found 
 # --s3_sce_bucket: Bucket on S3 where SCE objects are stored
+# --overwrite: Indicates whether or not to redo loom to SCE conversion and 
+#   overwrite any existing SCE files. To overwrite use `--overwrite`
 
 # import libraries
 library(magrittr)
@@ -63,6 +65,12 @@ option_list <- list(
     type = "character",
     default = "s3://sc-data-integration/human_cell_atlas_data/sce",
     help = "Bucket on s3 where SCE objects are stored"
+  ),
+  optparse::make_option(
+    c("-o", "--overwrite"),
+    action = "store_false",
+    help = "indicates whether or not to redo loom to SCE conversion and 
+      overwrite any existing SCE files. To overwrite use `--overwrite`"
   )
 )
 
@@ -149,6 +157,10 @@ loom_to_sce <- function(loom_file,
                               rowData = rowData(loom),
                               metadata = metadata(loom)) 
   
+  # add cell barcodes and gene names to column names and row names of SCE
+  colnames(sce) = sce$CellID
+  rownames(sce) = rowData(sce)$ensembl_ids
+  
   # save sce file 
   readr::write_rds(sce, sce_file)
   
@@ -169,8 +181,15 @@ system(sync_call, ignore.stdout = TRUE)
 local_sce_paths <- process_metadata_df %>%
   dplyr::pull(local_sce_path)
 
-# list of sce files that need to be created 
-missing_sce_files <- local_sce_paths[which(!file.exists(local_sce_paths))]
+# create a list of sce files that need to be created 
+# if overwriting existing SCEs grab all sce paths 
+if(opt$overwrite){
+  missing_sce_files <- local_sce_paths
+} else {
+  # if not overwriting existing ones, find which SCE's don't exist yet
+  missing_sce_files <- local_sce_paths[which(!file.exists(local_sce_paths))]  
+}
+
 
 # if any libraries are missing a corresponding sce, then create that sce 
 if(length(missing_sce_files) != 0){
