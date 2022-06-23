@@ -62,6 +62,14 @@ Rscript --vanilla 01-preprocess-sce.R \
 cd $sce_dir
 mkdir -p $results_dir
 
+# add check for Snakefile in downstream repo 
+if [ ! -f $downstream_repo/Snakefile ]; then
+  echo "The path provided for `--downstream_repo` is missing a Snakefile. 
+        Double check you have provided the correct path." 
+  exit 1
+fi
+
+
 # activate snakemake environment before running snakemake 
 source $CONDA_PREFIX/etc/profile.d/conda.sh
 conda activate snakemake
