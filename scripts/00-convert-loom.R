@@ -183,7 +183,7 @@ local_sce_paths <- process_metadata_df %>%
 
 # create a list of sce files that need to be created 
 # if overwriting existing SCEs grab all sce paths 
-if(opt$overwrite){
+if(!is.null(opt$overwrite)){
   missing_sce_files <- local_sce_paths
 } else {
   # if not overwriting existing ones, find which SCE's don't exist yet
