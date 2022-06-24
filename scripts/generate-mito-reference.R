@@ -32,7 +32,7 @@ option_list <- list(
   make_option(
     opt_str = c("--gtf_file"),
     type = "character",
-    default = "human.gencode.v27.annotation.gtf",
+    default = "gencode.v27.annotation.gtf",
     help = "File name for gtf file"
   ),
   make_option(
