@@ -68,7 +68,7 @@ option_list <- list(
   ),
   optparse::make_option(
     c("-o", "--overwrite"),
-    action = "store_false",
+    action = "store_true",
     help = "indicates whether or not to redo loom to SCE conversion and 
       overwrite any existing SCE files. To overwrite use `--overwrite`"
   )
