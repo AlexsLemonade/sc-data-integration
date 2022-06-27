@@ -16,6 +16,10 @@
 # --mito_output: Path to file to save mitochondrial gene list extracted from 
 #   input gtf file.
 
+# load the R project by finding the root directory using `here::here()`
+project_root <- here::here()
+renv::load(project_root)
+
 # import libraries
 library(magrittr)
 library(optparse)
@@ -38,13 +42,13 @@ option_list <- list(
   make_option(
     opt_str = c("--local_gtf_dir"),
     type = "character",
-    default = "../reference-files/gtf",
+    default = file.path(project_root, "reference-files"),
     help = "Local directory where gtf file exists or should be copied to"
   ),
   make_option(
     opt_str = c("--mito_output"),
     type = "character",
-    default = "../reference-files/gencode.v27.mitogenes.txt",
+    default = file.path(project_root, "reference-files", "gencode.v27.mitogenes.txt"),
     help = "Path to file to save mitochondrial gene list extracted 
       from input gtf file."
   )
