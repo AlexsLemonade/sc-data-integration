@@ -73,5 +73,5 @@ if(!file.exists(local_gtf_file)){
 gtf <- rtracklayer::import(local_gtf_file)
 mitogenes <- gtf[seqnames(gtf) == 'chrM']
 
-# save mitochondrial ensemble gene ids
+# save mitochondrial ensembl gene ids
 writeLines(unique(mitogenes$gene_id), opt$mito_output)
