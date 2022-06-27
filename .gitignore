@@ -1,3 +1,7 @@
 # ignore data directory 
 data/
 .Rproj.user
+
+# ignore gtf files 
+*.gtf*
+
