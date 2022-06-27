@@ -1,17 +1,17 @@
-library_biomaterial_id	sample_biomaterial_id	loom_filename	project_name	tissue_group	diagnosis	organ_part
-SRX7129196	SAMN13262714	f89aaa2c-2c5d-42fa-80ec-53b9d1851911.loom	HumanBrainSubstantiaNigra	brain	normal	cortex
-SRX7129192	SAMN13262720	0c34828c-31c4-467e-a3fc-79aed780e716.loom	HumanBrainSubstantiaNigra	brain	normal	cortex
-Control_CO28_NS	Control_CO28	d24b2758-62f6-48ed-b6fa-61322dd83ecf.loom	Oligodendrocyte_MS	brain	normal	NA
-Control_CO14_NS	Control_CO14	167e1f07-b4f0-45f5-9b3c-564d43dabfd3.loom	Oligodendrocyte_MS	brain	normal	NA
-4_BM6_cells	4_BM6	71369214-57de-4e8e-b8a2-2a3719684bb1.loom	1M_Immune_Cells	blood	immune system	bone marrow
-8_BM5_cells	8_BM5	062ea5b8-ad82-469b-aab5-7073545f888c.loom	1M_Immune_Cells	blood	immune system	bone marrow
-313C_bone_marrow_cells	313C_bone_marrow	9242f43e-40b5-438f-9f86-05c1337dc8c4.loom	AdultHemOrgans	blood	bone marrow	NA
-207B_bone_marrow_cells	207B_bone_marrow	514d2823-5adc-4c26-a587-eb4b6b207b0c.loom	AdultHemOrgans	blood	bone marrow	NA
-PP003_suspension	PP003	c763f679-e13d-4f81-844f-c2c80fc90f46.loom	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow
-PP012_suspension	PP012	58a18a4c-5423-4c59-9b3c-50b7f30b1ca5.loom	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow
-F06-KID-3p-CD45pos	F06-KID	eceb544d-ca90-4f82-acd4-0f6f1377f632.loom	FetalLiverHaematopoiesis	kidney	kidney	NA
-F03-KID-3p-CD45pos	F03-KID	4cedc599-22a2-421f-919f-397e2c9dd1d4.loom	FetalLiverHaematopoiesis	kidney	kidney	NA
-FCAImmP7555849_F41_KI_45P	F41_1	37cad11b-c8c9-4d1f-b715-498b0f8d4b35.loom	KidneySingleCellAtlas	kidney	kidney	NA
-FCAImmP7462242_F35_KI_45P	F35_1	afd0ea55-e710-4b46-bb05-2423e491b6f5.loom	KidneySingleCellAtlas	kidney	kidney	NA
-SRX5897026	SAMN11853943	f5aa720f-b283-406b-8d7f-7c0ee027aebb.loom	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex
-SRX5897034	SAMN11853950	90762f27-0820-4623-a5d9-d2b18876d944.loom	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex
+library_biomaterial_id	sample_biomaterial_id	loom_filename	project_name	tissue_group	diagnosis	organ_part	unfiltered_sce_filename	sce_unfiltered_files_s3_bucket	sce_unfiltered_files_folder
+SRX7129196	SAMN13262714	f89aaa2c-2c5d-42fa-80ec-53b9d1851911.loom	HumanBrainSubstantiaNigra	brain	normal	cortex	SRX7129196_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	brain/HumanBrainSubstantiaNigra
+SRX7129192	SAMN13262720	0c34828c-31c4-467e-a3fc-79aed780e716.loom	HumanBrainSubstantiaNigra	brain	normal	cortex	SRX7129192_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	brain/HumanBrainSubstantiaNigra
+Control_CO28_NS	Control_CO28	d24b2758-62f6-48ed-b6fa-61322dd83ecf.loom	Oligodendrocyte_MS	brain	normal	NA	Control_CO28_NS_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	brain/Oligodendrocyte_MS
+Control_CO14_NS	Control_CO14	167e1f07-b4f0-45f5-9b3c-564d43dabfd3.loom	Oligodendrocyte_MS	brain	normal	NA	Control_CO14_NS_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	brain/Oligodendrocyte_MS
+4_BM6_cells	4_BM6	71369214-57de-4e8e-b8a2-2a3719684bb1.loom	1M_Immune_Cells	blood	immune system	bone marrow	4_BM6_cells_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	blood/1M_Immune_Cells
+8_BM5_cells	8_BM5	062ea5b8-ad82-469b-aab5-7073545f888c.loom	1M_Immune_Cells	blood	immune system	bone marrow	8_BM5_cells_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	blood/1M_Immune_Cells
+313C_bone_marrow_cells	313C_bone_marrow	9242f43e-40b5-438f-9f86-05c1337dc8c4.loom	AdultHemOrgans	blood	bone marrow	NA	313C_bone_marrow_cells_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	blood/AdultHemOrgans
+207B_bone_marrow_cells	207B_bone_marrow	514d2823-5adc-4c26-a587-eb4b6b207b0c.loom	AdultHemOrgans	blood	bone marrow	NA	207B_bone_marrow_cells_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	blood/AdultHemOrgans
+PP003_suspension	PP003	c763f679-e13d-4f81-844f-c2c80fc90f46.loom	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow	PP003_suspension_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	blood/HumanTissueTcellActivation
+PP012_suspension	PP012	58a18a4c-5423-4c59-9b3c-50b7f30b1ca5.loom	HumanTissueTcellActivation	blood	hematopoietic system	bone marrow	PP012_suspension_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	blood/HumanTissueTcellActivation
+F06-KID-3p-CD45pos	F06-KID	eceb544d-ca90-4f82-acd4-0f6f1377f632.loom	FetalLiverHaematopoiesis	kidney	kidney	NA	F06-KID-3p-CD45pos_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	kidney/FetalLiverHaematopoiesis
+F03-KID-3p-CD45pos	F03-KID	4cedc599-22a2-421f-919f-397e2c9dd1d4.loom	FetalLiverHaematopoiesis	kidney	kidney	NA	F03-KID-3p-CD45pos_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	kidney/FetalLiverHaematopoiesis
+FCAImmP7555849_F41_KI_45P	F41_1	37cad11b-c8c9-4d1f-b715-498b0f8d4b35.loom	KidneySingleCellAtlas	kidney	kidney	NA	FCAImmP7555849_F41_KI_45P_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	kidney/KidneySingleCellAtlas
+FCAImmP7462242_F35_KI_45P	F35_1	afd0ea55-e710-4b46-bb05-2423e491b6f5.loom	KidneySingleCellAtlas	kidney	kidney	NA	FCAImmP7462242_F35_KI_45P_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	kidney/KidneySingleCellAtlas
+SRX5897026	SAMN11853943	f5aa720f-b283-406b-8d7f-7c0ee027aebb.loom	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex	SRX5897026_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	brain/MultipleSclerosisLineageDiversity
+SRX5897034	SAMN11853950	90762f27-0820-4623-a5d9-d2b18876d944.loom	MultipleSclerosisLineageDiversity	brain	brain	prefrontal cortex	SRX5897034_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	brain/MultipleSclerosisLineageDiversity

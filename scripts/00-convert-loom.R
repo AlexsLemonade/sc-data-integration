@@ -217,4 +217,18 @@ if(length(missing_sce_files) != 0){
                      '--exclude "*"', aws_includes, sep = " ")
   system(sync_call, ignore.stdout = TRUE)
   
+  # create data frame with sce filenames to add to existing library metadata
+  library_search <- paste(library_id, collapse="|")
+  sce_filepath_df <- data.frame(unfiltered_sce_filename = missing_sce_files) %>%
+    dplyr::mutate(library_biomaterial_id = stringr::str_extract(unfiltered_sce_filename, library_search))
+  
+  # modify existing library metadata with sce file information
+  library_metadata_updated <- library_metadata_df %>%
+    dplyr::left_join(sce_filepath_df) %>%
+    dplyr::mutate(sce_unfiltered_files_s3_bucket = opt$s3_sce_bucket,
+                  sce_unfiltered_files_folder = file.path(tissue_group, project_name),
+                  unfiltered_sce_filename = stringr::word(unfiltered_sce_filename, -1, sep = "/")) %>%
+    # write out updated library file with new sce file information
+    readr::write_tsv(opt$library_file)
+  
 }
