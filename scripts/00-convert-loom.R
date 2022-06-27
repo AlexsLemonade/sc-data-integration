@@ -22,6 +22,8 @@
 # --s3_sce_bucket: Bucket on S3 where SCE objects are stored
 # --copy_s3: indicates whether or not to copy existing SCE file from S3 first. 
 #   To copy files use `--copy_s3`
+# --overwrite: Indicates whether or not to redo loom to SCE conversion and 
+#   overwrite any existing SCE files. To overwrite use `--overwrite`
 
 # import libraries
 library(magrittr)
@@ -71,6 +73,12 @@ option_list <- list(
     action = "store_true",
     help = "indicates whether or not to copy existing SCE file from S3 first. 
     To copy files use `--copy_s3`"
+  ),
+  optparse::make_option(
+    c("-o", "--overwrite"),
+    action = "store_true",
+    help = "indicates whether or not to redo loom to SCE conversion and 
+      overwrite any existing SCE files. To overwrite use `--overwrite`"
   )
 )
 
@@ -162,6 +170,10 @@ loom_to_sce <- function(loom_file,
                               rowData = rowData(loom),
                               metadata = metadata(loom)) 
   
+  # add cell barcodes and gene names to column names and row names of SCE
+  colnames(sce) = sce$CellID
+  rownames(sce) = rowData(sce)$ensembl_ids
+  
   # save sce file 
   readr::write_rds(sce, sce_file)
   
@@ -185,8 +197,15 @@ if(!is.null(opt$copy_s3)){
 local_sce_paths <- process_metadata_df %>%
   dplyr::pull(local_sce_path)
 
-# list of sce files that need to be created 
-missing_sce_files <- local_sce_paths[which(!file.exists(local_sce_paths))]
+# create a list of sce files that need to be created 
+# if overwriting existing SCEs grab all sce paths 
+if(!is.null(opt$overwrite)){
+  missing_sce_files <- local_sce_paths
+} else {
+  # if not overwriting existing ones, find which SCE's don't exist yet
+  missing_sce_files <- local_sce_paths[which(!file.exists(local_sce_paths))]  
+}
+
 
 # if any libraries are missing a corresponding sce, then create that sce 
 if(length(missing_sce_files) != 0){
