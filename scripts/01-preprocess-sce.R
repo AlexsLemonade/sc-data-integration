@@ -6,18 +6,20 @@
 # `scripts/00-convert-loom.R` or synced from S3. Using the provided library IDs, 
 # the SCE files are identified and if any library ID does not have a corresponding 
 # SCE file an error is thrown, printing out those with missing SCE files.
-# If all library ID's have SCE files, then a new metadata file is created in the 
-# expected format for scpca-downstream-analyses with the sample_id, library_id, 
-# filtering_method (set to miQC), and filepath. 
+# If all library ID's have SCE files, then filtering is performed 
+# using `scpcaTools::filter_counts()`. Finally a new metadata file is created 
+# in the expected format for scpca-downstream-analyses with the sample_id, library_id, 
+# filtering_method (set to miQC), and filepath to the filtered SCE. 
 
 # Option descriptions: 
 # 
 # --library_file: The path to the file listing all libraries that should be included 
 #   in the conversion from loom to SCE. This file must contain the 
 #   `library_biomaterial_id` column
-# --full_metadata_file: The path to the metadata file for all libraries. This file must 
-#   contain columns for `library_biomaterial_id` and `sample_biomaterial_id`
-# --sce_dir: Path to the folder where all SCE objects are saved locally 
+# --unfiltered_sce_dir: Path to the folder where all unfiltered SCE objects 
+#   are saved locally 
+# --filtered_sce_dir: Path to the folder where all filtered SCE objects should be
+#   saved locally
 # --output_metadata: Path to write metadata file to be used to run 
 #   scpca-downstream-analyses
 
@@ -36,18 +38,18 @@ option_list <- list(
     type = "character",
     default = file.path(project_root, "sample-info", "hca-processed-libraries.tsv"),
     help = "path to file listing all libraries that are to be converted"
+  )
+  make_option(
+    opt_str = c("--unfiltered_sce_dir"),
+    type = "character",
+    default = file.path(project_root, "data", "human_cell_atlas", "sce"),
+    help = "path to folder where all unfiltered sce objects are located"
   ),
   make_option(
-    opt_str = c("-m", "--full_metadata_file"),
+    opt_str = c("--filtered_sce_dir"),
     type = "character",
-    default = file.path(project_root, "sample-info", "hca-library-metadata.tsv"),
-    help = "path to library metadata file where each row is a library"
-  ),
-  make_option(
-    opt_str = c("--sce_dir"),
-    type = "character",
-    default = "data/human_cell_atlas/sce",
-    help = "path to folder where all output sce objects should be stored"
+    default = file.path(project_root, "results", "human_cell_atlas", "filtered_sce"),
+    help = "path to folder where all filtered sce objects are to be stored"
   ),
   make_option(
     opt_str = c("-o", "--output_metadata"),
@@ -68,58 +70,78 @@ if(!file.exists(opt$library_file)){
   stop("--library_file provided does not exist.")
 }
 
-if(!file.exists(opt$full_metadata_file)){
-  stop("--full_metadata_file provided does not exist.")
-}
-
-# grab library IDs that have corresponding SCE files 
-library_id <- readr::read_tsv(opt$library_file) %>%
+# read in library metadata and grab unfiltered sce file paths 
+library_metadata_df <- readr::read_tsv(opt$library_file)
+library_id <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
 
-# read in full metadata file to use later to grab sample ID
-full_metadata_df <- readr::read_tsv(opt$full_metadata_file) %>%
-  # we only will need the library and sample ID columns
-  dplyr::select(library_biomaterial_id, sample_biomaterial_id) %>%
-  # remove any duplicates that may be present
-  dplyr::distinct()
+unfiltered_sce_files <- file.path(opt$unfiltered_sce_dir, 
+                                  library_metadata_df$sce_unfiltered_files_folder, 
+                                  library_metadata_df$unfiltered_sce_filename)
+
+# check that unfiltered sce files exist 
+# for any files that don't exist, report the library ID 
+file_check <- file.exists(unfiltered_sce_files)
+if(any(!file_check)){
+  missing_libraries <- paste(library_id[which(!file_check)], 
+                             collapse = ",")
+  stop(
+    glue::glue(
+      "Missing unfiltered SCE file for {missing_libraries}.
+      Make sure that you have synced the S3 file from S3 or run `scripts/00-convert-loom.R` to
+      convert the loom file to SCE if necessary."
+    )
+  )
+}
+
+# Function to filter SCE objects -----------------------------------------------
+
+read_and_filter_sce <- function(unfiltered_sce_file,
+                                filtered_sce_file){
+  
+  sce <- readr::read_rds(sce_file)
+  filtered_sce <- scpcaTools::filter_counts(sce)
+  
+  readr::write_rds(filtered_sce, filtered_sce_file)
+}
+
+# Filter objects ---------------------------------------------------------------
+
+library_metadata_df <- library_metadata_df %>%
+  dplyr::mutate(filtered_sce_filename = paste0(library_biomaterial_id, "_filtered_sce.rds"))
+
+filtered_sce_files <- file.path(opt$filtered_sce_dir,
+                                library_metadata_df$tissue_group,
+                                library_metadata_df$project_name,
+                                library_metadata_df$filtered_sce_filename)
+
+purrr::map2(unfiltered_sce_files, filtered_sce_files, read_and_filter_sce)
+
+# Update metadata --------------------------------------------------------------
 
 # get relative sce file paths by identifying all sce files 
 # with library ID in the sce file name in the provided sce directory 
 # first create a regular expression corresponding to processed library IDs
-library_search <- paste(library_id, collapse="|")
+sce_file_search <- paste(library_metadata_df$filtered_sce_filename, collapse="|")
 # paths to sce files relative to the root directory
-sce_files <- list.files(project_root, 
-                        pattern = library_search, 
+filtered_sce_paths <- list.files(project_root, 
+                        pattern = sce_file_search, 
                         recursive = TRUE)
 
 # only keep sce files that contain the provided sce directory as part of the path
 # this check makes sure that if any results files with the 
 # library ID in the filename exist already they are not included in the sce file list
-sce_files <- sce_files[grep(opt$sce_dir, sce_files)]
+filtered_sce_paths <- filtered_sce_paths[grep(opt$filtered_sce_dir, filtered_sce_paths)]
 
-# check that all libraries have SCE files, 
-# if not stop and warn that SCE file first must be created or synced from S3
-id_check <- stringr::str_detect(sce_files, library_search)
+# create search term to grab library IDs from filepaths
+library_search <- paste(library_id, collapse="|")
 
-if(!all(id_check)){
-  missing_libraries <- paste(library_id[which(!id_check)], collapse = ",")
-  stop(
-    glue::glue(
-      "Missing SCE file for {missing_libraries}. 
-      Make sure that you have synced the SCE file from S3 or run `scripts/00-convert-loom.R` to 
-      convert the loom file to SCE if necessary.
-      "
-    )
-  )
-}
-
-# Create metadata file ---------------------------------------------------------
-
-downstream_df <- data.frame(filepath = sce_files) %>%
+# construct metadata in the format needed for downstream analyses 
+downstream_df <- data.frame(filepath = filtered_sce_paths) %>%
   # extract library ID from SCE file path 
   dplyr::mutate(library_id = stringr::str_extract(filepath, library_search)) %>%
   # join with full metadata to obtain sample ID
-  dplyr::left_join(full_metadata_df, by = c("library_id" = "library_biomaterial_id")) %>%
+  dplyr::left_join(library_metadata_df, by = c("library_id" = "library_biomaterial_id")) %>%
   # add column for filtering method
   dplyr::mutate(filtering_method = "miQC") %>%
   # select only the columns needed for input to downstream analyses
