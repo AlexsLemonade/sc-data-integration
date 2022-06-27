@@ -20,6 +20,8 @@
 # --sce_output_dir: Path to the folder where all SCE objects should be saved locally 
 # --s3_loom_bucket: Bucket on S3 where loom data can be found 
 # --s3_sce_bucket: Bucket on S3 where SCE objects are stored
+# --copy_s3: indicates whether or not to copy existing SCE file from S3 first. 
+#   To copy files use `--copy_s3`
 
 # import libraries
 library(magrittr)
@@ -63,6 +65,12 @@ option_list <- list(
     type = "character",
     default = "s3://sc-data-integration/human_cell_atlas_data/sce",
     help = "Bucket on s3 where SCE objects are stored"
+  ),
+  optparse::make_option(
+    c("-c", "--copy_s3"),
+    action = "store_true",
+    help = "indicates whether or not to copy existing SCE file from S3 first. 
+    To copy files use `--copy_s3`"
   )
 )
 
@@ -162,11 +170,14 @@ loom_to_sce <- function(loom_file,
 
 # Grab existing SCE from S3 ----------------------------------------------------
 
-# grab all library ID's that should have SCE's copied over
-libraries_include <- paste("--include '", "*", library_id,"'", "*", sep = '', collapse = ' ')
-sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_output_dir, 
-                   '--exclude "*"', libraries_include, '--recursive', sep = " ")
-system(sync_call, ignore.stdout = TRUE)
+# only copy from S3 if option to copy is used at the command line
+if(!is.null(opt$copy_s3)){
+  # grab all library ID's that should have SCE's copied over
+  libraries_include <- paste("--include '", "*", library_id,"'", "*", sep = '', collapse = ' ')
+  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_output_dir, 
+                     '--exclude "*"', libraries_include, '--recursive', sep = " ")
+  system(sync_call, ignore.stdout = TRUE) 
+}
 
 # grab loom and convert to SCE --------------------------------------------------
 
