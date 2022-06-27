@@ -93,14 +93,19 @@ if(!dir.exists(opt$sce_output_dir)){
 all_metadata_df <- readr::read_tsv(opt$metadata_file)
 
 # identify datasets to be converted
-# read in library file and find intersection between metadata and library file 
-library_id <- readr::read_tsv(opt$library_file) %>%
+# read in library file and find intersection between metadata and library file
+# will need both library ID and loom filename
+library_metadata_df <- readr::read_tsv(opt$library_file)
+library_id <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
+loom_files <- library_metadata_df %>%
+  dplyr::pull(loom_filename)
 
 # get a metadata with just libraries to be processed
 # add file info for sce filepaths
 process_metadata_df <- all_metadata_df %>%
-  dplyr::filter(library_biomaterial_id %in% library_id) %>%
+  # use filename as unique identifier to select library file
+  dplyr::filter(loom_filename %in% loom_files) %>%
   # first make filename for sce file
   dplyr::mutate(local_sce_file = file.path(tissue_group,
                                            project_name,
@@ -181,20 +186,20 @@ if(length(missing_sce_files) != 0){
   # list of all loom files that correspond to missing sce files
   loom_missing_sce <- process_metadata_df %>%
     dplyr::filter(local_sce_path %in% missing_sce_files) %>%
-    dplyr::pull(loom_file)
+    dplyr::pull(loom_filename)
   
   # construct full loom path 
-  loom_file_paths <- file.path(opt$loom_dir, loom_missing_sce)
+  loom_file_paths <- Sys.glob(file.path(opt$loom_dir, "*", "*", "*", loom_missing_sce))
   
   # if any loom files don't exist for missing SCE's then grab those from AWS S3
   if(!all(file.exists(loom_file_paths))){
     
     # get list of folders inside s3 directory to include in copying
     aws_local_copy <- loom_missing_sce[which(!file.exists(loom_file_paths))]
-    aws_includes <- paste("--include '", aws_local_copy, "'", sep = '', collapse = ' ')
+    aws_includes <- paste("--include '", "*", aws_local_copy, "'", sep = '', collapse = ' ')
     
     # build one sync call to copy all missing loom files 
-    sync_call <- paste('aws s3 cp', opt$s3_loom_bucket, opt$loom_dir, 
+    sync_call <- paste('aws s3 cp', opt$s3_loom_bucket, ".", 
                        '--exclude "*"', aws_includes, '--recursive', sep = " ")
     
     system(sync_call, ignore.stdout = TRUE)
