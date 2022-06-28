@@ -22,6 +22,7 @@
 #   saved locally
 # --output_metadata: Path to write metadata file to be used to run 
 #   scpca-downstream-analyses
+# --seed Seed to use for reproducibility
 
 # load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
@@ -56,6 +57,18 @@ option_list <- list(
     type = "character",
     default = file.path(project_root, "sample-info", "hca-downstream-metadata.tsv"),
     help = "path to write metadata file to be used to run scpca-downstream-analyses"
+  ),
+  make_option(
+    opt_str = c("-s", "--seed"),
+    type = "integer",
+    default = 2022,
+    help = "Random seed to use for reproducibility of filtering results"
+  ),
+  make_option(
+    opt_str = c("--repeat_filtering"),
+    type = "store_true",
+    help = "Indicates whether or not to repeat filtering steps even if 
+      filtered SCE objects already exist"
   )
 )
 
@@ -64,6 +77,7 @@ option_list <- list(
 opt <- parse_args(OptionParser(option_list = option_list))
 
 # File set up ------------------------------------------------------------------
+set.seed(opt$seed)
 
 # checks that provided metadata files exist
 if(!file.exists(opt$library_file)){
@@ -138,10 +152,18 @@ filtered_sce_files <- file.path(opt$filtered_sce_dir,
                                 library_metadata_df$project_name,
                                 library_metadata_df$filtered_sce_filename)
 
-# apply function to read in unfiltered sce, filter sce, and save filtered sce
-filterd_sce_list <- purrr::map2(.x = unfiltered_sce_files,
-                                .y = filtered_sce_files,
-                                read_and_filter_sce)
+# check that filtered file exists and only filter if files don't exist
+# or the --repeat_mapping option has been used
+if(all(file.exists(filtered_sce_files)) || 
+   is.null(opt$repeat_filtering)){
+  warning("Filtered SCE objects already exist. 
+          To overwrite use the `--repeat_filtering` option.")
+} else {
+  # apply function to read in unfiltered sce, filter sce, and save filtered sce
+  filterd_sce_list <- purrr::map2(.x = unfiltered_sce_files,
+                                  .y = filtered_sce_files,
+                                  read_and_filter_sce) 
+}
 
 # Update metadata --------------------------------------------------------------
 
