@@ -2,20 +2,22 @@
 set -euo pipefail
 
 ###############################################################################
-# Create the metadata file needed for downstream analyses and then run 
+# Preprocess the unfiltered SCE objects including, removing empty droplets and 
+# creating the metadata file needed for downstream analyses. Then run 
 # scpca-downstream-analyses
 
-# Usage, note that the --snakefile option is required as there is no default set
+# **Note: Before running this, the original loom files must be converted to SCE 
+# objects by running `00-convert-loom.R`.
+
+# Usage, note that the --downstream_repo option is required as there is no default set
 # bash run-downstream-analyses.sh \
 #  --downstream_repo "full path to scpca-downstream-analyses repo"
 
 # Other parameters include: 
-# --processed_library_df: The path to the file listing all libraries that should be included 
-#   in the conversion from loom to SCE. This file must contain the 
-#   `library_biomaterial_id` column. 
-# --metadata_file: The path to the metadata file for all libraries. This file must 
-#   contain columns for `library_biomaterial_id` and `sample_biomaterial_id`
-# --sce_dir: Path to the folder where all SCE objects are saved locally
+# --processed_library_df: path to the file listing all libraries that should be 
+#   included in processing. 
+# --unfiltered_sce_dir: path to folder where all unfiltered sce objects are located
+# --filtered_sce_dir: path to folder where all filtered sce objects are to be stored
 # --downstream_metadata_file: Path to write metadata file to be used to run 
 #   scpca-downstream-analyses
 # --results_dir: Path to save results from running scpca-downstream-analyses 
@@ -34,9 +36,11 @@ cd "$script_directory" || exit
 
 processed_library_df=$script_directory/../sample-info/hca-processed-libraries.tsv
 metadata_file=$script_directory/../sample-info/hca-library-metadata.tsv
-sce_dir=$script_directory/../data/human_cell_atlas/sce
+unfiltered_sce_dir=$script_directory/../data/human_cell_atlas/sce
+filtered_sce_dir=$script_directory/../results/human_cell_atlas/filtered_sce_dir
 downstream_metadata_file=$script_directory/../sample-info/hca-downstream-metadata.tsv
-results_dir=$script_directory/../results/scpca-downstream-analyses
+results_dir=$script_directory/../results/human_cell_atlas/scpca-downstream-analyses
+mito_file=$script_directory/../reference-files/gencode.v27.mitogenes.txt
 
 # grab variables from command line
 while [ $# -gt 0 ]; do
@@ -47,28 +51,19 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-# use mito file provided in scpca-downstream-analyses if not provided
-mito_file=${mito_file:-"${downstream_repo}/reference-files/Homo_sapiens.GRCh38.104.mitogenes.txt"}
-
 # run Rscript to generate metadata file 
 Rscript --vanilla 01-preprocess-sce.R \
   --library_file $processed_library_df \
-  --full_metadata_file $metadata_file \
-  --sce_dir $sce_dir \
+  --unfiltered_sce_dir $unfiltered_sce_dir \
+  --filtered_sce_dir $filtered_sce_dir \
   --output_metadata $downstream_metadata_file
 
-# paths in the downstream metadata file are relative to the sce directory 
-# move to sce directory before running the snakefile 
-cd $sce_dir
-mkdir -p $results_dir
-
-# add check for Snakefile in downstream repo 
+# check for Snakefile in downstream repo 
 if [ ! -f $downstream_repo/Snakefile ]; then
   echo "The path provided for `--downstream_repo` is missing a Snakefile. 
         Double check you have provided the correct path." 
   exit 1
 fi
-
 
 # activate snakemake environment before running snakemake 
 source $CONDA_PREFIX/etc/profile.d/conda.sh
