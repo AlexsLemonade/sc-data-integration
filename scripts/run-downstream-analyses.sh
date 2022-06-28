@@ -37,7 +37,7 @@ cd "$script_directory" || exit
 processed_library_df=$script_directory/../sample-info/hca-processed-libraries.tsv
 metadata_file=$script_directory/../sample-info/hca-library-metadata.tsv
 unfiltered_sce_dir=$script_directory/../data/human_cell_atlas/sce
-filtered_sce_dir=$script_directory/../results/human_cell_atlas/filtered_sce_dir
+filtered_sce_dir=$script_directory/../results/human_cell_atlas/filtered_sce
 downstream_metadata_file=$script_directory/../sample-info/hca-downstream-metadata.tsv
 results_dir=$script_directory/../results/human_cell_atlas/scpca-downstream-analyses
 mito_file=$script_directory/../reference-files/gencode.v27.mitogenes.txt
