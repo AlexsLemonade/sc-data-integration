@@ -38,7 +38,7 @@ option_list <- list(
     type = "character",
     default = file.path(project_root, "sample-info", "hca-processed-libraries.tsv"),
     help = "path to file listing all libraries that are to be converted"
-  )
+  ),
   make_option(
     opt_str = c("--unfiltered_sce_dir"),
     type = "character",
@@ -94,13 +94,24 @@ if(any(!file_check)){
   )
 }
 
+# create output folders for each tissue group/project for sce results 
+# save in the same nested folder structure as the unfiltered SCE files
+# first grab folders from the metadata and then combine with the path to the filtered_sce_dir
+filtered_sce_output_folders <- unique(library_metadata_df$sce_unfiltered_files_folder)
+filtered_sce_output_folders <- file.path(opt$filtered_sce_dir, filtered_sce_output_folders)
+for (folder in 1:length(filtered_sce_output_folders)){
+  if(!dir.exists(filtered_sce_output_folders[folder])){
+    dir.create(filtered_sce_output_folders[folder], recursive = TRUE)
+  }
+}
+
 # Function to filter SCE objects -----------------------------------------------
 
 read_and_filter_sce <- function(unfiltered_sce_file,
                                 filtered_sce_file){
   
-  sce <- readr::read_rds(sce_file)
-  filtered_sce <- scpcaTools::filter_counts(sce)
+  unfiltered_sce <- readr::read_rds(unfiltered_sce_file)
+  filtered_sce <- scpcaTools::filter_counts(unfiltered_sce)
   
   readr::write_rds(filtered_sce, filtered_sce_file)
 }
@@ -115,7 +126,9 @@ filtered_sce_files <- file.path(opt$filtered_sce_dir,
                                 library_metadata_df$project_name,
                                 library_metadata_df$filtered_sce_filename)
 
-purrr::map2(unfiltered_sce_files, filtered_sce_files, read_and_filter_sce)
+filterd_sce_list <- purrr::map2(.x = unfiltered_sce_files,
+                                .y = filtered_sce_files,
+                                read_and_filter_sce)
 
 # Update metadata --------------------------------------------------------------
 
@@ -127,11 +140,6 @@ sce_file_search <- paste(library_metadata_df$filtered_sce_filename, collapse="|"
 filtered_sce_paths <- list.files(project_root, 
                         pattern = sce_file_search, 
                         recursive = TRUE)
-
-# only keep sce files that contain the provided sce directory as part of the path
-# this check makes sure that if any results files with the 
-# library ID in the filename exist already they are not included in the sce file list
-filtered_sce_paths <- filtered_sce_paths[grep(opt$filtered_sce_dir, filtered_sce_paths)]
 
 # create search term to grab library IDs from filepaths
 library_search <- paste(library_id, collapse="|")
