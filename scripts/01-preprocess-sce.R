@@ -107,6 +107,14 @@ for (folder in 1:length(filtered_sce_output_folders)){
 
 # Function to filter SCE objects -----------------------------------------------
 
+#' Read in unfiltered SCE, perform filtering of empty droplets, and save filtered SCE
+#' Filtering is performed using `DropletUtils::emptyDropsCellRanger`
+#'
+#' @param unfiltered_sce_file Path to unfiltered SCE object containing empty droplets
+#'   saved as an RDS file. 
+#' @param filtered_sce_file Path to save filtered SCE object as an RDS file.
+#'
+#' @return Filtered SCE object 
 read_and_filter_sce <- function(unfiltered_sce_file,
                                 filtered_sce_file){
   
@@ -114,18 +122,23 @@ read_and_filter_sce <- function(unfiltered_sce_file,
   filtered_sce <- scpcaTools::filter_counts(unfiltered_sce)
   
   readr::write_rds(filtered_sce, filtered_sce_file)
+  
+  return(filtered_sce)
 }
 
 # Filter objects ---------------------------------------------------------------
 
+# add filename for filtered sce file to library metadata
 library_metadata_df <- library_metadata_df %>%
   dplyr::mutate(filtered_sce_filename = paste0(library_biomaterial_id, "_filtered_sce.rds"))
 
+# build paths to filtered sce files
 filtered_sce_files <- file.path(opt$filtered_sce_dir,
                                 library_metadata_df$tissue_group,
                                 library_metadata_df$project_name,
                                 library_metadata_df$filtered_sce_filename)
 
+# apply function to read in unfiltered sce, filter sce, and save filtered sce
 filterd_sce_list <- purrr::map2(.x = unfiltered_sce_files,
                                 .y = filtered_sce_files,
                                 read_and_filter_sce)
@@ -148,7 +161,7 @@ library_search <- paste(library_id, collapse="|")
 downstream_df <- data.frame(filepath = filtered_sce_paths) %>%
   # extract library ID from SCE file path 
   dplyr::mutate(library_id = stringr::str_extract(filepath, library_search)) %>%
-  # join with full metadata to obtain sample ID
+  # join with metadata to obtain sample ID
   dplyr::left_join(library_metadata_df, by = c("library_id" = "library_biomaterial_id")) %>%
   # add column for filtering method
   dplyr::mutate(filtering_method = "miQC") %>%
@@ -157,3 +170,6 @@ downstream_df <- data.frame(filepath = filtered_sce_paths) %>%
   # downstream analyses requires sample_id as column name 
   dplyr::rename(sample_id = sample_biomaterial_id) %>%
   readr::write_tsv(opt$output_metadata)
+
+# save updated library metadata with addition of filtered sce filename
+readr::write_tsv(library_metadata_df, opt$library_file)
