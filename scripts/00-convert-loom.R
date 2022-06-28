@@ -20,6 +20,10 @@
 # --sce_output_dir: Path to the folder where all SCE objects should be saved locally 
 # --s3_loom_bucket: Bucket on S3 where loom data can be found 
 # --s3_sce_bucket: Bucket on S3 where SCE objects are stored
+# --copy_s3: indicates whether or not to copy existing SCE file from S3 first. 
+#   To copy files use `--copy_s3`
+# --overwrite: Indicates whether or not to redo loom to SCE conversion and 
+#   overwrite any existing SCE files. To overwrite use `--overwrite`
 
 # load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
@@ -67,6 +71,18 @@ option_list <- list(
     type = "character",
     default = "s3://sc-data-integration/human_cell_atlas_data/sce",
     help = "Bucket on s3 where SCE objects are stored"
+  ),
+  optparse::make_option(
+    c("-c", "--copy_s3"),
+    action = "store_true",
+    help = "indicates whether or not to copy existing SCE file from S3 first. 
+    To copy files use `--copy_s3`"
+  ),
+  optparse::make_option(
+    c("-o", "--overwrite"),
+    action = "store_true",
+    help = "indicates whether or not to redo loom to SCE conversion and 
+      overwrite any existing SCE files. To overwrite use `--overwrite`"
   )
 )
 
@@ -97,14 +113,19 @@ if(!dir.exists(opt$sce_output_dir)){
 all_metadata_df <- readr::read_tsv(opt$metadata_file)
 
 # identify datasets to be converted
-# read in library file and find intersection between metadata and library file 
-library_id <- readr::read_tsv(opt$library_file) %>%
+# read in library file and find intersection between metadata and library file
+# will need both library ID and loom filename
+library_metadata_df <- readr::read_tsv(opt$library_file)
+library_id <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
+loom_files <- library_metadata_df %>%
+  dplyr::pull(loom_filename)
 
 # get a metadata with just libraries to be processed
 # add file info for sce filepaths
 process_metadata_df <- all_metadata_df %>%
-  dplyr::filter(library_biomaterial_id %in% library_id) %>%
+  # use filename as unique identifier to select library file
+  dplyr::filter(loom_filename %in% loom_files) %>%
   # first make filename for sce file
   dplyr::mutate(local_sce_file = file.path(tissue_group,
                                            project_name,
@@ -153,6 +174,10 @@ loom_to_sce <- function(loom_file,
                               rowData = rowData(loom),
                               metadata = metadata(loom)) 
   
+  # add cell barcodes and gene names to column names and row names of SCE
+  colnames(sce) = sce$CellID
+  rownames(sce) = rowData(sce)$ensembl_ids
+  
   # save sce file 
   readr::write_rds(sce, sce_file)
   
@@ -161,11 +186,14 @@ loom_to_sce <- function(loom_file,
 
 # Grab existing SCE from S3 ----------------------------------------------------
 
-# grab all library ID's that should have SCE's copied over
-libraries_include <- paste("--include '", "*", library_id,"'", "*", sep = '', collapse = ' ')
-sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_output_dir, 
-                   '--exclude "*"', libraries_include, '--recursive', sep = " ")
-system(sync_call, ignore.stdout = TRUE)
+# only copy from S3 if option to copy is used at the command line
+if(!is.null(opt$copy_s3)){
+  # grab all library ID's that should have SCE's copied over
+  libraries_include <- paste("--include '", "*", library_id,"'", "*", sep = '', collapse = ' ')
+  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_output_dir, 
+                     '--exclude "*"', libraries_include, '--recursive', sep = " ")
+  system(sync_call, ignore.stdout = TRUE) 
+}
 
 # grab loom and convert to SCE --------------------------------------------------
 
@@ -173,8 +201,15 @@ system(sync_call, ignore.stdout = TRUE)
 local_sce_paths <- process_metadata_df %>%
   dplyr::pull(local_sce_path)
 
-# list of sce files that need to be created 
-missing_sce_files <- local_sce_paths[which(!file.exists(local_sce_paths))]
+# create a list of sce files that need to be created 
+# if overwriting existing SCEs grab all sce paths 
+if(!is.null(opt$overwrite)){
+  missing_sce_files <- local_sce_paths
+} else {
+  # if not overwriting existing ones, find which SCE's don't exist yet
+  missing_sce_files <- local_sce_paths[which(!file.exists(local_sce_paths))]  
+}
+
 
 # if any libraries are missing a corresponding sce, then create that sce 
 if(length(missing_sce_files) != 0){
@@ -185,20 +220,20 @@ if(length(missing_sce_files) != 0){
   # list of all loom files that correspond to missing sce files
   loom_missing_sce <- process_metadata_df %>%
     dplyr::filter(local_sce_path %in% missing_sce_files) %>%
-    dplyr::pull(loom_file)
+    dplyr::pull(loom_filename)
   
   # construct full loom path 
-  loom_file_paths <- file.path(opt$loom_dir, loom_missing_sce)
+  loom_file_paths <- Sys.glob(file.path(opt$loom_dir, "*", "*", "*", loom_missing_sce))
   
   # if any loom files don't exist for missing SCE's then grab those from AWS S3
   if(!all(file.exists(loom_file_paths))){
     
     # get list of folders inside s3 directory to include in copying
     aws_local_copy <- loom_missing_sce[which(!file.exists(loom_file_paths))]
-    aws_includes <- paste("--include '", aws_local_copy, "'", sep = '', collapse = ' ')
+    aws_includes <- paste("--include '", "*", aws_local_copy, "'", sep = '', collapse = ' ')
     
     # build one sync call to copy all missing loom files 
-    sync_call <- paste('aws s3 cp', opt$s3_loom_bucket, opt$loom_dir, 
+    sync_call <- paste('aws s3 cp', opt$s3_loom_bucket, ".", 
                        '--exclude "*"', aws_includes, '--recursive', sep = " ")
     
     system(sync_call, ignore.stdout = TRUE)
@@ -215,6 +250,20 @@ if(length(missing_sce_files) != 0){
   sync_call <- paste('aws s3 sync', opt$sce_output_dir, opt$s3_sce_bucket, 
                      '--exclude "*"', aws_includes, sep = " ")
   system(sync_call, ignore.stdout = TRUE)
+  
+  # create data frame with sce filenames to add to existing library metadata
+  library_search <- paste(library_id, collapse="|")
+  sce_filepath_df <- data.frame(unfiltered_sce_filename = missing_sce_files) %>%
+    dplyr::mutate(library_biomaterial_id = stringr::str_extract(unfiltered_sce_filename, library_search))
+  
+  # modify existing library metadata with sce file information
+  library_metadata_updated <- library_metadata_df %>%
+    dplyr::left_join(sce_filepath_df) %>%
+    dplyr::mutate(sce_unfiltered_files_s3_bucket = opt$s3_sce_bucket,
+                  sce_unfiltered_files_folder = file.path(tissue_group, project_name),
+                  unfiltered_sce_filename = stringr::word(unfiltered_sce_filename, -1, sep = "/")) %>%
+    # write out updated library file with new sce file information
+    readr::write_tsv(opt$library_file)
   
 }
 
