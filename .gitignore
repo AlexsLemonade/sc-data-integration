@@ -7,3 +7,6 @@ data/
 
 # ignore results files
 results/
+
+# ignore snakemake outputs 
+.snakemake/
