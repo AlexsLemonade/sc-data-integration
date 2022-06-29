@@ -34,13 +34,16 @@ script_directory="$(perl -e 'use File::Basename;
   print dirname(abs_path(@ARGV[0]));' -- "$0")"
 cd "$script_directory" || exit
 
-processed_library_df=$script_directory/../sample-info/hca-processed-libraries.tsv
-metadata_file=$script_directory/../sample-info/hca-library-metadata.tsv
-unfiltered_sce_dir=$script_directory/../data/human_cell_atlas/sce
-filtered_sce_dir=$script_directory/../results/human_cell_atlas/filtered_sce
-downstream_metadata_file=$script_directory/../sample-info/hca-downstream-metadata.tsv
-results_dir=$script_directory/../results/human_cell_atlas/scpca-downstream-analyses
-mito_file=$script_directory/../reference-files/gencode.v27.mitogenes.txt
+# grab full path to project root
+project_root=$(git rev-parse --show-toplevel)
+
+processed_library_df=$project_root/sample-info/hca-processed-libraries.tsv
+metadata_file=$project_root/sample-info/hca-library-metadata.tsv
+unfiltered_sce_dir=$project_root/data/human_cell_atlas/sce
+filtered_sce_dir=$project_root/results/human_cell_atlas/filtered_sce
+downstream_metadata_file=$project_root/sample-info/hca-downstream-metadata.tsv
+results_dir=$project_root/results/human_cell_atlas/scpca-downstream-analyses
+mito_file=$project_root/reference-files/gencode.v27.mitogenes.txt
 
 # grab variables from command line
 while [ $# -gt 0 ]; do
@@ -64,6 +67,9 @@ if [ ! -f $downstream_repo/Snakefile ]; then
         Double check you have provided the correct path." 
   exit 1
 fi
+
+# move to the project root since the paths in the metadata file are relative to the project root
+cd $project_root
 
 # activate snakemake environment before running snakemake 
 source $CONDA_PREFIX/etc/profile.d/conda.sh
