@@ -1,4 +1,13 @@
 # sc-data-integration
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Managing R packages with `renv`](#managing-r-packages-with-renv)
+- [Metadata](#metadata)
+- [Shared data files](#shared-data-files)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 This repo contains files, scripts, and analysis related to exploring integration of single-cell and single-nuclei data. 
 
@@ -55,3 +64,29 @@ Each row in this file corresponds to a library and contains the following column
 
 3. `hca-processed-libraries.tsv`: This file contains the list of libraries from each project that are being used for testing data integration. 
 This file is used as input to the script, `scripts/00-convert-loom.R`, used for converting loom to `SingleCellExperiment` objects and saving those objects to S3. 
+
+## Shared data files 
+
+Data for this project is stored in the S3 bucket, `s3://sc-data-integration`. 
+The following data can be found in the above S3 bucket within the `human_cell_atlas_data` folder: 
+
+- The `loom` folder contains the original loom files downloaded from the Human Cell Atlas data portal for each test dataset. 
+Here loom files are nested by `tissue_group`, `project_name`, and `bundle_uuid`. 
+- The `sce` folder contains the unfiltered `SingleCellExperiment` objects saved as RDS files.
+These `SingleCellExperiment` objects have been converted from the loom files using the `00-loom-convert.R` script in the `scripts` directory in this repo.
+Here RDS files are nested by `tissue_group` and `project_name`.
+
+A separate `reference-files` folder contains any reference files needed for processing dataset, such as the gtf file needed to generate the mitochondrial gene list found in the `reference-files` folder in the repository. 
+
+In order to access these files, you must have credentials setup for AWS. 
+Additionally, some of the scripts in this repository require use of AWS command line tools. 
+We have previously written up detailed instructions on [installing the AWS command line tools and configuring your credentials](https://github.com/AlexsLemonade/alsf-scpca#aws) that can be used as a reference.
+
+After AWS command line tools have been set up, the `SingleCellExperiment` objects found in `s3://sc-data-integration/human_cell_atlas_data/sce` can be copied to your local computer by running the `00-convert-loom.R` script with the `--copy_s3` flag.
+
+```
+Rscript scripts/00-convert-loom.R --copy_s3
+```
+
+This will copy any `SingleCellExperiment` objects for libraries listed in `hca-processed-libraries.tsv` that have already been converted from loom files.
+If any libraries listed in `hca-processed-libraries.tsv` do not have corresponding `SingleCellExperiment` objects, running the `00-convert-loom.R` will also convert those loom files.
