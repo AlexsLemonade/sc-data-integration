@@ -1,12 +1,13 @@
-# Script used to convert HCA data from loom format to SCE objects
+# Script used to obtain SCE objects
 
-# This script reads in a metadata file containing the desired libraries to convert 
-# from loom format to SCE objects as RDS files. If the RDS files already exist 
-# for the desired libraries, they are copied from an S3 bucket to a specified local 
+# This script reads in a metadata file containing the desired libraries to obtain 
+# SCE objects. If the RDS files already exist for the desired libraries on S3, 
+# they are copied from an S3 bucket to a specified local 
 # data directory. For libraries that do not have corresponding SCE objects as 
 # RDS files, the loom file will be read in and converted to an SCE object before 
 # saving the RDS file. If the loom file is not present locally, the file will be 
 # grabbed from the S3 bucket. All SCE objects will then be synced back to S3. 
+# An updated metadata file will be returned with the SCE file information.
 
 # Option descriptions: 
 # 
