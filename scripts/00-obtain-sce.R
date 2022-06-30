@@ -58,7 +58,7 @@ option_list <- list(
   make_option(
     opt_str = c("--sce_output_dir"),
     type = "character",
-    default = file.path(project_dir, "data", "human_cell_atlas", "sce"),
+    default = file.path(project_root, "data", "human_cell_atlas", "sce"),
     help = "path to folder where all output sce objects should be stored"
   ),
   make_option(
