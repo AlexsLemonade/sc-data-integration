@@ -215,18 +215,24 @@ if(length(missing_sce_files) != 0){
   # if the loom file isn't there, grab it from AWS before converting
   
   # list of all loom files that correspond to missing sce files
+  # obtain the path relative to the loom directory
   loom_missing_sce <- process_metadata_df %>%
     dplyr::filter(local_sce_path %in% missing_sce_files) %>%
-    dplyr::pull(loom_filename)
+    dplyr::mutate(missing_filepath = file.path(tissue_group,
+                                               project_name,
+                                               bundle_uuid,
+                                               loom_filename)) %>%
+    dplyr::pull(missing_filepath)
   
-  # construct full loom path 
-  loom_file_paths <- Sys.glob(file.path(opt$loom_dir, "*", "*", "*", loom_missing_sce))
-  
-  # if any loom files don't exist for missing SCE's then grab those from AWS S3
-  if(!all(file.exists(loom_file_paths))){
+  # construct full paths for searching if loom file exists 
+  full_missing_loom_path <- file.path(opt$loom_dir,
+                                      loom_missing_sce)
     
-    # get list of folders inside s3 directory to include in copying
-    aws_local_copy <- loom_missing_sce[which(!file.exists(loom_file_paths))]
+  # if any loom files don't exist for missing SCE's then grab those from AWS S3
+  if(!all(file.exists(full_missing_loom_path))){
+    
+    # get list of loom files inside s3 directory to include in copying
+    aws_local_copy <- loom_missing_sce[which(!file.exists(full_missing_loom_path))]
     aws_includes <- paste("--include '", "*", aws_local_copy, "'", sep = '', collapse = ' ')
     
     # build one sync call to copy all missing loom files 
