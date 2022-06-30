@@ -2,8 +2,8 @@
 
 # This script reads in a metadata file containing the desired libraries that have 
 # SCE objects to be pre-processed using scpca-downstream-analyses. Before running
-# this script, SCE objects either must be converted from loom files using 
-# `scripts/00-convert-loom.R` or synced from S3. Using the provided library IDs, 
+# this script, SCE objects can be obtained by running `scripts/00-obtain-sce.R` to
+# convert loom files to SCE or syncing SCE objects from S3. Using the provided library IDs, 
 # the SCE files are identified and if any library ID does not have a corresponding 
 # SCE file an error is thrown, printing out those with missing SCE files.
 # If all library ID's have SCE files, then filtering is performed 
@@ -102,7 +102,8 @@ if(any(!file_check)){
   stop(
     glue::glue(
       "Missing unfiltered SCE file for {missing_libraries}.
-      Make sure that you have synced the S3 file from S3 or run `scripts/00-convert-loom.R` to
+      Make sure that you have run `scripts/00-obtain-sce.R` 
+      to make a local copy of SCE objects present on S3 or
       convert the loom file to SCE if necessary."
     )
   )
