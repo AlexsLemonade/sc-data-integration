@@ -23,6 +23,8 @@
 # --output_metadata: Path to write metadata file to be used to run 
 #   scpca-downstream-analyses
 # --seed Seed to use for reproducibility
+# --repeat_filtering Indicates whether or not to repeat filtering steps even if 
+#   filtered SCE objects already exist
 
 # load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
