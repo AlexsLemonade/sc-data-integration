@@ -66,7 +66,7 @@ option_list <- list(
   ),
   make_option(
     opt_str = c("--repeat_filtering"),
-    type = "store_true",
+    action = "store_true",
     help = "Indicates whether or not to repeat filtering steps even if 
       filtered SCE objects already exist"
   )
