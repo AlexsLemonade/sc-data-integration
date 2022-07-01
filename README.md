@@ -82,11 +82,11 @@ In order to access these files, you must have credentials setup for AWS.
 Additionally, some of the scripts in this repository require use of AWS command line tools. 
 We have previously written up detailed instructions on [installing the AWS command line tools and configuring your credentials](https://github.com/AlexsLemonade/alsf-scpca#aws) that can be used as a reference.
 
-After AWS command line tools have been set up, the `SingleCellExperiment` objects found in `s3://sc-data-integration/human_cell_atlas_data/sce` can be copied to your local computer by running the `00-convert-loom.R` script with the `--copy_s3` flag.
+After AWS command line tools have been set up, the `SingleCellExperiment` objects found in `s3://sc-data-integration/human_cell_atlas_data/sce` can be copied to your local computer by running the `00-obtain-sce.R` script with the `--copy_s3` flag.
 
 ```
 Rscript scripts/00-obtain-sce.R --copy_s3
 ```
 
 This will copy any `SingleCellExperiment` objects for libraries listed in `hca-processed-libraries.tsv` that have already been converted from loom files.
-If any libraries listed in `hca-processed-libraries.tsv` do not have corresponding `SingleCellExperiment` objects, running the `00-convert-loom.R` will also convert those loom files.
+If any libraries listed in `hca-processed-libraries.tsv` do not have corresponding `SingleCellExperiment` objects, running the `00-obtain-sce.R` will also convert those loom files.
