@@ -63,7 +63,7 @@ Each row in this file corresponds to a library and contains the following column
 | `loom_file`       | loom file name in the format `tissue_group/project_name/bundle_uuid/filename` |
 
 3. `hca-processed-libraries.tsv`: This file contains the list of libraries from each project that are being used for testing data integration. 
-This file is used as input to the script, `scripts/00-convert-loom.R`, used for converting loom to `SingleCellExperiment` objects and saving those objects to S3. 
+This file is used as input to the script, `scripts/00-obtain-sce.R`, used for converting loom to `SingleCellExperiment` objects and saving those objects to S3. 
 
 ## Shared data files 
 
@@ -73,7 +73,7 @@ The following data can be found in the above S3 bucket within the `human_cell_at
 - The `loom` folder contains the original loom files downloaded from the Human Cell Atlas data portal for each test dataset. 
 Here loom files are nested by `tissue_group`, `project_name`, and `bundle_uuid`. 
 - The `sce` folder contains the unfiltered `SingleCellExperiment` objects saved as RDS files.
-These `SingleCellExperiment` objects have been converted from the loom files using the `00-loom-convert.R` script in the `scripts` directory in this repo.
+These `SingleCellExperiment` objects have been converted from the loom files using the `00-obtain-sce.R` script in the `scripts` directory in this repo.
 Here RDS files are nested by `tissue_group` and `project_name`.
 
 A separate `reference-files` folder contains any reference files needed for processing dataset, such as the gtf file needed to generate the mitochondrial gene list found in the `reference-files` folder in the repository. 
