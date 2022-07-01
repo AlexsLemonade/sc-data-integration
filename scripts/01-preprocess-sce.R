@@ -155,15 +155,20 @@ filtered_sce_files <- file.path(opt$filtered_sce_dir,
 
 # check that filtered file exists and only filter if files don't exist
 # or the --repeat_mapping option has been used
-if(all(file.exists(filtered_sce_files)) || 
-   is.null(opt$repeat_filtering)){
+if(is.null(opt$repeat_filtering) && all(file.exists(filtered_sce_files))) {
   warning("Filtered SCE objects already exist. 
           To overwrite use the `--repeat_filtering` option.")
 } else {
+  # if repeat filtering was used but all the files exist warn that files will be overwritten
+  if(!is.null(opt$repeat_filtering) && all(file.exists(filtered_sce_files))) {
+    warning("Filtered `SingleCellExperiment` objects are being regenerated.
+            The `--repeat_filtering` flag was used so files will be overwritten.")
+  }
   # apply function to read in unfiltered sce, filter sce, and save filtered sce
-  filtered_sce_list <- purrr::map2(.x = unfiltered_sce_files,
-                                  .y = filtered_sce_files,
-                                  read_and_filter_sce) 
+  purrr::walk2(.x = unfiltered_sce_files,
+               .y = filtered_sce_files,
+               read_and_filter_sce) 
+
 }
 
 # Update metadata --------------------------------------------------------------
@@ -190,8 +195,6 @@ downstream_df <- data.frame(filepath = filtered_sce_paths) %>%
   dplyr::mutate(filtering_method = "miQC") %>%
   # select only the columns needed for input to downstream analyses
   dplyr::select(sample_id = sample_biomaterial_id, library_id, filtering_method, filepath) %>%
-  # downstream analyses requires sample_id as column name 
-  dplyr::rename(sample_id = sample_biomaterial_id) %>%
   readr::write_tsv(opt$output_metadata)
 
 # save updated library metadata with addition of filtered sce filename
