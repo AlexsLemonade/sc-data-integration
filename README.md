@@ -85,7 +85,7 @@ We have previously written up detailed instructions on [installing the AWS comma
 After AWS command line tools have been set up, the `SingleCellExperiment` objects found in `s3://sc-data-integration/human_cell_atlas_data/sce` can be copied to your local computer by running the `00-convert-loom.R` script with the `--copy_s3` flag.
 
 ```
-Rscript scripts/00-convert-loom.R --copy_s3
+Rscript scripts/00-obtain-sce.R --copy_s3
 ```
 
 This will copy any `SingleCellExperiment` objects for libraries listed in `hca-processed-libraries.tsv` that have already been converted from loom files.
