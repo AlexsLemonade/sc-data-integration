@@ -161,7 +161,7 @@ if(all(file.exists(filtered_sce_files)) ||
           To overwrite use the `--repeat_filtering` option.")
 } else {
   # apply function to read in unfiltered sce, filter sce, and save filtered sce
-  filterd_sce_list <- purrr::map2(.x = unfiltered_sce_files,
+  filtered_sce_list <- purrr::map2(.x = unfiltered_sce_files,
                                   .y = filtered_sce_files,
                                   read_and_filter_sce) 
 }
@@ -189,7 +189,7 @@ downstream_df <- data.frame(filepath = filtered_sce_paths) %>%
   # add column for filtering method
   dplyr::mutate(filtering_method = "miQC") %>%
   # select only the columns needed for input to downstream analyses
-  dplyr::select(sample_biomaterial_id, library_id, filtering_method, filepath) %>%
+  dplyr::select(sample_id = sample_biomaterial_id, library_id, filtering_method, filepath) %>%
   # downstream analyses requires sample_id as column name 
   dplyr::rename(sample_id = sample_biomaterial_id) %>%
   readr::write_tsv(opt$output_metadata)
