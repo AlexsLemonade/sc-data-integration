@@ -7,3 +7,5 @@ data/
 # ignore gtf files 
 *.gtf*
 
+# ignore results files
+results/
