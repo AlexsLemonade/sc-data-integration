@@ -1,12 +1,13 @@
-# Script used to convert HCA data from loom format to SCE objects
+# Script used to obtain SCE objects
 
-# This script reads in a metadata file containing the desired libraries to convert 
-# from loom format to SCE objects as RDS files. If the RDS files already exist 
-# for the desired libraries, they are copied from an S3 bucket to a specified local 
+# This script reads in a metadata file containing the desired libraries to obtain 
+# SCE objects. If the RDS files already exist for the desired libraries on S3, 
+# they are copied from an S3 bucket to a specified local 
 # data directory. For libraries that do not have corresponding SCE objects as 
 # RDS files, the loom file will be read in and converted to an SCE object before 
 # saving the RDS file. If the loom file is not present locally, the file will be 
 # grabbed from the S3 bucket. All SCE objects will then be synced back to S3. 
+# An updated metadata file will be returned with the SCE file information.
 
 # Option descriptions: 
 # 
@@ -57,7 +58,7 @@ option_list <- list(
   make_option(
     opt_str = c("--sce_output_dir"),
     type = "character",
-    default = file.path(project_dir, "data", "human_cell_atlas", "sce"),
+    default = file.path(project_root, "data", "human_cell_atlas", "sce"),
     help = "path to folder where all output sce objects should be stored"
   ),
   make_option(
@@ -218,18 +219,24 @@ if(length(missing_sce_files) != 0){
   # if the loom file isn't there, grab it from AWS before converting
   
   # list of all loom files that correspond to missing sce files
+  # obtain the path relative to the loom directory
   loom_missing_sce <- process_metadata_df %>%
     dplyr::filter(local_sce_path %in% missing_sce_files) %>%
-    dplyr::pull(loom_filename)
+    dplyr::mutate(missing_filepath = file.path(tissue_group,
+                                               project_name,
+                                               bundle_uuid,
+                                               loom_filename)) %>%
+    dplyr::pull(missing_filepath)
   
-  # construct full loom path 
-  loom_file_paths <- Sys.glob(file.path(opt$loom_dir, "*", "*", "*", loom_missing_sce))
-  
-  # if any loom files don't exist for missing SCE's then grab those from AWS S3
-  if(!all(file.exists(loom_file_paths))){
+  # construct full paths for searching if loom file exists 
+  full_missing_loom_path <- file.path(opt$loom_dir,
+                                      loom_missing_sce)
     
-    # get list of folders inside s3 directory to include in copying
-    aws_local_copy <- loom_missing_sce[which(!file.exists(loom_file_paths))]
+  # if any loom files don't exist for missing SCE's then grab those from AWS S3
+  if(!all(file.exists(full_missing_loom_path))){
+    
+    # get list of loom files inside s3 directory to include in copying
+    aws_local_copy <- loom_missing_sce[which(!file.exists(full_missing_loom_path))]
     aws_includes <- paste("--include '", "*", aws_local_copy, "'", sep = '', collapse = ' ')
     
     # build one sync call to copy all missing loom files 

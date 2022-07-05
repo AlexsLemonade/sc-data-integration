@@ -2,8 +2,8 @@
 
 # This script reads in a metadata file containing the desired libraries that have 
 # SCE objects to be pre-processed using scpca-downstream-analyses. Before running
-# this script, SCE objects either must be converted from loom files using 
-# `scripts/00-convert-loom.R` or synced from S3. Using the provided library IDs, 
+# this script, SCE objects can be obtained by running `scripts/00-obtain-sce.R` to
+# convert loom files to SCE or syncing SCE objects from S3. Using the provided library IDs, 
 # the SCE files are identified and if any library ID does not have a corresponding 
 # SCE file an error is thrown, printing out those with missing SCE files.
 # If all library ID's have SCE files, then filtering is performed 
@@ -23,6 +23,8 @@
 # --output_metadata: Path to write metadata file to be used to run 
 #   scpca-downstream-analyses
 # --seed Seed to use for reproducibility
+# --repeat_filtering Indicates whether or not to repeat filtering steps even if 
+#   filtered SCE objects already exist
 
 # load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
@@ -66,7 +68,7 @@ option_list <- list(
   ),
   make_option(
     opt_str = c("--repeat_filtering"),
-    type = "store_true",
+    action = "store_true",
     help = "Indicates whether or not to repeat filtering steps even if 
       filtered SCE objects already exist"
   )
@@ -102,7 +104,8 @@ if(any(!file_check)){
   stop(
     glue::glue(
       "Missing unfiltered SCE file for {missing_libraries}.
-      Make sure that you have synced the S3 file from S3 or run `scripts/00-convert-loom.R` to
+      Make sure that you have run `scripts/00-obtain-sce.R` 
+      to make a local copy of SCE objects present on S3 or
       convert the loom file to SCE if necessary."
     )
   )
@@ -154,15 +157,20 @@ filtered_sce_files <- file.path(opt$filtered_sce_dir,
 
 # check that filtered file exists and only filter if files don't exist
 # or the --repeat_mapping option has been used
-if(all(file.exists(filtered_sce_files)) || 
-   is.null(opt$repeat_filtering)){
+if(is.null(opt$repeat_filtering) && all(file.exists(filtered_sce_files))) {
   warning("Filtered SCE objects already exist. 
           To overwrite use the `--repeat_filtering` option.")
 } else {
+  # if repeat filtering was used but all the files exist warn that files will be overwritten
+  if(!is.null(opt$repeat_filtering) && all(file.exists(filtered_sce_files))) {
+    warning("Filtered `SingleCellExperiment` objects are being regenerated.
+            The `--repeat_filtering` flag was used so files will be overwritten.")
+  }
   # apply function to read in unfiltered sce, filter sce, and save filtered sce
-  filterd_sce_list <- purrr::map2(.x = unfiltered_sce_files,
-                                  .y = filtered_sce_files,
-                                  read_and_filter_sce) 
+  purrr::walk2(.x = unfiltered_sce_files,
+               .y = filtered_sce_files,
+               read_and_filter_sce) 
+
 }
 
 # Update metadata --------------------------------------------------------------
@@ -188,9 +196,7 @@ downstream_df <- data.frame(filepath = filtered_sce_paths) %>%
   # add column for filtering method
   dplyr::mutate(filtering_method = "miQC") %>%
   # select only the columns needed for input to downstream analyses
-  dplyr::select(sample_biomaterial_id, library_id, filtering_method, filepath) %>%
-  # downstream analyses requires sample_id as column name 
-  dplyr::rename(sample_id = sample_biomaterial_id) %>%
+  dplyr::select(sample_id = sample_biomaterial_id, library_id, filtering_method, filepath) %>%
   readr::write_tsv(opt$output_metadata)
 
 # save updated library metadata with addition of filtered sce filename
