@@ -12,6 +12,7 @@ library(scran) # Needed for assays() function
 #' @param num_genes Optional number of high-variance genes to identify for use in integration. Default: 5000. This argument is *ignored* if gene_list is not NULL and/or if use_all_genes is TRUE 
 #' @param fastmnn_k Number of nearest-neighbors to consider when identifying mutual nearest neighbors. Default: 20 (same default as in batchelor::fastMNN())
 #' @param fastmnn_d Number of PCs to use when performing PCA. Default: 50 (same default as in batchelor::fastMNN())
+#' @param seed Random seed to set for integration
 #' @param ... Additional arguments to pass into batchelor::fastMNN()
 #'
 #' @return List containing the integrated SCE object (`sce_integrated`) and the unintegrated SCE objects (`sce1` and `sce2`)
@@ -23,7 +24,10 @@ integrate_fastMNN <- function(sce1, sce2,
                               use_all_genes = FALSE,
                               fastmnn_k = 20, 
                               fastmnn_d = 50, 
+                              seed = 2022,
                               ...) {
+  
+  set.seed(2022)
   
   # Add logcounts assay to SCE objects if it does not exist
   if (!("logcounts" %in% names(assays(sce1)))) {
