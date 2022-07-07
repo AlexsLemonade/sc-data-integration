@@ -7,7 +7,7 @@ set -euo pipefail
 # scpca-downstream-analyses
 
 # **Note: Before running this, the original loom files must be converted to SCE 
-# objects by running `00-convert-loom.R`.
+# objects by running `00-obtain-sce.R`.
 
 # Usage, note that the --downstream_repo option is required as there is no default set
 # bash run-downstream-analyses.sh \
@@ -39,7 +39,7 @@ cd "$script_directory" || exit
 # grab full path to project root
 project_root=$(git rev-parse --show-toplevel)
 
-processed_library_df=$project_root/sample-info/hca-processed-libraries.tsv
+processed_library_df=${project_root}/sample-info/hca-processed-libraries.tsv
 metadata_file=$project_root/sample-info/hca-library-metadata.tsv
 unfiltered_sce_dir=$project_root/data/human_cell_atlas/sce
 filtered_sce_dir=$project_root/results/human_cell_atlas/filtered_sce
