@@ -23,9 +23,10 @@ set -euo pipefail
 # --results_dir: Path to save results from running scpca-downstream-analyses 
 # --mito_file: Path to file with list of mitochondrial genes to use. 
 #   If not specified, the mitochondrial file for Ensembl-104 present in 
-#   scpca-downstream-analyses will be used.
+#   scpca-downstream-analyses will be used
 # --s3_bucket: S3 bucket to sync output from scpca-downstream-analyses. 
-#   Syncing will only be performed if a bucket is provided. 
+#   Syncing will only be performed if a bucket is provided
+# --cores: Default number of CPU cores to use for snakemake
 
 ###############################################################################
 
@@ -40,13 +41,14 @@ cd "$script_directory" || exit
 project_root=$(git rev-parse --show-toplevel)
 
 processed_library_df=${project_root}/sample-info/hca-processed-libraries.tsv
-metadata_file=$project_root/sample-info/hca-library-metadata.tsv
-unfiltered_sce_dir=$project_root/data/human_cell_atlas/sce
-filtered_sce_dir=$project_root/results/human_cell_atlas/filtered_sce
-downstream_metadata_file=$project_root/sample-info/hca-downstream-metadata.tsv
-results_dir=$project_root/results/human_cell_atlas/scpca-downstream-analyses
-mito_file=$project_root/reference-files/gencode.v27.mitogenes.txt
+metadata_file=${project_root}/sample-info/hca-library-metadata.tsv
+unfiltered_sce_dir=${project_root}/data/human_cell_atlas/sce
+filtered_sce_dir=${project_root}/results/human_cell_atlas/filtered_sce
+downstream_metadata_file=${project_root}/sample-info/hca-downstream-metadata.tsv
+results_dir=${project_root}/results/human_cell_atlas/scpca-downstream-analyses
+mito_file=${project_root}/reference-files/gencode.v27.mitogenes.txt
 s3_bucket=""
+cores=2
 
 # grab variables from command line
 while [ $# -gt 0 ]; do
@@ -58,7 +60,7 @@ while [ $# -gt 0 ]; do
 done
 
 # run Rscript to generate metadata file 
-Rscript --vanilla 01-preprocess-sce.R \
+Rscript --vanilla ../utils/preprocess-sce.R \
   --library_file $processed_library_df \
   --unfiltered_sce_dir $unfiltered_sce_dir \
   --filtered_sce_dir $filtered_sce_dir \
@@ -77,7 +79,7 @@ cd $project_root
 # activate snakemake environment before running snakemake 
 source $CONDA_PREFIX/etc/profile.d/conda.sh
 conda activate snakemake
-snakemake --cores 2 \
+snakemake --cores $cores \
   -s $downstream_repo/Snakefile \
   --config results_dir=$results_dir \
   project_metadata=$downstream_metadata_file \
