@@ -24,6 +24,8 @@ set -euo pipefail
 # --mito_file: Path to file with list of mitochondrial genes to use. 
 #   If not specified, the mitochondrial file for Ensembl-104 present in 
 #   scpca-downstream-analyses will be used.
+# --s3_bucket: S3 bucket to sync output from scpca-downstream-analyses. 
+#   Syncing will only be performed if a bucket is provided. 
 
 ###############################################################################
 
@@ -44,6 +46,7 @@ filtered_sce_dir=$project_root/results/human_cell_atlas/filtered_sce
 downstream_metadata_file=$project_root/sample-info/hca-downstream-metadata.tsv
 results_dir=$project_root/results/human_cell_atlas/scpca-downstream-analyses
 mito_file=$project_root/reference-files/gencode.v27.mitogenes.txt
+s3_bucket=""
 
 # grab variables from command line
 while [ $# -gt 0 ]; do
@@ -79,4 +82,8 @@ snakemake --cores 2 \
   --config results_dir=$results_dir \
   project_metadata=$downstream_metadata_file \
   mito_file=$mito_file
-  
+
+# sync output from snakefile to aws 
+if [[ -n $s3_bucket ]]; then
+  aws s3 sync $results_dir $s3_bucket
+fi 
