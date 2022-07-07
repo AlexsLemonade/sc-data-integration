@@ -95,14 +95,14 @@ If any libraries listed in `hca-processed-libraries.tsv` do not have correspondi
 
 The `human_cell_atlas_results/scpca-downstream-analyses` folder contains all processed `SingleCellExperiment` objects and the output from [running the core workflow in `scpca-downstream-analyses`](https://github.com/AlexsLemonade/scpca-downstream-analyses/blob/main/Snakefile). 
 Within this folder each library that has been processed has its own folder that contains both the processed `SingleCellExperiment` object and an html summary report. 
-The `SingleCellExperiment` objects in this folder have both been filtered to remove empty droplets and run through `scpca-downstream-analyses` using the `scripts/run-downstream-analyses.sh` script. 
+The `SingleCellExperiment` objects in this folder have both been filtered to remove empty droplets and run through `scpca-downstream-analyses` using the `scripts/01-run-downstream-analyses.sh` script. 
 This means they contain a `logcounts` assay with the normalized counts matrix, both PCA and UMAP embeddings, and clustering assignments that can be found in the `louvain_10` column of the `colData`. 
 The `SingleCellExperiment` objects present in `human_cell_atlas_results/scpca-downstream-analyses` should be the objects used as input for integration methods.
 
 These files were produced and synced to S3 using the following script: 
 
 ```
-bash scripts/run-downstream-analyses.sh \
+bash scripts/01-run-downstream-analyses.sh \
   --downstream_repo <full path to scpca-downstream-analyses-repo> \
   --s3_bucket "s3://sc-data-integration/human_cell_atlas_results/scpca-downstream-analyses"
 ```
