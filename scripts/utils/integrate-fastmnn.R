@@ -36,7 +36,9 @@ integrate_fastMNN <- function(sce1, sce2,
   if (!("logcounts" %in% names(assays(sce2)))) {
     sce2 <- scuttle::logNormCounts(sce2)
   }
-  
+  common_genes <- intersect(rownames(sce1), rownames(sce2))
+  common_sce1 <- sce1[common_genes,]
+  common_sce2 <- sce2[common_genes,]
   # Set up gene list:
   #   If gene_list is not NULL, the user-given vector will be used (no checking is performed here!)
   #   If gene_list is NULL....
