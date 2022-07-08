@@ -27,7 +27,7 @@ integrate_fastMNN <- function(sce1, sce2,
                               seed = 2022,
                               ...) {
   
-  set.seed(2022)
+  set.seed(seed)
   
   # Add logcounts assay to SCE objects if it does not exist
   if (!("logcounts" %in% names(assays(sce1)))) {
