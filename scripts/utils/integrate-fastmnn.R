@@ -47,14 +47,16 @@ integrate_fastMNN <- function(sce1, sce2,
   
   # If no genes provided *and* we don't want to use all genes, 
   #  allow scran to identify high-variance genes to use based on provided `num_genes`
-  if (is.null(gene_list) & !(use_all_genes)) {
+  if (!(use_all_genes)) {
     # Use vignette procedure to pull out high-variance genes 
     #  with user-given num_genes, or a default of 5000
-    dec1 <- scran::modelGeneVar(sce1)
-    dec2 <- scran::modelGeneVar(sce2)
-    combined.dec <- scran::combineVar(dec1, dec2)
-    gene_list <- scran::getTopHVGs(combined.dec, n = num_genes)   
-  } 
+    gene_var_1 <- scran::modelGeneVar(common_sce1)
+    gene_var_2 <- scran::modelGeneVar(common_sce2)
+    combined_gene_var <- scran::combineVar(gene_var_1, gene_var_2)
+    gene_list <- scran::getTopHVGs(combined_gene_var, n = num_genes)   
+  } else {
+    gene_list <- common_genes
+  }
   
   # Perform integration with fastMNN
   integrated <- batchelor::fastMNN(sce1, sce2, 
