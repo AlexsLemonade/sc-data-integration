@@ -59,7 +59,7 @@ integrate_fastMNN <- function(sce1, sce2,
   }
   
   # Perform integration with fastMNN
-  integrated <- batchelor::fastMNN(sce1, sce2, 
+  integrated <- batchelor::fastMNN(common_sce1, common_sce2, 
                                    # Which genes to use for integration (NULL uses all genes)
                                    subset.row = gene_list,
                                    # How many nearest neighbors?
