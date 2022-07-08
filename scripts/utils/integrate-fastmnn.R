@@ -1,4 +1,4 @@
-library(scran) # Needed for assays() function
+library(SingleCellExperiment) # Needed for assays() function
 
 
 
