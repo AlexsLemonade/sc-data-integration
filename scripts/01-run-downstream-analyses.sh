@@ -47,6 +47,7 @@ filtered_sce_dir=${project_root}/results/human_cell_atlas/filtered_sce
 downstream_metadata_file=${project_root}/sample-info/hca-downstream-metadata.tsv
 results_dir=${project_root}/results/human_cell_atlas/scpca-downstream-analyses
 mito_file=${project_root}/reference-files/gencode.v27.mitogenes.txt
+repeat_filtering="no"
 s3_bucket=""
 cores=$cores
 
@@ -59,12 +60,20 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+# create flag for repeat_filtering
+if [ $repeat_filtering == "yes" ]; then
+  repeat_filtering_flag = "--repeat_filtering"
+else
+  repeat_filtering_flag=""
+fi
+
 # run Rscript to generate metadata file 
-Rscript --vanilla ../utils/preprocess-sce.R \
+Rscript --vanilla utils/preprocess-sce.R \
   --library_file $processed_library_df \
   --unfiltered_sce_dir $unfiltered_sce_dir \
   --filtered_sce_dir $filtered_sce_dir \
-  --output_metadata $downstream_metadata_file
+  --output_metadata $downstream_metadata_file \
+  $repeat_filtering_flag
 
 # check for Snakefile in downstream repo 
 if [ ! -f $downstream_repo/Snakefile ]; then
