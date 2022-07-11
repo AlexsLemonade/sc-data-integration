@@ -2,6 +2,17 @@
 
 This folder holds the scripts that have been used for data integration and processing of single-cell libraries and datasets.
 
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Obtaining SingleCellExperiment objects](#obtaining-singlecellexperiment-objects)
+- [Running HCA test datasets through scpca-downstream-analyses](#running-hca-test-datasets-through-scpca-downstream-analyses)
+  - [Generating the mitochondrial gene list](#generating-the-mitochondrial-gene-list)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
+
 ## Obtaining SingleCellExperiment objects 
 
 The `00-obtain-sce.R` script is specifically for working with the test datasets from the [Human Cell Atlas Data portal](https://data.humancellatlas.org/). 
