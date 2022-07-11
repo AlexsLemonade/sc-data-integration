@@ -64,7 +64,7 @@ Results will be stored in `results/human_cell_atlas/scpca-downstream-analyses`.
 Running the script with default settings will produce both the empty drops filtered output and the output from `scpca-downstream-analyses`.
 
 To run `01-run-downstream-analyses.sh`, you will need to first clone the [`scpca-downstream-repo`](https://github.com/AlexsLemonade/scpca-downstream-analyses) and provide the full path to the location of the repo on your local computer.
-You will also need to provide the mitochondrial gene list to use for calculating the mitochondrial reads present in each cell. 
+This script requires a mitochondrial gene list to use for calculating the mitochondrial reads present in each cell. 
 For datasets downloaded from the Human Cell Atlas Data portal, the mitochondrial gene list has already been created using `generate-mito-reference.R` (see [instructions below](#generating-the-mitochondrial-gene-list)) and can be found in [`reference-files/gencode.v27.mitogenes.txt`](../reference-files/gencode.v27.mitogenes.txt).
 This file is the default file that is used in running `01-run-downstream-analyses.sh`. 
 **Note:** You must have available in your path R (v4.1.2),  [Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html#installation-via-conda-mamba) and [`pandoc`](https://pandoc.org/installing.html#macos). 
