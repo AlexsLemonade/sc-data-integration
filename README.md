@@ -101,7 +101,7 @@ The `SingleCellExperiment` objects present in `human_cell_atlas_results/scpca-do
 
 These files were produced and synced to S3 using the following script: 
 
-**Note:** To run the below script, you must be inside a conda environment with installation of [Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html#installation-via-conda-mamba) and [`pandoc`](https://pandoc.org/installing.html#macos). 
+**Note:** To run the below script, you must have available in your path R (v4.1.2),  [Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html#installation-via-conda-mamba) and [`pandoc`](https://pandoc.org/installing.html#macos). 
 `pandoc` must be version 1.12.3 or higher, which can be checked using the `pandoc -v` command.
 
 ```
