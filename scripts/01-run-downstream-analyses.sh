@@ -51,7 +51,7 @@ results_dir=${project_root}/results/human_cell_atlas/scpca-downstream-analyses
 mito_file=${project_root}/reference-files/gencode.v27.mitogenes.txt
 repeat_filtering="no"
 s3_bucket=""
-cores=$cores
+cores=2
 
 # grab variables from command line
 while [ $# -gt 0 ]; do
@@ -78,7 +78,7 @@ Rscript --vanilla utils/preprocess-sce.R \
   $repeat_filtering_flag
 
 # check for Snakefile in downstream repo 
-if [ ! -f $downstream_repo/Snakefile ]; then
+if [[ ! -f $downstream_repo/Snakefile ]]; then
   echo "The path provided for `--downstream_repo` is missing a Snakefile. 
         Double check you have provided the correct path." 
   exit 1
