@@ -4,12 +4,12 @@ This folder holds the scripts that have been used for data integration and proce
 
 ## Obtaining SingleCellExperiment objects 
 
-The `00-obtain-sce.R` script is specifically for working with the test datasets from the Human Cell Atlas Data portal. 
+The `00-obtain-sce.R` script is specifically for working with the test datasets from the [Human Cell Atlas Data portal](https://data.humancellatlas.org/). 
 Data downloaded directly from the portal are available as `SingleCellLoomExperiment` objects as a loom file, but for all downstream processing, `SingleCellExperiment` objects as RDS files will be required as input. 
 If the `SingleCellExperiment` objects have already been created by another Data Lab staff member, this script can be used to sync `SingleCellExperiment` objects from the S3 bucket to a local environment.
 If working with libraries for the first time that don't yet have `SingleCellExperiment` objects that exist on S3, they will be created by converting the `loom` files and then syncing the `SingleCellExperiment` object to S3. 
 
-All libraries that are being used for testing should be listed in `sample-info/hca-processed-libraries.tsv`. 
+All libraries that are being used for testing should be listed in [`sample-info/hca-processed-libraries.tsv`](../sample-info/hca-processed-libraries.tsv). 
 Before starting analysis, to copy the `SingleCellExperiment` objects for libraries listed in `scripts/hca-processed-libraries.tsv` locally, use the `--copy_s3` flag. 
 This will copy the `SingleCellExperiment` objects to the `data/human_cell_atlas/sce` folder where libraries will be nested by tissue group and project name. 
 
@@ -18,6 +18,7 @@ Rscript 00-obtain-sce.R --copy_s3
 ```
 
 To convert `loom` files to `SingleCellExperiment` objects as RDS files for the first time run the script with the default settings. 
+This will only perform the conversion for new libraries added to `sample-info/hca-processed-libraries.tsv` that have not been converted previously and are not present on S3.
 
 ```R
 Rscript 00-obtain-sce.R
@@ -50,7 +51,10 @@ This produces a filtered, normalized `SingleCellExperiment` object and a summary
 Results will be stored in `results/human_cell_atlas/scpca-downstream-analyses`.
 
 Running the script with default settings will produce both the empty drops filtered output and the output from `scpca-downstream-analyses`.
+
 You will need to first clone the [`scpca-downstream-repo`](https://github.com/AlexsLemonade/scpca-downstream-analyses) and provide the full path to the location of the repo on your local computer.
+**Note:** You must have available in your path R (v4.1.2),  [Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html#installation-via-conda-mamba) and [`pandoc`](https://pandoc.org/installing.html#macos). 
+`pandoc` must be version 1.12.3 or higher, which can be checked using the `pandoc -v` command.
 
 ```R
 bash 01-run-downstream-analyses.sh --downstream_repo <path to location of scpca-downstream-repo>
@@ -63,3 +67,6 @@ bash 01-run-downstream-analyses.sh \
   --downstream_repo <path to location of scpca-downstream-repo> \
   --s3_bucket "s3://sc-data-integration/human_cell_atlas_results"
 ```
+
+By default, filtering of empty droplets will not be repeated if filtered `SingleCellExperiment` objects are already present locally. 
+To overwrite existing filtered files, use `--repeat filtering yes` at the command line. 
