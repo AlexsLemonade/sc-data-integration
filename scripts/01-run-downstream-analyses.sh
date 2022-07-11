@@ -85,9 +85,7 @@ fi
 # move to the project root since the paths in the metadata file are relative to the project root
 cd $project_root
 
-# activate snakemake environment before running snakemake 
-source $CONDA_PREFIX/etc/profile.d/conda.sh
-conda activate snakemake
+# run snakefile from scpca-downstream-analyses
 snakemake --cores $cores \
   -s $downstream_repo/Snakefile \
   --config results_dir=$results_dir \
