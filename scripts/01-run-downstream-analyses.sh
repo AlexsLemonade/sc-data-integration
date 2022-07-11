@@ -48,7 +48,7 @@ downstream_metadata_file=${project_root}/sample-info/hca-downstream-metadata.tsv
 results_dir=${project_root}/results/human_cell_atlas/scpca-downstream-analyses
 mito_file=${project_root}/reference-files/gencode.v27.mitogenes.txt
 s3_bucket=""
-cores=2
+cores=$cores
 
 # grab variables from command line
 while [ $# -gt 0 ]; do
