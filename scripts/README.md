@@ -16,42 +16,42 @@ This folder holds the scripts that have been used for data integration and proce
 ## Obtaining SingleCellExperiment objects 
 
 The `00-obtain-sce.R` script is specifically for working with the test datasets from the [Human Cell Atlas Data portal](https://data.humancellatlas.org/). 
-Data downloaded directly from the portal are available as `SingleCellLoomExperiment` objects as a loom file, but for all downstream processing, `SingleCellExperiment` objects as RDS files will be required as input. 
+Data downloaded directly from the portal are available as `SingleCellLoomExperiment` objects as `loom` files, but for all downstream processing, `SingleCellExperiment` objects as RDS files will be required as input. 
 If the `SingleCellExperiment` objects have already been created by another Data Lab staff member, this script can be used to sync `SingleCellExperiment` objects from the S3 bucket to a local environment.
-If working with libraries for the first time that don't yet have `SingleCellExperiment` objects that exist on S3, they will be created by converting the `loom` files and then syncing the `SingleCellExperiment` object to S3. 
+If working with libraries for the first time that don't yet have `SingleCellExperiment` objects that exist on S3, they will be created by converting the `loom` files and then syncing the `SingleCellExperiment` objects to S3. 
 
 All libraries that are being used for testing should be listed in [`sample-info/hca-processed-libraries.tsv`](../sample-info/hca-processed-libraries.tsv). 
-Before starting analysis, to copy the `SingleCellExperiment` objects for libraries listed in `scripts/hca-processed-libraries.tsv` locally, use the `--copy_s3` flag. 
+Before starting analysis, copy the `SingleCellExperiment` objects for libraries listed in `scripts/hca-processed-libraries.tsv` locally using the `--copy_s3` flag. 
 This will copy the `SingleCellExperiment` objects to the `data/human_cell_atlas/sce` folder where libraries will be nested by tissue group and project name. 
 
 ```R
 Rscript 00-obtain-sce.R --copy_s3
 ```
 
-To convert `loom` files to `SingleCellExperiment` objects as RDS files for the first time run the script with the default settings. 
+To convert `loom` files to `SingleCellExperiment` objects as RDS files for the first time, run the script with the default settings. 
 This will only perform the conversion for new libraries added to `sample-info/hca-processed-libraries.tsv` that have not been converted previously and are not present on S3.
 
 ```R
 Rscript 00-obtain-sce.R
 ```
 
-If changes have been made to the way files are converted and you would like to re-convert the `loom` files, use the `--overwrite` option. 
+If changes have been made to the way files are converted and you would like to re-convert the `loom` files, use the `--overwrite` flag. 
 
 ```R
-Rscript --obtain-sce.R --overwrite
+Rscript 00-obtain-sce.R --overwrite
 ```
 
 ## Running HCA test datasets through scpca-downstream-analyses 
 
 Before libraries can be integrated, data downloaded from the Human Cell Atlas Data portal will need to be filtered to remove empty droplets and low quality cells and undergo normalization. 
-The `01-run-downstream-analyses.sh` script is a bash script that should be used to both remove empty drops and run the [core workflow as part of `scpca-downstream-analyses`](https://github.com/AlexsLemonade/scpca-downstream-analyses#the-core-downstream-analyses-workflow) for each library listed in `sample-info/hca-processed-libraries.tsv`. 
+The `01-run-downstream-analyses.sh` script is a bash script that should be used to both remove empty drops and run the [core workflow from `scpca-downstream-analyses`](https://github.com/AlexsLemonade/scpca-downstream-analyses#the-core-downstream-analyses-workflow) for each library listed in `sample-info/hca-processed-libraries.tsv`. 
 
 The bash script first runs the Rscript `utils/preprocess-sce.R`, which will create a filtered `SingleCellExperiment` object for each library. 
 The filtered results can be found in `results/human_cell_atlas/filtered_sce`. 
-This preprocessing script also creates a metadata file, `sample-info/hca-downstream-metadata.tsv`, that is required to run `scpca-downstream-analyses` containing the following columns: 
+This preprocessing script also creates a metadata file, `sample-info/hca-downstream-metadata.tsv`, that is required to run `scpca-downstream-analyses`, and contains the following columns: 
 
-- `sample ID`: Equivalent to the `sample_biomaterial_id`
-- `library ID`: Equivalent to the `library_biomaterial_id`
+- `sample_id`: Equivalent to the `sample_biomaterial_id`
+- `library_id`: Equivalent to the `library_biomaterial_id`
 - `filtering_method`: What type of filtering to use to remove low quality cells. 
 This is set to use [`miQC`](https://rdrr.io/github/greenelab/miQC/man/filterCells.html), but if `miQC` fails, a set of manual filtering thresholds will be used instead.
 - `filepath`: The full path to the filtered `SingleCellExperiment` object as an RDS file.
@@ -63,7 +63,7 @@ Results will be stored in `results/human_cell_atlas/scpca-downstream-analyses`.
 
 Running the script with default settings will produce both the empty drops filtered output and the output from `scpca-downstream-analyses`.
 
-You will need to first clone the [`scpca-downstream-repo`](https://github.com/AlexsLemonade/scpca-downstream-analyses) and provide the full path to the location of the repo on your local computer.
+To run `01-run-downstream-analyses.sh`, you will need to first clone the [`scpca-downstream-repo`](https://github.com/AlexsLemonade/scpca-downstream-analyses) and provide the full path to the location of the repo on your local computer.
 You will also need to provide the mitochondrial gene list to use for calculating the mitochondrial reads present in each cell. 
 For datasets downloaded from the Human Cell Atlas Data portal, the mitochondrial gene list has already been created using `generate-mito-reference.R` (see [instructions below](#generating-the-mitochondrial-gene-list)) and can be found in [`reference-files/gencode.v27.mitogenes.txt`](../reference-files/gencode.v27.mitogenes.txt).
 This file is the default file that is used in running `01-run-downstream-analyses.sh`. 
@@ -74,7 +74,7 @@ This file is the default file that is used in running `01-run-downstream-analyse
 bash 01-run-downstream-analyses.sh --downstream_repo <path to location of scpca-downstream-repo>
 ```
 
-If desired, an S3 bucket can be provided to ensure that the results from `scpca-downstream-analyses` are copied to S3 for other Data Lab staff members to use. 
+If desired, an S3 bucket link can be provided to ensure that the results from `scpca-downstream-analyses` are copied to S3 for other Data Lab staff members to use. 
 
 ```R 
 bash 01-run-downstream-analyses.sh \
@@ -83,7 +83,7 @@ bash 01-run-downstream-analyses.sh \
 ```
 
 By default, filtering of empty droplets will not be repeated if filtered `SingleCellExperiment` objects are already present locally. 
-To overwrite existing filtered files, use `--repeat filtering yes` at the command line. 
+To overwrite existing filtered files, use `--repeat_filtering yes` at the command line. 
 
 
 ### Generating the mitochondrial gene list 
