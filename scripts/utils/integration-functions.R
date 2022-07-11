@@ -53,7 +53,7 @@ combine_sce_objects <- function(sce_list = list()) {
   
   # Now, loop over SCEs to subset each to the array of `shared_genes`
   #  At the same time, we also update the rowData column names to be unique across SCEs
-  #  We also update the colData rownames to be be unique, on the off-chance we have repeated barcodes
+  #  COMMENTED OUT: We also update the colData rownames to be be unique, on the off-chance we have repeated barcodes
   for (i in 1:length(sce_list)){
     
     # Subset to shared genes
@@ -63,7 +63,7 @@ combine_sce_objects <- function(sce_list = list()) {
     colnames(rowData(sce_list[[i]])) <- paste0(colnames(rowData(sce_list[[i]])), "-", sample_ids[i])
     
     # Add relevant sample IDs to colData row names
-    rownames(colData(sce_list[[i]])) <- paste0(rownames(colData(sce_list[[i]])), "-", sample_ids[i])
+    #rownames(colData(sce_list[[i]])) <- paste0(rownames(colData(sce_list[[i]])), "-", sample_ids[i])
     
   }
   
