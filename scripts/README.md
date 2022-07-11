@@ -53,6 +53,9 @@ Results will be stored in `results/human_cell_atlas/scpca-downstream-analyses`.
 Running the script with default settings will produce both the empty drops filtered output and the output from `scpca-downstream-analyses`.
 
 You will need to first clone the [`scpca-downstream-repo`](https://github.com/AlexsLemonade/scpca-downstream-analyses) and provide the full path to the location of the repo on your local computer.
+You will also need to provide the mitochondrial gene list to use for calculating the mitochondrial reads present in each cell. 
+For datasets downloaded from the Human Cell Atlas Data portal, the mitochondrial gene list has already been created using `generate-mito-reference.R` (see [instructions below](#generating-the-mitochondrial-gene-list)) and can be found in [`reference-files/gencode.v27.mitogenes.txt`](../reference-files/gencode.v27.mitogenes.txt).
+This file is the default file that is used in running `01-run-downstream-analyses.sh`. 
 **Note:** You must have available in your path R (v4.1.2),  [Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html#installation-via-conda-mamba) and [`pandoc`](https://pandoc.org/installing.html#macos). 
 `pandoc` must be version 1.12.3 or higher, which can be checked using the `pandoc -v` command.
 
@@ -70,3 +73,25 @@ bash 01-run-downstream-analyses.sh \
 
 By default, filtering of empty droplets will not be repeated if filtered `SingleCellExperiment` objects are already present locally. 
 To overwrite existing filtered files, use `--repeat filtering yes` at the command line. 
+
+
+### Generating the mitochondrial gene list 
+
+To process libraries through the core workflow in `scpca-downstream-analyses`, a text file containing a list of mitochondrial genes found in the reference transcriptome used for alignment is required as input. 
+Within this file, each row must contain a unique ensembl gene identifier corresponding to a mitochondrial gene. 
+
+To generate this list for the reference used, use the `generate-mito-reference.R` script. 
+Running the script with the default configuration will re-create the `reference-files/gencode.v27.mitogenes.txt` mitochondrial gene list. 
+
+```R
+Rscript generate-mito-reference.R
+```
+
+To generate a mitochondrial gene list for a different reference, you will need to obtain the unzipped gtf file corresponding to the reference genome or transcriptome of interest. 
+The gtf file should be stored in the `reference-files` directory before running the script.
+
+```R
+Rscript generate-mito-reference.R \
+  --gtf_file <filename for gtf file> \
+  --mito_output <full path to save mitochondrial gene list>
+```
