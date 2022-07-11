@@ -63,8 +63,8 @@ while [ $# -gt 0 ]; do
 done
 
 # create flag for repeat_filtering
-if [ $repeat_filtering == "yes" ]; then
-  repeat_filtering_flag = "--repeat_filtering"
+if [[ $repeat_filtering == "yes" ]]; then
+  repeat_filtering_flag="--repeat_filtering"
 else
   repeat_filtering_flag=""
 fi
