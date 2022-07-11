@@ -24,6 +24,8 @@ set -euo pipefail
 # --mito_file: Path to file with list of mitochondrial genes to use. 
 #   If not specified, the mitochondrial file for Ensembl-104 present in 
 #   scpca-downstream-analyses will be used
+# --repeat_filtering: An option to repeat the filtering of empty droplets if filtering files already exist. 
+#   Default here is not to repeat filtering. To turn on use `--repeat_filtering yes`
 # --s3_bucket: S3 bucket to sync output from scpca-downstream-analyses. 
 #   Syncing will only be performed if a bucket is provided
 # --cores: Default number of CPU cores to use for snakemake
