@@ -24,6 +24,8 @@ set -euo pipefail
 # --mito_file: Path to file with list of mitochondrial genes to use. 
 #   If not specified, the mitochondrial file for Ensembl-104 present in 
 #   scpca-downstream-analyses will be used
+# --repeat_filtering: An option to repeat the filtering of empty droplets if filtering files already exist. 
+#   Default here is not to repeat filtering. To turn on use `--repeat_filtering yes`
 # --s3_bucket: S3 bucket to sync output from scpca-downstream-analyses. 
 #   Syncing will only be performed if a bucket is provided
 # --cores: Default number of CPU cores to use for snakemake
@@ -47,8 +49,9 @@ filtered_sce_dir=${project_root}/results/human_cell_atlas/filtered_sce
 downstream_metadata_file=${project_root}/sample-info/hca-downstream-metadata.tsv
 results_dir=${project_root}/results/human_cell_atlas/scpca-downstream-analyses
 mito_file=${project_root}/reference-files/gencode.v27.mitogenes.txt
+repeat_filtering="no"
 s3_bucket=""
-cores=2
+cores=$cores
 
 # grab variables from command line
 while [ $# -gt 0 ]; do
@@ -59,12 +62,20 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+# create flag for repeat_filtering
+if [ $repeat_filtering == "yes" ]; then
+  repeat_filtering_flag = "--repeat_filtering"
+else
+  repeat_filtering_flag=""
+fi
+
 # run Rscript to generate metadata file 
-Rscript --vanilla ../utils/preprocess-sce.R \
+Rscript --vanilla utils/preprocess-sce.R \
   --library_file $processed_library_df \
   --unfiltered_sce_dir $unfiltered_sce_dir \
   --filtered_sce_dir $filtered_sce_dir \
-  --output_metadata $downstream_metadata_file
+  --output_metadata $downstream_metadata_file \
+  $repeat_filtering_flag
 
 # check for Snakefile in downstream repo 
 if [ ! -f $downstream_repo/Snakefile ]; then
@@ -76,9 +87,7 @@ fi
 # move to the project root since the paths in the metadata file are relative to the project root
 cd $project_root
 
-# activate snakemake environment before running snakemake 
-source $CONDA_PREFIX/etc/profile.d/conda.sh
-conda activate snakemake
+# run snakefile from scpca-downstream-analyses
 snakemake --cores $cores \
   -s $downstream_repo/Snakefile \
   --config results_dir=$results_dir \
