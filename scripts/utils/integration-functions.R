@@ -18,7 +18,7 @@ combine_sce_objects <- function(sce_list = list(),
                                 preserve_rowdata_columns = c("Gene", "ensembl_ids", "gene_names")) {
   
   
-  # Ensure `sce_list` is named (according to library IDs) -----------------------
+  # Ensure `sce_list` is named (according to library IDs) ----------------------
   if (is.null(names(sce_list))) {
     stop("The `sce_list` must be named by the SCE object's library IDs.")
   }
