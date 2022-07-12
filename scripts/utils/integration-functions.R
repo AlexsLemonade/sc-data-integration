@@ -6,7 +6,7 @@ library(magrittr)
 
 #' combine_sce_objects
 #'
-#' @param sce_list Named list of SCE objects to combine, where names are biospecimen IDs. No specific assays or dimReduced are expected.
+#' @param sce_list Named list of SCE objects to combine, where names are library biospecimen IDs. No specific assays or dimReduced are expected.
 #'
 #' @return List with two items: `sce_list_updated`, the updated input list with new rowData column names and new colData row names, subsetted to shared genes as specified, and ii) `combined_sce` the SCE objects combined with `cbind()`
 #'
@@ -22,7 +22,8 @@ combine_sce_objects <- function(sce_list = list()) {
   # Ensure that colnames of colData match across all SCE objects ---------------
   #  which is required for cbind() 
   # Find all the existing column names across SCE objects
-  sce_colnames <- sapply(sce_list, function(x) colnames(colData(x))) %>%
+  sce_colnames <- sce_list %>%
+    purrr::map(~ colnames(colData(.)) %>%
     unname() %>%
     unlist() %>%
     unique()
@@ -38,7 +39,7 @@ combine_sce_objects <- function(sce_list = list()) {
     
   # Check that colData colnames now match by comparing all to the first
   new_sce_colnames <- lapply(sce_list, function(x) colnames(colData(x)))
-  for (i in 1:length(sce_list)) {
+  for (i in 2:length(sce_list)){
     # There should be no difference:
     total_diffs <- length(setdiff(new_sce_colnames[[1]], new_sce_colnames[[i]]))
     if (total_diffs != 0) { 
@@ -49,7 +50,9 @@ combine_sce_objects <- function(sce_list = list()) {
   # Subset SCEs to shared genes and ensure appropriate naming ------------------
   
   # First, obtain intersection among all SCE objects
-  shared_genes <- Reduce(intersect, lapply(sce_list, rownames)) 
+  shared_genes <- sce_list %>%
+    purrr::map(rownames) %>%
+    purrr::reduce(intersect)
   
   # Now, loop over SCEs to subset each to the array of `shared_genes`
   #  At the same time, we also update the rowData column names to be unique across SCEs
@@ -63,7 +66,7 @@ combine_sce_objects <- function(sce_list = list()) {
     colnames(rowData(sce_list[[i]])) <- paste0(colnames(rowData(sce_list[[i]])), "-", sample_ids[i])
     
     # Add relevant sample IDs to colData row names
-    #rownames(colData(sce_list[[i]])) <- paste0(rownames(colData(sce_list[[i]])), "-", sample_ids[i])
+    colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), "-", sample_ids[i])
     
   }
   
@@ -72,11 +75,7 @@ combine_sce_objects <- function(sce_list = list()) {
   
   
   # Return updated sce_list and combined SCE object ----------------------------
-  return(
-    list(
-      sce_list_updated = sce_list,
-      combined_sce = combined_sce
-    )
+  return(combined_sce)
   )
 }
 
