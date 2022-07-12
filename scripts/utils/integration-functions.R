@@ -6,24 +6,32 @@ library(magrittr)
 
 #' combine_sce_objects
 #'
-#' @param sce_list Named list of SCE objects to combine, where names are library biospecimen IDs. No specific assays or dimReduced are expected.
+#' @param sce_list Named list of SCE objects to combine, where names are library 
+#'   biospecimen IDs. No specific assays or dimReduced are expected.
+#' @param preserve_rowdata_columns An array of columns that appear in SCE rowData
+#    which should not be renamed with the given library ID
 #'
-#' @return List with two items: `sce_list_updated`, the updated input list with new rowData column names and new colData row names, subsetted to shared genes as specified, and ii) `combined_sce` the SCE objects combined with `cbind()`
+#' @return The combined SCE object
 #'
 #' @examples
-combine_sce_objects <- function(sce_list = list()) {
+combine_sce_objects <- function(sce_list = list(), 
+                                preserve_rowdata_columns = c("Gene", "ensembl_ids", "gene_names")) {
   
   
-  # Ensure `sce_list` is named (according to sample IDs) -----------------------
+  # Ensure `sce_list` is named (according to library IDs) -----------------------
   if (is.null(names(sce_list))) {
-    stop("The `sce_list` must be named by the SCE object's sample IDs.")
+    stop("The `sce_list` must be named by the SCE object's library IDs.")
+  }
+  # Ensure `sce_list` has >=2 items --------------------------------------------
+  if (length(sce_list) < 2) {
+    stop("The `sce_list` must contain 2 or more SCE objects to combine.")
   }
   
   # Ensure that colnames of colData match across all SCE objects ---------------
-  #  which is required for cbind() 
+  # This is required for cbind() 
   # Find all the existing column names across SCE objects
   sce_colnames <- sce_list %>%
-    purrr::map(~ colnames(colData(.)) %>%
+    purrr::map(~ colnames(colData(.))) %>%
     unname() %>%
     unlist() %>%
     unique()
@@ -36,14 +44,14 @@ combine_sce_objects <- function(sce_list = list()) {
       colData(sce_list[[i]])[,add_col] <- NA
     }
   }
-    
+ 
   # Check that colData colnames now match by comparing all to the first
   new_sce_colnames <- lapply(sce_list, function(x) colnames(colData(x)))
-  for (i in 2:length(sce_list)){
+  for (i in 2:length(sce_list)) {
     # There should be no difference:
     total_diffs <- length(setdiff(new_sce_colnames[[1]], new_sce_colnames[[i]]))
     if (total_diffs != 0) { 
-      stop("Could not force colData column names to match across SCE objects. Cannot `cbind()` SCE objects.")
+      stop("colData column names must match across SCE objects.")
     }
   }
 
@@ -53,30 +61,49 @@ combine_sce_objects <- function(sce_list = list()) {
   shared_genes <- sce_list %>%
     purrr::map(rownames) %>%
     purrr::reduce(intersect)
-  
+
   # Now, loop over SCEs to subset each to the array of `shared_genes`
   #  At the same time, we also update the rowData column names to be unique across SCEs
-  #  COMMENTED OUT: We also update the colData rownames to be be unique, on the off-chance we have repeated barcodes
   for (i in 1:length(sce_list)){
     
     # Subset to shared genes
     sce_list[[i]] <- sce_list[[i]][shared_genes,]
       
     # Add relevant sample IDs to rowData column names
-    colnames(rowData(sce_list[[i]])) <- paste0(colnames(rowData(sce_list[[i]])), "-", sample_ids[i])
+    colnames(rowData(sce_list[[i]])) <- paste0(colnames(rowData(sce_list[[i]])), "-", library_ids[i])
+
+    # But restore those names in `ignore_rowdata_columns`
+    colnames(rowData(sce_list[[i]]))
+    
     
     # Add relevant sample IDs to colData row names
-    colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), "-", sample_ids[i])
+    colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), "-", library_ids[i])
     
   }
+  
   
   # Combine SCE objects with `cbind()` -----------------------------------------
   combined_sce <- do.call(cbind, sce_list)
   
   
-  # Return updated sce_list and combined SCE object ----------------------------
+  # Restore rowData colnames that do contain shared gene info (not stats) ------
+  # In addition, keep only 1 column of these "duplicates"
+  for (restore_colname in preserve_rowdata_columns) {
+    
+    # Determine which columns need to be updated
+    columns <- stringr::str_extract(names(rowData(combined_sce)), 
+                                    paste0("^", restore_colname,"-.+$"))
+    columns <- columns[!is.na(columns)]
+    
+    # Rename the relevant column without the -library_id the first time it appears, 
+    #  and remove the "duplicated" columns entirely
+    names(rowData(combined_sce))[names(rowData(combined_sce)) == columns[1]] <- restore_colname
+    rowData(combined_sce)[columns[-1]] <- NULL
+  }
+  
+
+  # Return combined SCE object ----------------------------
   return(combined_sce)
-  )
 }
 
 
