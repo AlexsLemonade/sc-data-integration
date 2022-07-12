@@ -10,7 +10,7 @@ set -euo pipefail
 # objects by running `00-obtain-sce.R`.
 
 # Usage, note that the --downstream_repo option is required as there is no default set
-# bash run-downstream-analyses.sh \
+# bash 01-run-downstream-analyses.sh \
 #  --downstream_repo "full path to scpca-downstream-analyses repo"
 
 # Other parameters include: 
