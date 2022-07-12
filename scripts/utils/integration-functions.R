@@ -1,7 +1,7 @@
 
 # Load libraries function(s) may need -----------
 library(SingleCellExperiment)
-`%>%` <- dplyr::`%>%`
+library(magrittr)
 
 
 #' combine_sce_objects
