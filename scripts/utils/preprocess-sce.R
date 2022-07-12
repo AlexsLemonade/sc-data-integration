@@ -175,20 +175,11 @@ if(is.null(opt$repeat_filtering) && all(file.exists(filtered_sce_files))) {
 
 # Update metadata --------------------------------------------------------------
 
-# get relative sce file paths by identifying all sce files 
-# with library ID in the sce file name in the provided sce directory 
-# first create a regular expression corresponding to processed library IDs
-sce_file_search <- paste(library_metadata_df$filtered_sce_filename, collapse="|")
-# paths to sce files relative to the root directory
-filtered_sce_paths <- list.files(project_root, 
-                        pattern = sce_file_search, 
-                        recursive = TRUE)
-
 # create search term to grab library IDs from filepaths
 library_search <- paste(library_id, collapse="|")
 
 # construct metadata in the format needed for downstream analyses 
-downstream_df <- data.frame(filepath = filtered_sce_paths) %>%
+downstream_df <- data.frame(filepath = filtered_sce_files) %>%
   # extract library ID from SCE file path 
   dplyr::mutate(library_id = stringr::str_extract(filepath, library_search)) %>%
   # join with metadata to obtain sample ID
