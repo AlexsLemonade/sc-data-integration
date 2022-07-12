@@ -12,7 +12,7 @@ source(
 
 hca_metadata <- readr::read_tsv(file.path("sample-info", "hca-processed-libraries.tsv"))
 sce_dir <- file.path("results", "human_cell_atlas", "scpca-downstream-analyses")
-
+project <- "KidneySingleCellAtlas"
 # Set up filepaths to read in
 for (project in unique(hca_metadata$project_name)) {
   print(project)
