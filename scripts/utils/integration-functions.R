@@ -46,7 +46,8 @@ combine_sce_objects <- function(sce_list = list(),
   }
  
   # Check that colData colnames now match by comparing all to the first
-  new_sce_colnames <- lapply(sce_list, function(x) colnames(colData(x)))
+  new_sce_colnames <- sce_list %>%
+    purrr::map(~ colnames(colData(.))) 
   for (i in 2:length(sce_list)) {
     # There should be no difference:
     total_diffs <- length(setdiff(new_sce_colnames[[1]], new_sce_colnames[[i]]))
@@ -91,14 +92,13 @@ combine_sce_objects <- function(sce_list = list(),
   for (restore_colname in preserve_rowdata_columns) {
     
     # Determine which columns need to be updated
-    columns <- stringr::str_extract(names(rowData(combined_sce)), 
-                                    paste0("^", restore_colname,"-.+$"))
-    columns <- columns[!is.na(columns)]
+    columns <- names(rowData(combined_sce)
+    restore_cols <- which(stringr::str_starts(paste0(columns, "-"), restore_colname))
     
     # Rename the relevant column without the -library_id the first time it appears, 
     #  and remove the "duplicated" columns entirely
-    names(rowData(combined_sce))[names(rowData(combined_sce)) == columns[1]] <- restore_colname
-    rowData(combined_sce)[columns[-1]] <- NULL
+    names(rowData(combined_sce))[restore_cols[1]] <- restore_colname
+    rowData(combined_sce)[restore_cols[-1]] <- NULL
   }
   
 
