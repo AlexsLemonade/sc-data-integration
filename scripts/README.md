@@ -13,7 +13,7 @@ This folder holds the scripts that have been used for data integration and proce
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
 
-## Obtaining SingleCellExperiment objects 
+## Obtaining `SingleCellExperiment` objects 
 
 The `00-obtain-sce.R` script is specifically for working with the test datasets from the [Human Cell Atlas Data portal](https://data.humancellatlas.org/). 
 Data downloaded directly from the portal are available as `SingleCellLoomExperiment` objects as `loom` files, but for all downstream processing, `SingleCellExperiment` objects as RDS files will be required as input. 
@@ -41,12 +41,12 @@ If changes have been made to the way files are converted and you would like to r
 Rscript 00-obtain-sce.R --overwrite
 ```
 
-## Running HCA test datasets through scpca-downstream-analyses 
+## Running HCA test datasets through `scpca-downstream-analyses` 
 
 Before libraries can be integrated, data downloaded from the Human Cell Atlas Data portal will need to be filtered to remove empty droplets and low quality cells and undergo normalization. 
 The `01-run-downstream-analyses.sh` script is a bash script that should be used to both remove empty drops and run the [core workflow from `scpca-downstream-analyses`](https://github.com/AlexsLemonade/scpca-downstream-analyses#the-core-downstream-analyses-workflow) for each library listed in `sample-info/hca-processed-libraries.tsv`. 
 
-The bash script first runs the Rscript `utils/preprocess-sce.R`, which will create a filtered `SingleCellExperiment` object for each library. 
+The bash script first runs the R script `utils/preprocess-sce.R`, which will create a filtered `SingleCellExperiment` object for each library. 
 The filtered results can be found in `results/human_cell_atlas/filtered_sce`. 
 This preprocessing script also creates a metadata file, `sample-info/hca-downstream-metadata.tsv`, that is required to run `scpca-downstream-analyses`, and contains the following columns: 
 
@@ -57,7 +57,7 @@ This is set to use [`miQC`](https://rdrr.io/github/greenelab/miQC/man/filterCell
 - `filepath`: The full path to the filtered `SingleCellExperiment` object as an RDS file.
 This path is specific to your local machine. 
 
-Following creation of the metadata, `scpca-downstream-analyses` is run for each library. 
+Following creation of the metadata, the `scpca-downstream-analyses` workflow is run for each library. 
 This produces a filtered, normalized `SingleCellExperiment` object and a summary html report showing the filtering and clustering results for that library. 
 Results will be stored in `results/human_cell_atlas/scpca-downstream-analyses`.
 
