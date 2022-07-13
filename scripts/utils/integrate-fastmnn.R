@@ -1,17 +1,19 @@
 library(SingleCellExperiment) # Needed for assays() function
 
 
-combined_sce <- readr::read_rds(here::here("combined_sce.RDS"))
-
 #' integrate_fastMNN
 #'
 #' Integrate SCE datasets using fastMNN from the batchelor package
 #' @param combined_sce The combined SCE objects to integrate
-#' @param use_all_genes Logical indicating whether all genes should be used. Default: FALSE.
-#' @param num_genes Optional number of high-variance genes to identify for use in integration. Default: 5000. 
-#'   This argument is *ignored* if gene_list if use_all_genes is TRUE 
-#' @param fastmnn_k Number of nearest-neighbors to consider when identifying mutual nearest neighbors. Default: 20 (same default as in batchelor::fastMNN())
-#' @param fastmnn_d Number of PCs to use when performing PCA. Default: 50 (same default as in batchelor::fastMNN())
+#' @param use_all_genes Logical indicating whether all genes should be used. 
+#'   Default: `FALS`E.
+#' @param num_genes Optional number of high-variance genes to identify for 
+#'   use in integration. Default: 5000. This argument is *ignored* if gene_list
+#'   if use_all_genes is `TRUE`, 
+#' @param fastmnn_k Number of nearest-neighbors to consider when identifying 
+#' mutual nearest neighbors. Default: 20 (same default as in batchelor::fastMNN())
+#' @param fastmnn_d Number of PCs to use when performing PCA. 
+#'   Default: 50 (same default as in batchelor::fastMNN())
 #' @param seed Random seed to set for fastMNN integration
 #' @param ... Additional arguments to pass into `batchelor::fastMNN()`
 #'
@@ -45,14 +47,20 @@ integrate_fastMNN <- function(combined_sce,
   
   # Perform integration with fastMNN
   sce_integrated <- batchelor::fastMNN(combined_sce, 
-                                   # Which genes to use for integration (NULL uses all genes)
-                                   subset.row = gene_list,
-                                   # How many nearest neighbors?
-                                   k = fastmnn_k,
-                                   # How many PCs?
-                                   d = fastmnn_d,
-                                   # Anything else?
-                                   ...)
+                                       # Specify batches
+                                       batch = unique(combined_sce$batch),
+                                       # Which genes to use for integration (NULL uses all genes)
+                                       subset.row = gene_list,
+                                       # How many nearest neighbors?
+                                       k = fastmnn_k,
+                                       # How many PCs?
+                                       d = fastmnn_d,
+                                       # Anything else?
+                                       ...)
+  
+  # Error in h(simpleError(msg, call)) : 
+  #error in evaluating the argument 'seed' in selecting a method for function 'DelayedArray': invalid class “ScaledMatrixSeed” object: 
+  #  length of 'scale' must equal 'ncol(object)'
   
   # Return integrated SCE object
   return(sce_integrated)
