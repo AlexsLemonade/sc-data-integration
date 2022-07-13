@@ -36,7 +36,8 @@ sce_list <- list(sce1, sce2) #, sce3, sce4)
 names(sce_list) <- c(library_ids[1], library_ids[2]) #, library_ids[3],  library_ids[4])
 
 # cbind it up!
-combined_sce <- combine_sce_objects(sce_list)
+combined_sce <- combine_sce_objects(sce_list, 
+                                    c("Gene", "ensembl_ids", "gene_names"))
 
 
 
