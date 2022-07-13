@@ -74,15 +74,16 @@ combine_sce_objects <- function(sce_list = list(),
       
     # Add relevant sample IDs to rowData column names
     colnames(rowData(sce_list[[i]])) <- paste0(colnames(rowData(sce_list[[i]])), "-", library_ids[i])
-
-    # But restore those names in `ignore_rowdata_columns`
-    colnames(rowData(sce_list[[i]]))
-    
     
     # Add relevant sample IDs to colData row names
     colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), "-", library_ids[i])
     
+    # Add colData column to track this batch
+    sce_list[[i]]$batch <- library_ids[i]
   }
+  
+  # Add batch information to colData -------------------------------------------
+  
   
   
   # Combine SCE objects with `cbind()` -----------------------------------------
