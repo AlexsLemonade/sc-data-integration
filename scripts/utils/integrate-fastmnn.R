@@ -1,24 +1,24 @@
 library(SingleCellExperiment) # Needed for assays() function
 
 
+combined_sce <- readr::read_rds(here::here("combined_sce.RDS"))
 
 #' integrate_fastMNN
 #'
 #' Integrate SCE datasets using fastMNN from the batchelor package
 #' @param combined_sce The combined SCE objects to integrate
-#' @param gene_list Optional vector of high-variance genes to integrate on. Default: NULL (all genes will be used)
-#' @param use_all_genes Optional logical indicating whether all genes should be used. Default: FALSE. This argument is 
-#' @param num_genes Optional number of high-variance genes to identify for use in integration. Default: 5000. This argument is *ignored* if gene_list is not NULL and/or if use_all_genes is TRUE 
+#' @param use_all_genes Logical indicating whether all genes should be used. Default: FALSE.
+#' @param num_genes Optional number of high-variance genes to identify for use in integration. Default: 5000. 
+#'   This argument is *ignored* if gene_list if use_all_genes is TRUE 
 #' @param fastmnn_k Number of nearest-neighbors to consider when identifying mutual nearest neighbors. Default: 20 (same default as in batchelor::fastMNN())
 #' @param fastmnn_d Number of PCs to use when performing PCA. Default: 50 (same default as in batchelor::fastMNN())
-#' @param seed Random seed to set for integration
-#' @param ... Additional arguments to pass into batchelor::fastMNN()
+#' @param seed Random seed to set for fastMNN integration
+#' @param ... Additional arguments to pass into `batchelor::fastMNN()`
 #'
 #' @return The integrated SCE object
 #'
 #' @examples
 integrate_fastMNN <- function(combined_sce, 
-                              gene_list = NULL, 
                               num_genes = 5000, 
                               use_all_genes = FALSE,
                               fastmnn_k = 20, 
@@ -28,37 +28,23 @@ integrate_fastMNN <- function(combined_sce,
   
   set.seed(seed)
   
-  # Add logcounts assay to SCE objects if it does not exist
-  if (!("logcounts" %in% names(assays(sce1)))) {
-    sce1 <- scuttle::logNormCounts(sce1)
+  # Throw an error if normalization has not been performed
+  if (!("logcounts" %in% names(assays(combined_sce)))) {
+    stop("The `combined_sce` object is missing a `logcounts` assay which is required for fastMNN integration.")
   }
-  if (!("logcounts" %in% names(assays(sce2)))) {
-    sce2 <- scuttle::logNormCounts(sce2)
-  }
-  common_genes <- intersect(rownames(sce1), rownames(sce2))
-  common_sce1 <- sce1[common_genes,]
-  common_sce2 <- sce2[common_genes,]
+
   # Set up gene list:
-  #   If gene_list is not NULL, the user-given vector will be used (no checking is performed here!)
-  #   If gene_list is NULL....
-  #      And use_all_genes is TRUE, all genes are used
-  #      And use_all_genes is FALSE, `num_genes` high variance genes are used (via scran)
-  
-  # If no genes provided *and* we don't want to use all genes, 
-  #  allow scran to identify high-variance genes to use based on provided `num_genes`
   if (!(use_all_genes)) {
-    # Use vignette procedure to pull out high-variance genes 
-    #  with user-given num_genes, or a default of 5000
-    gene_var_1 <- scran::modelGeneVar(common_sce1)
-    gene_var_2 <- scran::modelGeneVar(common_sce2)
-    combined_gene_var <- scran::combineVar(gene_var_1, gene_var_2)
-    gene_list <- scran::getTopHVGs(combined_gene_var, n = num_genes)   
+    # Determine high-variance genes if we are not using them all
+    gene_var <- scran::modelGeneVar(combined_sce)
+    gene_list <- scran::getTopHVGs(gene_var, n = num_genes)   
   } else {
-    gene_list <- common_genes
+    # Set gene_list to NULL to use all genes, consistent with fastMNN function
+    gene_list <- NULL 
   }
   
   # Perform integration with fastMNN
-  integrated <- batchelor::fastMNN(common_sce1, common_sce2, 
+  sce_integrated <- batchelor::fastMNN(combined_sce, 
                                    # Which genes to use for integration (NULL uses all genes)
                                    subset.row = gene_list,
                                    # How many nearest neighbors?
@@ -67,15 +53,8 @@ integrate_fastMNN <- function(combined_sce,
                                    d = fastmnn_d,
                                    # Anything else?
                                    ...)
-  integrated 
   
-  # Return integrated SCE object as well as 
-  # the non-integrated SCE objects that now have logcounts
-  return( 
-    list(
-      sce_integrated = integrated,
-      sce1 = sce1,
-      sce2 = sce2
-    ))
+  # Return integrated SCE object
+  return(sce_integrated)
   
 }
