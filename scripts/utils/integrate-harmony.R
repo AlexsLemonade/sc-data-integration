@@ -16,9 +16,14 @@ library(SingleCellExperiment)
 #'
 #' @return An integrated SCE object with two additional reducedDim fields: 
 #'   `harmony_pcs` and `harmony_gene_matrix`
-integrate_harmony <- function(combined_sce, groups_to_integrate = c("batch"), ...) {
+#' @examples 
+#' integrate_harmony(combined_sce, c("batch))
+integrate_harmony <- function(combined_sce, groups_to_integrate = c(), ...) {
   
   # Ensure columns given in groups_to_integrate are present in combined_sce ----
+  if (length(groups_to_integrate) == 0) {
+    stop("You must provide an array of groupings to integrate.")
+  }
   if (!(all(groups_to_integrate %in% names(colData(combined_sce))))) {
     stop("The combined_sce object must contain covariate columns in colData.")
   }
