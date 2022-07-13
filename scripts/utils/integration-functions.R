@@ -15,7 +15,7 @@ library(magrittr)
 #'
 #' @examples
 combine_sce_objects <- function(sce_list = list(), 
-                                preserve_rowdata_columns = c("Gene", "ensembl_ids", "gene_names")) {
+                                preserve_rowdata_columns = NULL) {
   
   
   # Ensure `sce_list` is named (according to library IDs) ----------------------
@@ -92,7 +92,7 @@ combine_sce_objects <- function(sce_list = list(),
   for (restore_colname in preserve_rowdata_columns) {
     
     # Determine which columns need to be updated
-    columns <- names(rowData(combined_sce)
+    columns <- names(rowData(combined_sce))
     restore_cols <- which(stringr::str_starts(paste0(columns, "-"), restore_colname))
     
     # Rename the relevant column without the -library_id the first time it appears, 
