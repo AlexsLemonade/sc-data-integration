@@ -91,19 +91,18 @@ combine_sce_objects <- function(sce_list = list(),
   
   # Restore rowData colnames that do contain shared gene info (not stats) ------
   # In addition, keep only 1 column of these "duplicates"
-  if (!(is.null(preserve_rowdata_columns))) {
-    for (restore_colname in preserve_rowdata_columns) {
-      
-      # Determine which columns need to be updated
-      columns <- names(rowData(combined_sce))
-      restore_cols <- which(stringr::str_starts(paste0(columns, "-"), restore_colname))
-      
-      # Rename the relevant column without the -library_id the first time it appears, 
-      #  and remove the "duplicated" columns entirely
-      names(rowData(combined_sce))[restore_cols[1]] <- restore_colname
-      rowData(combined_sce)[restore_cols[-1]] <- NULL
-    }
+  for (restore_colname in preserve_rowdata_columns) {
+    
+    # Determine which columns need to be updated
+    columns <- names(rowData(combined_sce))
+    restore_cols <- which(stringr::str_starts(paste0(columns, "-"), restore_colname))
+    
+    # Rename the relevant column without the -library_id the first time it appears, 
+    #  and remove the "duplicated" columns entirely
+    names(rowData(combined_sce))[restore_cols[1]] <- restore_colname
+    rowData(combined_sce)[restore_cols[-1]] <- NULL
   }
+
   
 
   # Return combined SCE object ----------------------------
