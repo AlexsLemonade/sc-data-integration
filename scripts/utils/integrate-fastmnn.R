@@ -1,20 +1,20 @@
 library(SingleCellExperiment) # Needed for assays() function
 
 
-#' integrate_fastMNN
+#' Integrated combined SCE objects with `fastMNN`
 #'
-#' Integrate SCE datasets using fastMNN from the batchelor package
+#' This function integrates a combined SCE object the using `fastMNN` function
+#'  from the `batchelor` package.
 #' @param combined_sce The combined SCE objects to integrate
 #' @param use_all_genes Logical indicating whether all genes should be used. 
-#'   Default: `FALS`E.
+#'   Default: `FALSE`.
 #' @param num_genes Optional number of high-variance genes to identify for 
-#'   use in integration. Default: 5000. This argument is *ignored* if gene_list
-#'   if use_all_genes is `TRUE`, 
+#'   use in integration. Default: 5000.
 #' @param fastmnn_k Number of nearest-neighbors to consider when identifying 
-#' mutual nearest neighbors. Default: 20 (same default as in batchelor::fastMNN())
+#' mutual nearest neighbors. Default: 20 (same default as in `batchelor::fastMNN()`)
 #' @param fastmnn_d Number of PCs to use when performing PCA. 
-#'   Default: 50 (same default as in batchelor::fastMNN())
-#' @param seed Random seed to set for fastMNN integration
+#'   Default: 50 (same default as in `batchelor::fastMNN()`)
+#' @param seed Random seed to set for `fastMNN` integration
 #' @param ... Additional arguments to pass into `batchelor::fastMNN()`
 #'
 #' @return The integrated SCE object
