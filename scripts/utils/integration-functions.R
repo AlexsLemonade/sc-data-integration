@@ -82,10 +82,6 @@ combine_sce_objects <- function(sce_list = list(),
     sce_list[[i]]$batch <- library_ids[i]
   }
   
-  # Add batch information to colData -------------------------------------------
-  
-  
-  
   # Combine SCE objects with `cbind()` -----------------------------------------
   combined_sce <- do.call(cbind, sce_list)
   
