@@ -58,10 +58,6 @@ integrate_fastMNN <- function(combined_sce,
                                        # Anything else?
                                        ...)
   
-  # Error in h(simpleError(msg, call)) : 
-  #error in evaluating the argument 'seed' in selecting a method for function 'DelayedArray': invalid class “ScaledMatrixSeed” object: 
-  #  length of 'scale' must equal 'ncol(object)'
-  
   # Return integrated SCE object
   return(sce_integrated)
   
