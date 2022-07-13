@@ -10,29 +10,31 @@ library(SingleCellExperiment)
 #'  
 #' @param combined_sce A combined SCE object. Must contain a cell column `batch`
 #'   that indicates the different groups to be integrated.
+#' @param groups_to_integrate Array containing the covariates to consider during integration.
+#'   By default, this considers the single covariate `"batch"`
 #' @param ... Additional paramteers that may be passed to `harmony::HarmonyMatrix()`
 #'
 #' @return An integrated SCE object with two additional reducedDim fields: 
 #'   `harmony_pcs` and `harmony_gene_matrix`
-integrate_harmony <- function(combined_sce, ...) {
+integrate_harmony <- function(combined_sce, groups_to_integrate = c("batch"), ...) {
   
-  # Ensure `batch` column is present in combined_sce ---------------------------
-  if (!("batch" %in% names(colData(combined_sce)))) {
-    stop("The combined_sce object must contain a cell data field `batch` to perform integration.")
+  # Ensure columns given in groups_to_integrate are present in combined_sce ----
+  if (!(all(groups_to_integrate %in% names(colData(combined_sce))))) {
+    stop("The combined_sce object must contain covariate columns in colData.")
   }
   
   # Create metadata information for input to harmony ---------------------------
-  harmony_metadata <- tibble::tibble(
-    cell_id = rownames(colData(combined_sce)),
-    batch = colData(combined_sce)$batch
-  ) 
+  harmony_metadata <- tibble::as_tibble(colData(combined_sce), 
+                                        rownames = "cell_id") %>%
+    dplyr::select(cell_id,
+                  dplyr::all_of(groups_to_integrate))
   
   # Perform integration starting from PCs --------------------------------------
   # In this case, harmony uses pre-computed PCs during integration
   harmony_from_pcs <- harmony::HarmonyMatrix(
-    data_mat  = reducedDim(combined_sce, "PCA"), # Matrix with coordinates for each cell (row) along many PCs (columns)
+    data_mat  = reducedDim(combined_sce, "PCA"), 
     meta_data = harmony_metadata, 
-    vars_use  = "batch", # column in meta_data that indicates groups to integrate
+    vars_use  = groups_to_integrate, 
     do_pca = FALSE, # We are passing in PCs
     ...
   )
@@ -41,8 +43,8 @@ integrate_harmony <- function(combined_sce, ...) {
   # In this case, harmony computes PCs to use during integration
   harmony_from_gene_matrix <- harmony::HarmonyMatrix(
     data_mat  = logcounts(combined_sce), # Gene expression matrix
-    meta_data = harmony_metadata, # Dataframe with information for each cell (row)
-    vars_use  = "batch",
+    meta_data = harmony_metadata, 
+    vars_use  = groups_to_integrate, 
     do_pca = TRUE, # We are NOT passing in PCs
     ...
   )
