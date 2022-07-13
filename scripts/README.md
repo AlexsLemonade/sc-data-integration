@@ -70,13 +70,13 @@ This file is the default file that is used in running `01-run-downstream-analyse
 **Note:** You must have available in your path R (v4.1.2),  [Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html#installation-via-conda-mamba) and [`pandoc`](https://pandoc.org/installing.html#macos). 
 `pandoc` must be version 1.12.3 or higher, which can be checked using the `pandoc -v` command.
 
-```R
+```sh
 bash 01-run-downstream-analyses.sh --downstream_repo <path to location of scpca-downstream-repo>
 ```
 
 If desired, an S3 bucket link can be provided to ensure that the results from `scpca-downstream-analyses` are copied to S3 for other Data Lab staff members to use. 
 
-```R 
+```sh 
 bash 01-run-downstream-analyses.sh \
   --downstream_repo <path to location of scpca-downstream-repo> \
   --s3_bucket "s3://sc-data-integration/human_cell_atlas_results"
@@ -85,6 +85,11 @@ bash 01-run-downstream-analyses.sh \
 By default, filtering of empty droplets will not be repeated if filtered `SingleCellExperiment` objects are already present locally. 
 To overwrite existing filtered files, use `--repeat_filtering yes` at the command line. 
 
+```sh
+bash 01-run-downstream-analyses.sh \
+  --downstream_repo <path to location of scpca-downstream-repo> \
+  --repeat_filtering yes
+```
 
 ### Generating the mitochondrial gene list 
 
