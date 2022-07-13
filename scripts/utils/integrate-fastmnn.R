@@ -5,8 +5,7 @@ library(SingleCellExperiment) # Needed for assays() function
 #' integrate_fastMNN
 #'
 #' Integrate SCE datasets using fastMNN from the batchelor package
-#' @param sce1 The first SCE object to integrate
-#' @param sce2 The second SCE object to integrate
+#' @param combined_sce The combined SCE objects to integrate
 #' @param gene_list Optional vector of high-variance genes to integrate on. Default: NULL (all genes will be used)
 #' @param use_all_genes Optional logical indicating whether all genes should be used. Default: FALSE. This argument is 
 #' @param num_genes Optional number of high-variance genes to identify for use in integration. Default: 5000. This argument is *ignored* if gene_list is not NULL and/or if use_all_genes is TRUE 
@@ -15,10 +14,10 @@ library(SingleCellExperiment) # Needed for assays() function
 #' @param seed Random seed to set for integration
 #' @param ... Additional arguments to pass into batchelor::fastMNN()
 #'
-#' @return List containing the integrated SCE object (`sce_integrated`) and the unintegrated SCE objects (`sce1` and `sce2`)
+#' @return The integrated SCE object
 #'
 #' @examples
-integrate_fastMNN <- function(sce1, sce2, 
+integrate_fastMNN <- function(combined_sce, 
                               gene_list = NULL, 
                               num_genes = 5000, 
                               use_all_genes = FALSE,
