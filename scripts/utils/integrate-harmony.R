@@ -1,19 +1,20 @@
 library(SingleCellExperiment)
 
-#' Integrate a combined SCE with harmony
+#' Integrate a combined SCE with `harmony`
 #' 
 #' This function performs integration on a merged SCE object with different batches
-#'  using the harmony R package. It performs integration using two approaches within
-#'  Harmony: i) integrating using provided PCs (here, those calculated by the 
+#'  using the `harmony` R package. It performs integration using two approaches within
+#'  `harmony`: i) integrating using provided PCs (here, those calculated by the 
 #'  `scpca-downstream-analyses` workflow), and ii) integrating starting from the
 #'  normalized gene matrix, meaning Harmony will calculate PCs to use for integration. 
 #'  
 #' @param combined_sce A combined SCE object. Must contain a cell column `batch`
 #'   that indicates the different groups to be integrated.
+#' @param ... Additional paramteers that may be passed to `harmony::HarmonyMatrix()`
 #'
 #' @return An integrated SCE object with two additional reducedDim fields: 
 #'   `harmony_pcs` and `harmony_gene_matrix`
-integrate_harmony <- function(combined_sce) {
+integrate_harmony <- function(combined_sce, ...) {
   
   # Ensure `batch` column is present in combined_sce ---------------------------
   if (!("batch" %in% names(colData(combined_sce)))) {
@@ -32,7 +33,8 @@ integrate_harmony <- function(combined_sce) {
     data_mat  = reducedDim(combined_sce, "PCA"), # Matrix with coordinates for each cell (row) along many PCs (columns)
     meta_data = harmony_metadata, 
     vars_use  = "batch", # column in meta_data that indicates groups to integrate
-    do_pca = FALSE # We are passing in PCs
+    do_pca = FALSE, # We are passing in PCs
+    ...
   )
   
   # Perform integration starting from the expression matrix --------------------
@@ -41,7 +43,8 @@ integrate_harmony <- function(combined_sce) {
     data_mat  = logcounts(combined_sce), # Gene expression matrix
     meta_data = harmony_metadata, # Dataframe with information for each cell (row)
     vars_use  = "batch",
-    do_pca = TRUE # We are NOT passing in PCs
+    do_pca = TRUE, # We are NOT passing in PCs
+    ...
   )
   
   # Add new PCs from both approaches back into the combined_sce ----------------
