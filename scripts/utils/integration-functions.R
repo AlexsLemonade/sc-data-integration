@@ -4,7 +4,10 @@ library(SingleCellExperiment)
 library(magrittr)
 
 
-#' combine_sce_objects
+#' Combine two or more SCE objects
+#' 
+#' This function combines one or more SCE objects into a single SCE object, with
+#'   a cell column `batch` indicating the different originating SCEs.
 #'
 #' @param sce_list Named list of SCE objects to combine, where names are library 
 #'   biospecimen IDs. No specific assays or dimReduced are expected.
