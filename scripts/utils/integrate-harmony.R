@@ -10,7 +10,7 @@ library(SingleCellExperiment)
 #'  
 #' @param combined_sce A combined SCE object. Must contain a cell column `batch`
 #'   that indicates the different groups to be integrated.
-#' @param groups_to_integrate Array containing the covariates to consider during integration.
+#' @param groups_to_integrate Vector containing the covariates to consider during integration.
 #' @param ... Additional parameters that may be passed to `harmony::HarmonyMatrix()`
 #'
 #' @return An integrated SCE object with two additional reducedDim fields: 
