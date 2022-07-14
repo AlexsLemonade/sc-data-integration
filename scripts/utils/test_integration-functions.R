@@ -39,7 +39,12 @@ names(sce_list) <- c(library_ids[1], library_ids[2]) #, library_ids[3],  library
 combined_sce <- combine_sce_objects(sce_list, 
                                     c("Gene", "ensembl_ids", "gene_names"))
 
-
+# Test harmony:
+integrate_harmony(combined_sce, "batch", from_pca=FALSE)
+integrate_harmony(combined_sce, "batch")
+# Should fail:
+# integrate_harmony(combined_sce)
+# integrate_harmony(combined_sce, "not_a_column")
 
 
 
