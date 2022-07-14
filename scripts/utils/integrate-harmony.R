@@ -11,7 +11,7 @@ library(magrittr) # pipe
 #'  
 #' @param combined_sce A combined SCE object. Must contain a cell column `batch`
 #'   that indicates the different groups to be integrated.
-#' @param groups_to_integrate Vector containing the covariates to consider during integration.
+#' @param covariate_cols Vector containing the covariates to consider during integration.
 #' @param from_pca A logical indicating whether to integrate directly from PCs. Default: TRUE.
 #' @param ... Additional parameters that may be passed to `harmony::HarmonyMatrix()`
 #'
@@ -21,19 +21,19 @@ library(magrittr) # pipe
 #' integrate_harmony(combined_sce, "batch")
 #' integrate_harmony(combined_sce, c("sample", "batch"), from_pca = FALSE) # start from gene expression matrix
 integrate_harmony <- function(combined_sce, 
-                              groups_to_integrate = c(), 
+                              covariate_cols = c(), 
                               from_pca = TRUE,
                               ...) {
   
   # Perform checks ----------------------
 
   # Ensure groupings were provided
-  if (length(groups_to_integrate) == 0) {
-    stop("You must provide a vector of groupings to integrate.")
+  if (length(covariate_cols) == 0) {
+    stop("You must provide a vector of covariate columns.")
   }
   # Ensure groupings are present in the data
-  if (!(all(groups_to_integrate %in% names(colData(combined_sce))))) {
-    stop("The combined_sce object must contain covariate columns in colData.")
+  if (!(all(covariate_cols %in% names(colData(combined_sce))))) {
+    stop("The combined_sce object must contain the given covariate columns in colData.")
   }
   # Ensure PCs are present in the combined_sce object
   if (from_pca && !("PCA" %in% reducedDimNames(combined_sce))) {
@@ -44,7 +44,7 @@ integrate_harmony <- function(combined_sce,
   harmony_metadata <- tibble::as_tibble(colData(combined_sce), 
                                         rownames = "cell_id") %>%
     dplyr::select(cell_id,
-                  dplyr::all_of(groups_to_integrate))
+                  dplyr::all_of(covariate_cols))
   
   # Perform integration --------------------------------------
   if (from_pca) {
@@ -52,7 +52,7 @@ integrate_harmony <- function(combined_sce,
     harmony_results <- harmony::HarmonyMatrix(
       data_mat  = reducedDim(combined_sce, "PCA"), 
       meta_data = harmony_metadata, 
-      vars_use  = groups_to_integrate, 
+      vars_use  = covariate_cols, 
       do_pca = FALSE, # We are passing in PCs
       ...
     )
@@ -61,7 +61,7 @@ integrate_harmony <- function(combined_sce,
     harmony_results<- harmony::HarmonyMatrix(
       data_mat  = logcounts(combined_sce), # Gene expression matrix
       meta_data = harmony_metadata, 
-      vars_use  = groups_to_integrate, 
+      vars_use  = covariate_cols, 
       do_pca = TRUE, # We are NOT passing in PCs
       ...
     )
