@@ -18,8 +18,8 @@ library(magrittr) # pipe
 #' @return An integrated SCE object with the additional reducedDim field `harmony`
 #'   representing the integrated PCs 
 #' @examples 
-#' integrate_harmony(combined_sce, c("batch"))
-#' integrate_harmony(combined_sce, c("batch"), from_pca = FALSE) # start from gene expression matrix
+#' integrate_harmony(combined_sce, "batch")
+#' integrate_harmony(combined_sce, c("sample", "batch"), from_pca = FALSE) # start from gene expression matrix
 integrate_harmony <- function(combined_sce, 
                               groups_to_integrate = c(), 
                               from_pca = TRUE,
