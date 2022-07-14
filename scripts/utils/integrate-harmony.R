@@ -36,7 +36,7 @@ integrate_harmony <- function(combined_sce,
     stop("The combined_sce object must contain covariate columns in colData.")
   }
   # Ensure PCs are present in the combined_sce object
-  if (!("PCA" %in% reducedDimNames(combined_sce))) {
+  if (from_pca && !("PCA" %in% reducedDimNames(combined_sce))) {
     stop("The combined_sce object must contain PCs.")
   }
   
