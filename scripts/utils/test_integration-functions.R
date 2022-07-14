@@ -7,7 +7,14 @@ source(
     here::here(),
     "scripts", 
     "utils",
-    "integration-functions.R")
+    "integration-helpers.R")
+)
+source(
+  file.path(
+    here::here(),
+    "scripts", 
+    "utils",
+    "integrate-harmony.R")
 )
 
 
