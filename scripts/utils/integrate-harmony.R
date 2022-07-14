@@ -16,7 +16,7 @@ library(SingleCellExperiment)
 #' @return An integrated SCE object with two additional reducedDim fields: 
 #'   `harmony_pcs` and `harmony_gene_matrix`
 #' @examples 
-#' integrate_harmony(combined_sce, c("batch))
+#' integrate_harmony(combined_sce, c("batch"))
 integrate_harmony <- function(combined_sce, groups_to_integrate = c(), ...) {
   
   # Ensure columns given in groups_to_integrate are present in combined_sce ----
