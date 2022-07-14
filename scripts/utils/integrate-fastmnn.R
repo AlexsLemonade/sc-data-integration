@@ -6,10 +6,10 @@ library(SingleCellExperiment) # Needed for assays() function
 #' This function integrates a combined SCE object the using `fastMNN` function
 #'  from the `batchelor` package.
 #' @param combined_sce The combined SCE objects to integrate
-#' @param use_all_genes Logical indicating whether all genes should be used. 
-#'   Default: `FALSE`.
-#' @param num_genes Optional number of high-variance genes to identify for 
-#'   use in integration. Default: 5000.
+#' @param gene_list Vector of high-variance genes to consider. The default value 
+#'   of `NULL` means all genes will be used.
+#' @param cosine_norm Logical indicating whether cosine normalization should be 
+#'   performed prior to calculating PCs for integration. Default: `TRUE`. 
 #' @param fastmnn_k Number of nearest-neighbors to consider when identifying 
 #' mutual nearest neighbors. Default: 20 (same default as in `batchelor::fastMNN()`)
 #' @param fastmnn_d Number of PCs to use when performing PCA. 
@@ -18,11 +18,9 @@ library(SingleCellExperiment) # Needed for assays() function
 #' @param ... Additional arguments to pass into `batchelor::fastMNN()`
 #'
 #' @return The integrated SCE object
-#'
-#' @examples
 integrate_fastMNN <- function(combined_sce, 
-                              num_genes = 5000, 
-                              use_all_genes = FALSE,
+                              gene_list = NULL, 
+                              cosine_norm = TRUE,
                               fastmnn_k = 20, 
                               fastmnn_d = 50, 
                               seed = 2022,
@@ -32,25 +30,18 @@ integrate_fastMNN <- function(combined_sce,
   
   # Throw an error if normalization has not been performed
   if (!("logcounts" %in% names(assays(combined_sce)))) {
-    stop("The `combined_sce` object is missing a `logcounts` assay which is required for fastMNN integration.")
-  }
-
-  # Set up gene list:
-  if (!(use_all_genes)) {
-    # Determine high-variance genes if we are not using them all
-    gene_var <- scran::modelGeneVar(combined_sce)
-    gene_list <- scran::getTopHVGs(gene_var, n = num_genes)   
-  } else {
-    # Set gene_list to NULL to use all genes, consistent with fastMNN function
-    gene_list <- NULL 
+    stop("The `combined_sce` object is missing a `logcounts` assay required for fastMNN integration.")
   }
   
-  # Perform integration with fastMNN
-  sce_integrated <- batchelor::fastMNN(combined_sce, 
-                                       # Specify batches
-                                       batch = unique(combined_sce$batch),
-                                       # Which genes to use for integration (NULL uses all genes)
+  # Perform integration with fastMNN -------------------
+  integrated_sce <- batchelor::fastMNN(combined_sce, 
+                                       # Specify batches. TODO: More batches?
+                                       batch = combined_sce$batch,
+                                       # Which genes to use for integration
+                                       # The default value of NULL uses all genes
                                        subset.row = gene_list,
+                                       # Perform cosine normalization?
+                                       cos.norm = cosine_norm,
                                        # How many nearest neighbors?
                                        k = fastmnn_k,
                                        # How many PCs?
@@ -58,7 +49,18 @@ integrate_fastMNN <- function(combined_sce,
                                        # Anything else?
                                        ...)
   
-  # Return integrated SCE object
-  return(sce_integrated)
+  # Add sce_integrated fields into `combined_sce` ---------------
+  
+  # From docs: the `reconstructed` assay is a...
+  #  low-rank reconstruction of the expression matrix. 
+  #  This can be interpreted as per-gene corrected log-expression values 
+  #  (after cosine normalization, if cos.norm=TRUE) but should not be 
+  #  used for quantitative analyses.
+  assay(combined_sce, "fastMNN_reconstructed")  <- assay(integrated_sce, "reconstructed")
+  # The integrated PCs
+  reducedDim(combined_sce, "fastMNN_corrected") <- reducedDim(integrated_sce, "corrected")
+  
+  # Return SCE object with fastMNN information 
+  return(combined_sce)
   
 }
