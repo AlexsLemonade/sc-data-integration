@@ -1,4 +1,5 @@
 library(SingleCellExperiment)
+library(magrittr) # pipe
 
 #' Integrate a combined SCE with `harmony`
 #' 
@@ -11,20 +12,32 @@ library(SingleCellExperiment)
 #' @param combined_sce A combined SCE object. Must contain a cell column `batch`
 #'   that indicates the different groups to be integrated.
 #' @param groups_to_integrate Vector containing the covariates to consider during integration.
+#' @param from_pca A logical indicating whether to integrate directly from PCs. Default: TRUE.
 #' @param ... Additional parameters that may be passed to `harmony::HarmonyMatrix()`
 #'
-#' @return An integrated SCE object with two additional reducedDim fields: 
-#'   `harmony_pcs` and `harmony_gene_matrix`
+#' @return An integrated SCE object with the additional reducedDim field `harmony`
+#'   representing the integrated PCs 
 #' @examples 
 #' integrate_harmony(combined_sce, c("batch"))
-integrate_harmony <- function(combined_sce, groups_to_integrate = c(), ...) {
+#' integrate_harmony(combined_sce, c("batch"), from_pca = FALSE) # start from gene expression matrix
+integrate_harmony <- function(combined_sce, 
+                              groups_to_integrate = c(), 
+                              from_pca = TRUE,
+                              ...) {
   
-  # Ensure columns given in groups_to_integrate are present in combined_sce ----
+  # Perform checks ----------------------
+
+  # Ensure groupings were provided
   if (length(groups_to_integrate) == 0) {
-    stop("You must provide an array of groupings to integrate.")
+    stop("You must provide a vector of groupings to integrate.")
   }
+  # Ensure groupings are present in the data
   if (!(all(groups_to_integrate %in% names(colData(combined_sce))))) {
     stop("The combined_sce object must contain covariate columns in colData.")
+  }
+  # Ensure PCs are present in the combined_sce object
+  if (!("PCA" %in% reducedDimNames(combined_sce))) {
+    stop("The combined_sce object must contain PCs.")
   }
   
   # Create metadata information for input to harmony ---------------------------
@@ -33,30 +46,30 @@ integrate_harmony <- function(combined_sce, groups_to_integrate = c(), ...) {
     dplyr::select(cell_id,
                   dplyr::all_of(groups_to_integrate))
   
-  # Perform integration starting from PCs --------------------------------------
-  # In this case, harmony uses pre-computed PCs during integration
-  harmony_from_pcs <- harmony::HarmonyMatrix(
-    data_mat  = reducedDim(combined_sce, "PCA"), 
-    meta_data = harmony_metadata, 
-    vars_use  = groups_to_integrate, 
-    do_pca = FALSE, # We are passing in PCs
-    ...
-  )
+  # Perform integration --------------------------------------
+  if (from_pca) {
+    # Perform integration using pre-computed PCs, as recommended
+    harmony_results <- harmony::HarmonyMatrix(
+      data_mat  = reducedDim(combined_sce, "PCA"), 
+      meta_data = harmony_metadata, 
+      vars_use  = groups_to_integrate, 
+      do_pca = FALSE, # We are passing in PCs
+      ...
+    )
+  } else {
+    # Perform integration starting from the expression matrix
+    harmony_results<- harmony::HarmonyMatrix(
+      data_mat  = logcounts(combined_sce), # Gene expression matrix
+      meta_data = harmony_metadata, 
+      vars_use  = groups_to_integrate, 
+      do_pca = TRUE, # We are NOT passing in PCs
+      ...
+    )
+  }
   
-  # Perform integration starting from the expression matrix --------------------
-  # In this case, harmony computes PCs to use during integration
-  harmony_from_gene_matrix <- harmony::HarmonyMatrix(
-    data_mat  = logcounts(combined_sce), # Gene expression matrix
-    meta_data = harmony_metadata, 
-    vars_use  = groups_to_integrate, 
-    do_pca = TRUE, # We are NOT passing in PCs
-    ...
-  )
-  
-  # Add new PCs from both approaches back into the combined_sce ----------------
-  reducedDim(combined_sce, "harmony_pcs") <- harmony_from_pcs
-  reducedDim(combined_sce, "harmony_gene_matrix") <- harmony_from_gene_matrix
-  
+  # Add new PCs back into the combined_sce ----------------
+  reducedDim(combined_sce, "harmony") <- harmony_results
+
   # Return the integrated SCE --------------------------------------------------
   return(combined_sce)
   
