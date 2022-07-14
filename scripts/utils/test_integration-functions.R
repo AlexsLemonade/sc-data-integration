@@ -1,22 +1,10 @@
 # Script to test integration functions
 renv::load(here::here())
+util_dir <- here::here("scripts", "utils")
+source(file.path(util_dir, "integration-helpers.R"))
+source(file.path(util_dir, "integrate-harmony.R"))
 
 library(magrittr) # pipe
-source(
-  file.path(
-    here::here(),
-    "scripts", 
-    "utils",
-    "integration-helpers.R")
-)
-source(
-  file.path(
-    here::here(),
-    "scripts", 
-    "utils",
-    "integrate-harmony.R")
-)
-
 
 hca_metadata <- readr::read_tsv(
   here::here("sample-info",
