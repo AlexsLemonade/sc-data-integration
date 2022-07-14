@@ -110,6 +110,99 @@ combine_sce_objects <- function(sce_list = list(),
 }
 
 
+#' Identify highly variable genes for combined SingleCellExperiment objects
+#'
+#' @param combined_sce SingleCellExperiment object containing gene expression data 
+#'   from more than one library.
+#' @param num_genes Number of highly variable genes to select.
+#' @param block_var Column present in colData of the SingleCellExperiment object 
+#'   that contains the original identity of each library. Default is "batch". 
+#'
+#' @return Highly variable gene list
+#'
+hvg_selection <- function(combined_sce,
+                          num_genes = 5000,
+                          block_var = "batch"){
+  
+  # check to make sure that the column to use for blocking is present 
+  if(!block_var %in% colnames(colData(combined_sce))){
+    stop("block_var must be a column present in the colData of the SCE object.")
+  }
+  
+  # model gene variance 
+  gene_var_block <- scran::modelGeneVar(combined_sce, 
+                                        block = combined_sce$batch)
+  # identify subset of variable genes
+  gene_list <- scran::getTopHVGs(gene_var_block, 
+                                 n = num_genes)
+  
+  return(gene_list)
+  
+}
+
+
+#' Calculate PCA and UMAP embeddings for a combined SingleCellExperiment object 
+#'
+#' @param combined_sce SingleCellExperiment object containing gene expression data 
+#'   from more than one library.
+#' @param var_genes List of highly variable genes to use for PCA calculation. 
+#'   Required if PCA `do_pca` is set to TRUE.
+#' @param prefix Prefix to use for naming the PCA and UMAP embeddings that will be 
+#'   stored in `reducedDim(combined_sce)`. If no prefix is provided, results will 
+#'   be stored to the `PCA` and `UMAP` slots.
+#' @param assay Name of the Assay holding the gene expression matrix to use for
+#'   performing PCA. Default is "logcounts".
+#' @param do_pca Boolean indicating whether or not to perform PCA prior to UMAP.
+#'   Default is set to TRUE. If PCA is skipped, the existing PCA results must be 
+#'   saved in the object with `prefix`_PCA and the `prefix` must be used indicated
+#'   using the `prefix` argument.
+#'
+#' @return Combined SingleCellExperiment with PCA and UMAP stored in reducedDim
+#'
+dim_reduction <- function(combined_sce, 
+                          var_genes = NULL, 
+                          prefix = NULL, 
+                          assay = "logcounts",
+                          do_pca = TRUE){
+  
+  # check for assay present in SCE object
+  if(!assay %in% assayNames(combined_sce)){
+    stop("assay provided is not in the assayNames() of the SCE object.")
+  }
+  
+  # create pca and umap names 
+  if(!is.null(prefix)){
+    pca_name <- paste(prefix, "PCA", sep = "_")
+    umap_name <- paste(prefix, "UMAP", sep = "_")
+  } else {
+    pca_name <- "PCA"
+    umap_name <- "UMAP"
+  }
+  
+  # only add PCA if specified
+  if(do_pca){
+    
+    # check that var_genes was provided
+    if(is.null(var_genes)){
+      stop("A list of variable genes to perform PCA must be provided 
+           using the var_genes argument.")
+    }
+    
+    combined_sce <- combined_sce %>%
+      scater::runPCA(subset_row = var_genes,
+                     name = pca_name,
+                     exprs_values = assay)
+  }
+  
+  # add UMAP 
+  combined_sce <- combined_sce %>%
+      scater::runUMAP(dimred = pca_name,
+                    name = umap_name)
+  
+  return(combined_sce)
+  
+}
+
 
 
 

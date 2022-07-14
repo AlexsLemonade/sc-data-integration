@@ -39,9 +39,10 @@ names(sce_list) <- c(library_ids[1], library_ids[2]) #, library_ids[3],  library
 combined_sce <- combine_sce_objects(sce_list, 
                                     c("Gene", "ensembl_ids", "gene_names"))
 
+# get hvg 
+var_genes <- hvg_selection(combined_sce,
+                           n = 5000)
 
-
-
-
-
-
+# run PCA and UMAP on merged object with hvg selection 
+combined_sce <- dim_reduction(combined_sce, 
+                              var_genes = var_genes)
