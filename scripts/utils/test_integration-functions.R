@@ -44,7 +44,24 @@ combined_sce <- perform_dim_reduction(combined_sce,
 
 # Test harmony:
 integrate_harmony(combined_sce, "batch", from_pca=FALSE)
-integrate_harmony(combined_sce, "batch")
+integrated_object <- integrate_harmony(combined_sce, "batch")
+
+# add UMAP from harmony_PCA 
+integrated_object <- perform_dim_reduction(integrated_object, 
+                                           var_genes = var_genes,
+                                           do_pca = FALSE,
+                                           prefix = "harmony")
+
+# plot UMAP pre and post integration 
+pre_integration <- scater::plotReducedDim(combined_sce, 
+                                          dimred = "UMAP", 
+                                          colour_by = "batch")
+post_integration <- scater::plotReducedDim(integrated_object, 
+                                           dimred = "harmony_UMAP", 
+                                           colour_by = "batch")
+
+cowplot::plot_grid(pre_integration, post_integration, ncol = 2)
+
 # Should fail:
 # integrate_harmony(combined_sce)
 # integrate_harmony(combined_sce, "not_a_column")
