@@ -12,7 +12,7 @@ library(magrittr) # pipe
 #' @param combined_sce A combined SCE object. Must contain a cell column `batch`
 #'   that indicates the different groups to be integrated.
 #' @param covariate_cols Vector containing the covariates to consider during integration.
-#' @param from_pca A logical indicating whether to integrate directly from PCs. Default: TRUE.
+#' @param from_pca A boolean indicating whether to integrate directly from PCs. Default: TRUE.
 #' @param seed Random seed for harmony integration
 #' @param ... Additional parameters that may be passed to `harmony::HarmonyMatrix()`
 #'
