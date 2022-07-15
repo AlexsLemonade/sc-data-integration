@@ -56,9 +56,9 @@ integrate_fastMNN <- function(combined_sce,
   #  This can be interpreted as per-gene corrected log-expression values 
   #  (after cosine normalization, if cos.norm=TRUE) but should not be 
   #  used for quantitative analyses.
-  assay(combined_sce, "fastMNN_reconstructed")  <- assay(integrated_sce, "reconstructed")
+  assay(combined_sce, "fastMNN_corrected")  <- assay(integrated_sce, "reconstructed")
   # The integrated PCs
-  reducedDim(combined_sce, "fastMNN_corrected") <- reducedDim(integrated_sce, "corrected")
+  reducedDim(combined_sce, "fastMNN_PCA") <- reducedDim(integrated_sce, "corrected")
   
   # Return SCE object with fastMNN information 
   return(combined_sce)
