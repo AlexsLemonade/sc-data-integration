@@ -54,7 +54,7 @@ if(!file.exists(opt$library_file)){
 
 # read in library metadata and grab unfiltered sce file paths 
 library_metadata_df <- readr::read_tsv(opt$library_file)
-library_id <- library_metadata_df %>%
+library_ids <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
 
 # setup output directory 
@@ -65,19 +65,19 @@ if(!dir.exists(opt$anndata_output_dir)){
 # Identify SCE files -----------------------------------------------------------
 
 # find SCE files that match library ID 
-library_search <- paste(library_id, collapse = "|")
+library_search <- paste(library_ids, collapse = "|")
 all_library_files <- list.files(opt$sce_dir,
                         pattern = library_search, 
                         recursive = TRUE,
                         full.names = TRUE)
 # just include RDS files, otherwise HTML files will also be found 
-sce_files <- all_library_files[grep(pattern = ".rds", all_library_files)]
+sce_files <- all_library_files[grep(pattern = ".rds", all_library_files, ignore.case = TRUE)]
 
 # if the number of sce files is different then the library ID's find the missing files
-if(length(sce_files) < length(library_id)){
+if(length(sce_files) < length(library_ids)){
   
   libraries_found <- stringr::str_extract(sce_files, library_search)
-  missing_libraries <- setdiff(library_id, libraries_found)
+  missing_libraries <- setdiff(library_ids, libraries_found)
   
   stop(
     glue::glue(
@@ -91,7 +91,7 @@ if(length(sce_files) < length(library_id)){
 
 # create paths to anndata h5 files 
 anndata_files <- file.path(opt$anndata_output_dir,
-                           paste0(library_id, 
+                           paste0(library_ids, 
                                   "_anndata.h5"))
 
 # small function to read in sce and export as anndata 
