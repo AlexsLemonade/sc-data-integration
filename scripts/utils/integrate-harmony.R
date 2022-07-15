@@ -4,9 +4,9 @@ library(magrittr) # pipe
 #' Integrate a combined SCE with `harmony`
 #' 
 #' This function performs integration on a merged SCE object with different batches
-#'  using the `harmony` R package. It performs integration using two approaches within
+#'  using the `harmony` R package. It can perform integration using one of two approaches within
 #'  `harmony`: i) integrating using provided PCs (here, those calculated by the 
-#'  `scpca-downstream-analyses` workflow), and ii) integrating starting from the
+#'  `scpca-downstream-analyses` workflow, this is the default approach), and ii) integrating starting from the
 #'  normalized gene matrix, meaning Harmony will calculate PCs to use for integration. 
 #'  
 #' @param combined_sce A combined SCE object. Must contain a cell column `batch`
