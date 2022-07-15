@@ -3,6 +3,8 @@ renv::load(here::here())
 util_dir <- here::here("scripts", "utils")
 source(file.path(util_dir, "integration-helpers.R"))
 source(file.path(util_dir, "integrate-harmony.R"))
+source(file.path(util_dir, "integrate-fastMNN.R"))
+
 
 library(magrittr) # pipe
 
@@ -40,6 +42,10 @@ integrate_harmony(combined_sce, "batch")
 # Should fail:
 # integrate_harmony(combined_sce)
 # integrate_harmony(combined_sce, "not_a_column")
+
+
+# Test fastMNN:
+integrate_fastMNN(combined_sce)
 
 
 
