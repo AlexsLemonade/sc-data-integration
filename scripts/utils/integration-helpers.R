@@ -112,13 +112,13 @@ combine_sce_objects <- function(sce_list = list(),
 
 #' Identify highly variable genes for combined SingleCellExperiment objects
 #'
-#' @param combined_sce SingleCellExperiment object containing gene expression data 
+#' @param combined_sce SingleCellExperiment object containing normalized gene expression data 
 #'   from more than one library.
 #' @param num_genes Number of highly variable genes to select.
 #' @param block_var Column present in colData of the SingleCellExperiment object 
 #'   that contains the original identity of each library. Default is "batch". 
 #'
-#' @return Highly variable gene list
+#' @return Highly variable gene vector
 #'
 hvg_selection <- function(combined_sce,
                           num_genes = 5000,
@@ -147,7 +147,7 @@ hvg_selection <- function(combined_sce,
 #'   from more than one library.
 #' @param var_genes List of highly variable genes to use for PCA calculation. 
 #'   Required if PCA `do_pca` is set to TRUE.
-#' @param prefix Prefix to use for naming the PCA and UMAP embeddings that will be 
+#' @param prefix Prefix to use for naming the PCA and UMAP embeddings in the format `"<prefix>_PCA"` and `"<prefix>_UMAP"` respectively,  that will be 
 #'   stored in `reducedDim(combined_sce)`. If no prefix is provided, results will 
 #'   be stored to the `PCA` and `UMAP` slots.
 #' @param assay Name of the Assay holding the gene expression matrix to use for
@@ -171,13 +171,12 @@ dim_reduction <- function(combined_sce,
   }
   
   # create pca and umap names 
-  if(!is.null(prefix)){
-    pca_name <- paste(prefix, "PCA", sep = "_")
-    umap_name <- paste(prefix, "UMAP", sep = "_")
-  } else {
-    pca_name <- "PCA"
-    umap_name <- "UMAP"
-  }
+pca_name <- "PCA"
+umap_name <- "UMAP"
+if(!is.null(prefix)){
+    pca_name <- paste(prefix, pca_name, sep = "_")
+    umap_name <- paste(prefix, umap_name, sep = "_")
+}
   
   # only add PCA if specified
   if(do_pca){
