@@ -13,7 +13,8 @@ library(magrittr) # pipe
 #'   that indicates the different groups to be integrated.
 #' @param covariate_cols Vector containing the covariates to consider during integration.
 #' @param from_pca A boolean indicating whether to integrate directly from PCs. Default: TRUE.
-#' @param seed Random seed for harmony integration
+#' @param seed Random seed to set for `fastMNN` integration. A seed will only
+#'  be set if this is not `NULL` (the default).
 #' @param ... Additional parameters that may be passed to `harmony::HarmonyMatrix()`
 #'
 #' @return An integrated SCE object with the additional reducedDim field `harmony`
@@ -24,10 +25,12 @@ library(magrittr) # pipe
 integrate_harmony <- function(combined_sce, 
                               covariate_cols = c(), 
                               from_pca = TRUE,
-                              seed = 2022,
+                              seed = NULL,
                               ...) {
   
-  set.seed(2022)
+  if (!(is.null(seed))) {
+    set.seed(seed)
+  }
   
   # Perform checks ----------------------
 
