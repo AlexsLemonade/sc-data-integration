@@ -9,3 +9,9 @@ data/
 
 # ignore results files
 results/
+
+# ignore snakemake outputs 
+.snakemake/
+
+# metadata files for downstream analyses 
+sample-info/*-downstream-metadata.tsv
