@@ -1,15 +1,10 @@
 # Script to test integration functions
 renv::load(here::here())
+util_dir <- here::here("scripts", "utils")
+source(file.path(util_dir, "integration-helpers.R"))
+source(file.path(util_dir, "integrate-harmony.R"))
 
 library(magrittr) # pipe
-source(
-  file.path(
-    here::here(),
-    "scripts", 
-    "utils",
-    "integration-functions.R")
-)
-
 
 hca_metadata <- readr::read_tsv(
   here::here("sample-info",
@@ -42,6 +37,12 @@ combined_sce <- combine_sce_objects(sce_list,
 # get hvg 
 var_genes <- hvg_selection(combined_sce,
                            n = 5000)
+# Test harmony:
+integrate_harmony(combined_sce, "batch", from_pca=FALSE)
+integrate_harmony(combined_sce, "batch")
+# Should fail:
+# integrate_harmony(combined_sce)
+# integrate_harmony(combined_sce, "not_a_column")
 
 # run PCA and UMAP on merged object with hvg selection 
 combined_sce <- dim_reduction(combined_sce, 
