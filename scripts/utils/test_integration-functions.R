@@ -35,15 +35,16 @@ combined_sce <- combine_sce_objects(sce_list,
                                     c("Gene", "ensembl_ids", "gene_names"))
 
 # get hvg 
-var_genes <- hvg_selection(combined_sce,
-                           n = 5000)
+var_genes <- perform_hvg_selection(combined_sce,
+                                   n = 5000)
+
+# run PCA and UMAP on merged object with hvg selection 
+combined_sce <- perform_dim_reduction(combined_sce, 
+                                      var_genes = var_genes)
+
 # Test harmony:
 integrate_harmony(combined_sce, "batch", from_pca=FALSE)
 integrate_harmony(combined_sce, "batch")
 # Should fail:
 # integrate_harmony(combined_sce)
 # integrate_harmony(combined_sce, "not_a_column")
-
-# run PCA and UMAP on merged object with hvg selection 
-combined_sce <- dim_reduction(combined_sce, 
-                              var_genes = var_genes)
