@@ -524,6 +524,16 @@
       "Hash": "1c0aa18b97e6aaa17f93b8b866c0ace5",
       "Requirements": []
     },
+    "RcppTOML": {
+      "Package": "RcppTOML",
+      "Version": "0.1.7",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "f8a578aa91321ecec1292f1e2ffadeda",
+      "Requirements": [
+        "Rcpp"
+      ]
+    },
     "Rhdf5lib": {
       "Package": "Rhdf5lib",
       "Version": "1.16.0",
@@ -671,6 +681,34 @@
       "Repository": "CRAN",
       "Hash": "543776ae6848fde2f48ff3816d0628bc",
       "Requirements": []
+    },
+    "basilisk": {
+      "Package": "basilisk",
+      "Version": "1.6.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/basilisk",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "8910ee2",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "434222ee50900074edb09bf4f450a8dd",
+      "Requirements": [
+        "basilisk.utils",
+        "dir.expiry",
+        "reticulate"
+      ]
+    },
+    "basilisk.utils": {
+      "Package": "basilisk.utils",
+      "Version": "1.6.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/basilisk.utils",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "f6bb193",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "58673c47483cbe8788375fe252173cec",
+      "Requirements": [
+        "dir.expiry"
+      ]
     },
     "beachmat": {
       "Package": "beachmat",
@@ -877,6 +915,19 @@
       "Repository": "CRAN",
       "Hash": "cf6b206a045a684728c3267ef7596190",
       "Requirements": []
+    },
+    "dir.expiry": {
+      "Package": "dir.expiry",
+      "Version": "1.2.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/dir.expiry",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "3ee6a95",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "6bb39bd57af2ec2a8882594030682c2f",
+      "Requirements": [
+        "filelock"
+      ]
     },
     "dplyr": {
       "Package": "dplyr",
@@ -1552,6 +1603,23 @@
         "yaml"
       ]
     },
+    "reticulate": {
+      "Package": "reticulate",
+      "Version": "1.25",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "786b311743eb8cd347491f8f0a571941",
+      "Requirements": [
+        "Matrix",
+        "Rcpp",
+        "RcppTOML",
+        "here",
+        "jsonlite",
+        "png",
+        "rappdirs",
+        "withr"
+      ]
+    },
     "rhdf5": {
       "Package": "rhdf5",
       "Version": "2.38.1",
@@ -2031,6 +2099,26 @@
       "Repository": "CRAN",
       "Hash": "458bb38374d73bf83b1bb85e353da200",
       "Requirements": []
+    },
+    "zellkonverter": {
+      "Package": "zellkonverter",
+      "Version": "1.4.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/zellkonverter",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "bcef367",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "fbd0f1420ccff2a085a624c5b493e145",
+      "Requirements": [
+        "DelayedArray",
+        "Matrix",
+        "S4Vectors",
+        "SingleCellExperiment",
+        "SummarizedExperiment",
+        "basilisk",
+        "cli",
+        "reticulate"
+      ]
     },
     "zlibbioc": {
       "Package": "zlibbioc",
