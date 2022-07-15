@@ -155,11 +155,13 @@ perform_hvg_selection <- function(combined_sce,
 #'   from more than one library.
 #' @param var_genes List of highly variable genes to use for PCA calculation. 
 #'   Required if PCA `do_pca` is set to TRUE.
-#' @param prefix Prefix to use for naming the PCA and UMAP embeddings in the format `"<prefix>_PCA"` and `"<prefix>_UMAP"` respectively,  that will be 
+#' @param prefix Prefix to use for naming the PCA and UMAP embeddings in the 
+#'   format `"<prefix>_PCA"` and `"<prefix>_UMAP"` respectively,  that will be 
 #'   stored in `reducedDim(combined_sce)`. If no prefix is provided, results will 
 #'   be stored to the `PCA` and `UMAP` slots.
 #' @param assay Name of the Assay holding the gene expression matrix to use for
-#'   performing PCA. Default is "logcounts".
+#'   performing PCA. Default is "logcounts". An assay name is only required if 
+#'   `do_pca` is TRUE.
 #' @param do_pca Boolean indicating whether or not to perform PCA prior to UMAP.
 #'   Default is set to TRUE. If PCA is skipped, the existing PCA results must be 
 #'   saved in the object with `prefix`_PCA and the `prefix` must be used indicated
@@ -173,11 +175,6 @@ perform_dim_reduction <- function(combined_sce,
                                   assay = "logcounts",
                                   do_pca = TRUE){
   
-  # check for assay present in SCE object
-  if(!assay %in% assayNames(combined_sce)){
-    stop("assay provided is not in the assayNames() of the SCE object.")
-  }
-  
   # create pca and umap names 
   pca_name <- "PCA"
   umap_name <- "UMAP"
@@ -189,12 +186,18 @@ perform_dim_reduction <- function(combined_sce,
   # only add PCA if specified
   if(do_pca){
     
+    # check for assay present in SCE object
+    if(!assay %in% assayNames(combined_sce)){
+      stop("assay provided is not in the assayNames() of the SCE object.")
+    }
+    
     # check that var_genes was provided
     if(is.null(var_genes)){
       stop("A list of variable genes to perform PCA must be provided 
            using the var_genes argument.")
     }
     
+    # add PCA
     combined_sce <- combined_sce %>%
       scater::runPCA(subset_row = var_genes,
                      name = pca_name,
