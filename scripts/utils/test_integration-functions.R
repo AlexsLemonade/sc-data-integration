@@ -1,15 +1,10 @@
 # Script to test integration functions
 renv::load(here::here())
+util_dir <- here::here("scripts", "utils")
+source(file.path(util_dir, "integration-helpers.R"))
+source(file.path(util_dir, "integrate-harmony.R"))
 
 library(magrittr) # pipe
-source(
-  file.path(
-    here::here(),
-    "scripts", 
-    "utils",
-    "integration-functions.R")
-)
-
 
 hca_metadata <- readr::read_tsv(
   here::here("sample-info",
@@ -39,7 +34,12 @@ names(sce_list) <- c(library_ids[1], library_ids[2]) #, library_ids[3],  library
 combined_sce <- combine_sce_objects(sce_list, 
                                     c("Gene", "ensembl_ids", "gene_names"))
 
-
+# Test harmony:
+integrate_harmony(combined_sce, "batch", from_pca=FALSE)
+integrate_harmony(combined_sce, "batch")
+# Should fail:
+# integrate_harmony(combined_sce)
+# integrate_harmony(combined_sce, "not_a_column")
 
 
 
