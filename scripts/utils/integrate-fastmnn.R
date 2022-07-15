@@ -8,25 +8,22 @@ library(SingleCellExperiment) # Needed for assays() function
 #' @param combined_sce The combined SCE objects to integrate
 #' @param gene_list Vector of high-variance genes to consider. The default value 
 #'   of `NULL` means all genes will be used.
-#' @param cosine_norm Logical indicating whether cosine normalization should be 
+#' @param cosine_norm Boolean indicating whether cosine normalization should be 
 #'   performed prior to calculating PCs for integration. Default: `TRUE`. 
-#' @param fastmnn_k Number of nearest-neighbors to consider when identifying 
-#' mutual nearest neighbors. Default: 20 (same default as in `batchelor::fastMNN()`)
-#' @param fastmnn_d Number of PCs to use when performing PCA. 
-#'   Default: 50 (same default as in `batchelor::fastMNN()`)
-#' @param seed Random seed to set for `fastMNN` integration
+#' @param seed Random seed to set for `fastMNN` integration. A seed will only
+#'  be set if this is not `NULL` (the default).
 #' @param ... Additional arguments to pass into `batchelor::fastMNN()`
 #'
 #' @return The integrated SCE object
 integrate_fastMNN <- function(combined_sce, 
                               gene_list = NULL, 
                               cosine_norm = TRUE,
-                              fastmnn_k = 20, 
-                              fastmnn_d = 50, 
-                              seed = 2022,
+                              seed = NULL,
                               ...) {
   
-  set.seed(seed)
+  if (!(is.null(seed))) {
+    set.seed(seed)
+  }
   
   # Throw an error if normalization has not been performed
   if (!("logcounts" %in% names(assays(combined_sce)))) {
@@ -35,17 +32,13 @@ integrate_fastMNN <- function(combined_sce,
   
   # Perform integration with fastMNN -------------------
   integrated_sce <- batchelor::fastMNN(combined_sce, 
-                                       # Specify batches. TODO: More batches?
+                                       # Specify batches.
                                        batch = combined_sce$batch,
                                        # Which genes to use for integration
                                        # The default value of NULL uses all genes
                                        subset.row = gene_list,
                                        # Perform cosine normalization?
                                        cos.norm = cosine_norm,
-                                       # How many nearest neighbors?
-                                       k = fastmnn_k,
-                                       # How many PCs?
-                                       d = fastmnn_d,
                                        # Anything else?
                                        ...)
   
