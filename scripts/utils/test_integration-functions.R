@@ -21,8 +21,8 @@ project_metadata <- hca_metadata %>%
                                      paste0(library_biomaterial_id, "_miQC_processed_sce.rds")))
 
 library_ids <- project_metadata$library_biomaterial_id
-sce1 <- readr::read_rds(project_metadata$sce_path[3]) 
-sce2 <- readr::read_rds(project_metadata$sce_path[4]) 
+sce1 <- readr::read_rds(project_metadata$sce_path[1]) 
+sce2 <- readr::read_rds(project_metadata$sce_path[2]) 
 #sce3 <- readr::read_rds(project_metadata$sce_path[3]) 
 #sce4 <- readr::read_rds(project_metadata$sce_path[4]) 
 
@@ -38,9 +38,15 @@ combined_sce <- combine_sce_objects(sce_list,
 var_genes <- perform_hvg_selection(combined_sce,
                                    n = 5000)
 
-# run PCA and UMAP on merged object with hvg selection 
+# run multi batch PCA and UMAP on merged object with hvg selection 
 combined_sce <- perform_dim_reduction(combined_sce, 
                                       var_genes = var_genes)
+
+# single PCA 
+perform_dim_reduction(combined_sce,
+                      var_genes = var_genes,
+                      single_pca = TRUE, 
+                      multi_pca = FALSE)
 
 # Test harmony:
 integrate_harmony(combined_sce, "batch", from_pca=FALSE)
@@ -49,7 +55,7 @@ integrated_object <- integrate_harmony(combined_sce, "batch")
 # add UMAP from harmony_PCA 
 integrated_object <- perform_dim_reduction(integrated_object, 
                                            var_genes = var_genes,
-                                           do_pca = FALSE,
+                                           multi_pca = FALSE,
                                            prefix = "harmony")
 
 # plot UMAP pre and post integration 
