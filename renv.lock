@@ -573,6 +573,21 @@
       "Hash": "1c0aa18b97e6aaa17f93b8b866c0ace5",
       "Requirements": []
     },
+    "ResidualMatrix": {
+      "Package": "ResidualMatrix",
+      "Version": "1.4.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/ResidualMatrix",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "6394364",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "b212a06899e6a7a45f4ea69d45bc14a9",
+      "Requirements": [
+        "DelayedArray",
+        "Matrix",
+        "S4Vectors"
+      ]
+    },
     "Rhdf5lib": {
       "Package": "Rhdf5lib",
       "Version": "1.16.0",
@@ -745,6 +760,34 @@
       "Repository": "CRAN",
       "Hash": "543776ae6848fde2f48ff3816d0628bc",
       "Requirements": []
+    },
+    "batchelor": {
+      "Package": "batchelor",
+      "Version": "1.10.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/batchelor",
+      "git_branch": "RELEASE_3_14",
+      "git_last_commit": "fbbcf91",
+      "git_last_commit_date": "2021-10-26",
+      "Hash": "4c054eebc8b869abc555adc8469fa09e",
+      "Requirements": [
+        "BiocGenerics",
+        "BiocNeighbors",
+        "BiocParallel",
+        "BiocSingular",
+        "DelayedArray",
+        "DelayedMatrixStats",
+        "Matrix",
+        "Rcpp",
+        "ResidualMatrix",
+        "S4Vectors",
+        "ScaledMatrix",
+        "SingleCellExperiment",
+        "SummarizedExperiment",
+        "beachmat",
+        "igraph",
+        "scuttle"
+      ]
     },
     "beachmat": {
       "Package": "beachmat",
