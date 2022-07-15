@@ -72,7 +72,7 @@ integrate_harmony <- function(combined_sce,
   }
   
   # Add new PCs back into the combined_sce ----------------
-  reducedDim(combined_sce, "harmony") <- harmony_results
+  reducedDim(combined_sce, "harmony_PCA") <- harmony_results
 
   # Return the integrated SCE --------------------------------------------------
   return(combined_sce)
