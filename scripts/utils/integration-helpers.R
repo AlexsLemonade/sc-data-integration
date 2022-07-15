@@ -114,24 +114,32 @@ combine_sce_objects <- function(sce_list = list(),
 #'
 #' @param combined_sce SingleCellExperiment object containing normalized gene expression data 
 #'   from more than one library.
-#' @param num_genes Number of highly variable genes to select.
+#' @param num_genes Number of highly variable genes to select. Default is 5000.
 #' @param block_var Column present in colData of the SingleCellExperiment object 
 #'   that contains the original identity of each library. Default is "batch". 
 #'
 #' @return Highly variable gene vector
 #'
-hvg_selection <- function(combined_sce,
-                          num_genes = 5000,
-                          block_var = "batch"){
+perform_hvg_selection <- function(combined_sce,
+                                  num_genes = 5000,
+                                  block_var = "batch"){
+  
+  # check that logcounts are present in combined_sce, required for modelGeneVar
+  if(!"logcounts" %in% assayNames(combined_sce)){
+    stop("log-normalized counts are not found in the 'logcounts' assay of the combined SCE.")
+  }
   
   # check to make sure that the column to use for blocking is present 
   if(!block_var %in% colnames(colData(combined_sce))){
     stop("block_var must be a column present in the colData of the SCE object.")
   }
   
+  # extract the column with the block variable
+  block_col <- colData(combined_sce)[,block_var]
+  
   # model gene variance 
   gene_var_block <- scran::modelGeneVar(combined_sce, 
-                                        block = combined_sce$batch)
+                                        block = block_col)
   # identify subset of variable genes
   gene_list <- scran::getTopHVGs(gene_var_block, 
                                  n = num_genes)
@@ -159,11 +167,11 @@ hvg_selection <- function(combined_sce,
 #'
 #' @return Combined SingleCellExperiment with PCA and UMAP stored in reducedDim
 #'
-dim_reduction <- function(combined_sce, 
-                          var_genes = NULL, 
-                          prefix = NULL, 
-                          assay = "logcounts",
-                          do_pca = TRUE){
+perform_dim_reduction <- function(combined_sce, 
+                                  var_genes = NULL, 
+                                  prefix = NULL, 
+                                  assay = "logcounts",
+                                  do_pca = TRUE){
   
   # check for assay present in SCE object
   if(!assay %in% assayNames(combined_sce)){
@@ -171,12 +179,12 @@ dim_reduction <- function(combined_sce,
   }
   
   # create pca and umap names 
-pca_name <- "PCA"
-umap_name <- "UMAP"
-if(!is.null(prefix)){
+  pca_name <- "PCA"
+  umap_name <- "UMAP"
+  if(!is.null(prefix)){
     pca_name <- paste(prefix, pca_name, sep = "_")
     umap_name <- paste(prefix, umap_name, sep = "_")
-}
+  }
   
   # only add PCA if specified
   if(do_pca){
