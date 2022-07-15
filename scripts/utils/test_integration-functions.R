@@ -13,7 +13,7 @@ hca_metadata <- readr::read_tsv(
 sce_dir <- here::here("results", 
                       "human_cell_atlas", 
                       "scpca-downstream-analyses")
-tissue <- "kidney"
+tissue <- "brain"
 project_metadata <- hca_metadata %>%
   dplyr::filter(tissue_group == tissue) %>%
   dplyr::mutate(sce_path = file.path(sce_dir,
@@ -21,8 +21,8 @@ project_metadata <- hca_metadata %>%
                                      paste0(library_biomaterial_id, "_miQC_processed_sce.rds")))
 
 library_ids <- project_metadata$library_biomaterial_id
-sce1 <- readr::read_rds(project_metadata$sce_path[1]) 
-sce2 <- readr::read_rds(project_metadata$sce_path[2]) 
+sce1 <- readr::read_rds(project_metadata$sce_path[3]) 
+sce2 <- readr::read_rds(project_metadata$sce_path[4]) 
 #sce3 <- readr::read_rds(project_metadata$sce_path[3]) 
 #sce4 <- readr::read_rds(project_metadata$sce_path[4]) 
 
@@ -60,7 +60,7 @@ post_integration <- scater::plotReducedDim(integrated_object,
                                            dimred = "harmony_UMAP", 
                                            colour_by = "batch")
 
-cowplot::plot_grid(pre_integration, post_integration, ncol = 2)
+cowplot::plot_grid(pre_integration, post_integration, ncol = 1)
 
 # Should fail:
 # integrate_harmony(combined_sce)
