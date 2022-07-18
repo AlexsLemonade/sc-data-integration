@@ -122,7 +122,7 @@ combine_sce_objects <- function(sce_list = list(),
 #'
 perform_hvg_selection <- function(combined_sce,
                                   num_genes = 5000,
-                                  block_var = "batch"){
+                                  batch_column = "batch"){
   
   # check that logcounts are present in combined_sce, required for modelGeneVar
   if(!"logcounts" %in% assayNames(combined_sce)){
@@ -130,16 +130,16 @@ perform_hvg_selection <- function(combined_sce,
   }
   
   # check to make sure that the column to use for blocking is present 
-  if(!block_var %in% colnames(colData(combined_sce))){
-    stop("block_var must be a column present in the colData of the SCE object.")
+  if(!batch_column %in% colnames(colData(combined_sce))){
+    stop("batch_column must be a column present in the colData of the SCE object.")
   }
   
   # extract the column with the block variable
-  block_col <- colData(combined_sce)[,block_var]
+  batch_column <- colData(combined_sce)[,batch_column]
   
   # model gene variance 
   gene_var_block <- scran::modelGeneVar(combined_sce, 
-                                        block = block_col)
+                                        block = batch_column)
   # identify subset of variable genes
   gene_list <- scran::getTopHVGs(gene_var_block, 
                                  n = num_genes)
@@ -166,7 +166,7 @@ perform_hvg_selection <- function(combined_sce,
 #'   while "multi" uses `batchelor::multiBatchPCA()`. If a PCA method is not chosen, 
 #'   PCA is skipped, and the existing PCA results must be saved in the object with `prefix`_PCA 
 #'   and the `prefix` must be used indicated using the `prefix` argument.
-#' @param batch_var Column present in colData of the SingleCellExperiment object 
+#' @param batch_column Column present in colData of the SingleCellExperiment object 
 #'   that contains the original identity of each library. Default is "batch". 
 #'
 #' @return Combined SingleCellExperiment with PCA and UMAP stored in reducedDim
@@ -176,12 +176,7 @@ perform_dim_reduction <- function(combined_sce,
                                   prefix = NULL, 
                                   assay = "logcounts",
                                   pca_type = NULL,
-                                  batch_var = "batch"){
-  
-  # check that pca_type is either single or multi if input
-  if (!is.null(pca_type) && !(pca_type %in% c("single", "multi"))){
-    stop("pca_type must either be `single` or `multi`.")
-  }
+                                  batch_column = "batch"){
   
   # create pca and umap names 
   pca_name <- "PCA"
@@ -191,54 +186,62 @@ perform_dim_reduction <- function(combined_sce,
     umap_name <- paste(prefix, umap_name, sep = "_")
   }
   
-  # if performing either PCA check that variable genes are provided
-  if(!is.null(pca_type)){
+  
+  # check that pca_type is either single or multi if input
+  if (!is.null(pca_type)){
+    
+    if(!(pca_type %in% c("single", "multi"))){
+      stop("pca_type must either be `single` or `multi`.")
+    }
+    
     # check that var_genes was provided
     if(is.null(var_genes)){
       stop("A list of variable genes to perform PCA must be provided 
            using the var_genes argument.")
     }
-  }
-  
-  if(!is.null(pca_type) && pca_type == "multi"){
     
-    # check that logcounts are present in combined_sce, required for modelGeneVar
-    if(!"logcounts" %in% assayNames(combined_sce)){
-      stop("log-normalized counts are required for multiBatchPCA, 
+    if(pca_type == "multi"){
+      
+      # check that logcounts are present in combined_sce, required for modelGeneVar
+      if(!"logcounts" %in% assayNames(combined_sce)){
+        stop("log-normalized counts are required for multiBatchPCA, 
            and are not found in the 'logcounts' assay of the combined SCE.")
+      }
+      
+      # check to make sure that the column to use for blocking is present 
+      if(!batch_column %in% colnames(colData(combined_sce))){
+        stop("batch_column must be a column present in the colData of the SCE object.")
+      }
+      
+      # extract the column with the batch_column variable
+      batch_column <- colData(combined_sce)[,batch_column]
+      
+      # perform multi batch PCA 
+      multi_pca_list <- batchelor::multiBatchPCA(combined_sce,
+                                                 subset.row = var_genes,
+                                                 batch = batch_column,
+                                                 preserve.single = TRUE)
+      
+      # add dataframe with PCA results to SCE object
+      reducedDim(combined_sce, pca_name) <- multi_pca_list@listData[[1]]
+      
     }
     
-    # check to make sure that the column to use for blocking is present 
-    if(!batch_var %in% colnames(colData(combined_sce))){
-      stop("batch_var must be a column present in the colData of the SCE object.")
+    if(pca_type == "single"){
+      
+      # check for assay present in SCE object
+      if(!assay %in% assayNames(combined_sce)){
+        stop("assay provided is not in the assayNames() of the SCE object.")
+      }
+      
+      # add PCA
+      combined_sce <- combined_sce %>%
+        scater::runPCA(subset_row = var_genes,
+                       name = pca_name,
+                       exprs_values = assay) 
+    
     }
-    
-    # extract the column with the block variable
-    batch_col <- colData(combined_sce)[,batch_var]
-    
-    # perform multi batch PCA 
-    multi_pca_list <- batchelor::multiBatchPCA(combined_sce,
-                                               subset.row = var_genes,
-                                               batch = batch_col,
-                                               preserve.single = TRUE)
-    
-    # add dataframe with PCA results to SCE object
-    reducedDim(combined_sce, pca_name) <- multi_pca_list@listData[[1]]
-    
-  }
   
-  if(!is.null(pca_type) && pca_type == "single"){
-    
-    # check for assay present in SCE object
-    if(!assay %in% assayNames(combined_sce)){
-      stop("assay provided is not in the assayNames() of the SCE object.")
-    }
-    
-    # add PCA
-    combined_sce <- combined_sce %>%
-      scater::runPCA(subset_row = var_genes,
-                     name = pca_name,
-                     exprs_values = assay) 
   }
   
   # add UMAP 
