@@ -40,13 +40,16 @@ var_genes <- perform_hvg_selection(combined_sce,
 
 # run multi batch PCA and UMAP on merged object with hvg selection 
 combined_sce <- perform_dim_reduction(combined_sce, 
-                                      var_genes = var_genes)
+                                      var_genes = var_genes,
+                                      pca_type = "multi")
 
 # single PCA 
 perform_dim_reduction(combined_sce,
                       var_genes = var_genes,
-                      single_pca = TRUE, 
-                      multi_pca = FALSE)
+                      pca_type = "single")
+
+# should fail PCA 
+#perform_dim_reduction(combined_sce, var_genes = var_genes, pca_type = "pca")
 
 # Test harmony:
 integrate_harmony(combined_sce, "batch", from_pca=FALSE)
@@ -55,7 +58,6 @@ integrated_object <- integrate_harmony(combined_sce, "batch")
 # add UMAP from harmony_PCA 
 integrated_object <- perform_dim_reduction(integrated_object, 
                                            var_genes = var_genes,
-                                           multi_pca = FALSE,
                                            prefix = "harmony")
 
 # plot UMAP pre and post integration 
