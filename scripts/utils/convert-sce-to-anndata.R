@@ -11,8 +11,10 @@
 # --anndata_output_dir: Path to folder where all AnnData files will be saved as HDF5 files 
 # 
 # **Note that any columns present in the `rowData` of an SCE object that contains 
-# duplicated information, e.g. duplicate gene identifiers, will be converted to 
-# categorical data in the AnnData object.
+# duplicated information, e.g. duplicate gene identifiers, are converted to 
+# categorical data by the `anndata` package.
+# For context and more information see the comment:
+# https://github.com/AlexsLemonade/sc-data-integration/pull/42#issuecomment-1187703050
 
 # load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
