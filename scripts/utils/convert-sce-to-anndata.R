@@ -9,6 +9,10 @@
 #   each file should contain the library ID in the filename and be stored as an RDS file.
 #   Typically this is the output from running scpca-downstream-analyses 
 # --anndata_output_dir: Path to folder where all AnnData files will be saved as HDF5 files 
+# 
+# **Note that any columns present in the `rowData` of an SCE object that contains 
+# duplicated information, e.g. duplicate gene identifiers, will be converted to 
+# categorical data in the AnnData object.
 
 # load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
