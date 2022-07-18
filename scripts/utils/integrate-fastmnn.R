@@ -6,6 +6,8 @@ library(SingleCellExperiment) # Needed for assays() function
 #' This function integrates a combined SCE object the using `fastMNN` function
 #'  from the `batchelor` package.
 #' @param combined_sce The combined SCE objects to integrate
+#' @param block_var The variable in `combined_sce` indicating batches. Default 
+#'   is "batch".
 #' @param gene_list Vector of high-variance genes to consider. The default value 
 #'   of `NULL` means all genes will be used.
 #' @param cosine_norm Boolean indicating whether cosine normalization should be 
@@ -16,6 +18,7 @@ library(SingleCellExperiment) # Needed for assays() function
 #'
 #' @return The integrated SCE object
 integrate_fastMNN <- function(combined_sce, 
+                              block_var = "batch",
                               gene_list = NULL, 
                               cosine_norm = TRUE,
                               seed = NULL,
@@ -25,15 +28,19 @@ integrate_fastMNN <- function(combined_sce,
     set.seed(seed)
   }
   
-  # Throw an error if normalization has not been performed
+  # Perform checks ---------------
   if (!("logcounts" %in% names(assays(combined_sce)))) {
-    stop("The `combined_sce` object is missing a `logcounts` assay required for fastMNN integration.")
+    stop("The `combined_sce` object requires a `logcounts` assay for fastMNN integration.")
   }
   
-  # Perform integration with fastMNN -------------------
+  if (!(batch_var %in% names(colData(combined_sce)))) {
+    stop("The provided batch_var column must be in `combined_sce` colData.")
+  }
+
+    # Perform integration with fastMNN -------------------
   integrated_sce <- batchelor::fastMNN(combined_sce, 
                                        # Specify batches.
-                                       batch = combined_sce$batch,
+                                       batch = colData(combined_sce)[,block_var],
                                        # Which genes to use for integration
                                        # The default value of NULL uses all genes
                                        subset.row = gene_list,
@@ -42,18 +49,20 @@ integrate_fastMNN <- function(combined_sce,
                                        # Anything else?
                                        ...)
   
-  # Add sce_integrated fields into `combined_sce` ---------------
+  # Add integrated_sce fields into `combined_sce` ---------------
   
-  # From docs: the `reconstructed` assay is a...
+  # From fastMNN docs: the `reconstructed` assay is a...
   #  low-rank reconstruction of the expression matrix. 
   #  This can be interpreted as per-gene corrected log-expression values 
   #  (after cosine normalization, if cos.norm=TRUE) but should not be 
   #  used for quantitative analyses.
+
+  # We will use `_corrected` for fastMNN's `reconstructed` and 
+  #  `_PCA` for fastMNN's `corrected`.
   assay(combined_sce, "fastMNN_corrected")  <- assay(integrated_sce, "reconstructed")
-  # The integrated PCs
   reducedDim(combined_sce, "fastMNN_PCA") <- reducedDim(integrated_sce, "corrected")
   
-  # Return SCE object with fastMNN information 
+  # Return SCE object with fastMNN information ---------------
   return(combined_sce)
   
 }
