@@ -761,7 +761,6 @@
       "Hash": "543776ae6848fde2f48ff3816d0628bc",
       "Requirements": []
     },
-<<<<<<< HEAD
     "batchelor": {
       "Package": "batchelor",
       "Version": "1.10.0",
