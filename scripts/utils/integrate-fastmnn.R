@@ -6,7 +6,7 @@ library(SingleCellExperiment) # Needed for assays() function
 #' This function integrates a combined SCE object the using `fastMNN` function
 #'  from the `batchelor` package.
 #' @param combined_sce The combined SCE objects to integrate
-#' @param batch_column The variable in `combined_sce` indicating batches. Default 
+#' @param batch_column The variable in `combined_sce` indicating batches, typically corresponds to the library ID. Default 
 #'   is "batch".
 #' @param gene_list Vector of high-variance genes to consider. The default value 
 #'   of `NULL` means all genes will be used.

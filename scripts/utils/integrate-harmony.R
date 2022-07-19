@@ -15,7 +15,7 @@ library(magrittr) # pipe
 #'   is "batch".
 #' @param covariate_cols Optional vector containing additional covariates to consider during integration.
 #' @param from_pca A boolean indicating whether to integrate directly from PCs. Default: TRUE.
-#' @param seed Random seed to set for `fastMNN` integration. A seed will only
+#' @param seed Random seed to set for `harmony` integration. A seed will only
 #'  be set if this is not `NULL` (the default).
 #' @param ... Additional parameters that may be passed to `harmony::HarmonyMatrix()`
 #'
