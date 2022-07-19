@@ -161,7 +161,7 @@ perform_hvg_selection <- function(combined_sce,
 #'   be stored to the `PCA` and `UMAP` slots.
 #' @param assay Name of the Assay holding the gene expression matrix to use for
 #'   performing PCA. Default is "logcounts". An assay name is only required if 
-#'   `single_pca` is TRUE. For `multi_pca` the `logcounts` assay is used.
+#'   using `pca_type = single`. For `pca_type = multi` the `logcounts` assay is used.
 #' @param pca_type Type of PCA to perform prior to UMAP, "single" uses `scater::runPCA()`, 
 #'   while "multi" uses `batchelor::multiBatchPCA()`. If a PCA method is not chosen, 
 #'   PCA is skipped, and the existing PCA results must be saved in the object with `prefix`_PCA 
