@@ -6,7 +6,7 @@ library(SingleCellExperiment) # Needed for assays() function
 #' This function integrates a combined SCE object the using `fastMNN` function
 #'  from the `batchelor` package.
 #' @param combined_sce The combined SCE objects to integrate
-#' @param block_var The variable in `combined_sce` indicating batches. Default 
+#' @param batch_column The variable in `combined_sce` indicating batches. Default 
 #'   is "batch".
 #' @param gene_list Vector of high-variance genes to consider. The default value 
 #'   of `NULL` means all genes will be used.
@@ -18,7 +18,7 @@ library(SingleCellExperiment) # Needed for assays() function
 #'
 #' @return The integrated SCE object
 integrate_fastMNN <- function(combined_sce, 
-                              block_var = "batch",
+                              batch_column = "batch",
                               gene_list = NULL, 
                               cosine_norm = TRUE,
                               seed = NULL,
@@ -33,14 +33,14 @@ integrate_fastMNN <- function(combined_sce,
     stop("The `combined_sce` object requires a `logcounts` assay for fastMNN integration.")
   }
   
-  if (!(batch_var %in% names(colData(combined_sce)))) {
-    stop("The provided batch_var column must be in `combined_sce` colData.")
+  if (!(batch_column %in% names(colData(combined_sce)))) {
+    stop("The provided `batch_column` column must be in `combined_sce` colData.")
   }
 
     # Perform integration with fastMNN -------------------
   integrated_sce <- batchelor::fastMNN(combined_sce, 
                                        # Specify batches.
-                                       batch = colData(combined_sce)[,block_var],
+                                       batch = colData(combined_sce)[,batch_column],
                                        # Which genes to use for integration
                                        # The default value of NULL uses all genes
                                        subset.row = gene_list,
