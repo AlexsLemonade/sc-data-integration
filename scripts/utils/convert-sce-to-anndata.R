@@ -24,6 +24,9 @@ renv::load(project_root)
 library(magrittr)
 library(optparse)
 
+# source helper functions 
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+
 # Set up optparse options
 option_list <- list(
   make_option(
@@ -41,9 +44,16 @@ option_list <- list(
     Typically this is the output from running scpca-downstream-analyses"
   ),
   make_option(
+    opt_str = c("-g", "--grouping_var"), 
+    type = "character",
+    default = "project_name", 
+    help = "Column name present in the library metadata file to use for grouping SCE objects
+    and merging prior to performing HVG selection and export to AnnData."
+  ),
+  make_option(
     opt_str = c("--anndata_output_dir"),
     type = "character",
-    default = file.path(project_root, "results", "human_cell_atlas", "anndata", "individual_anndata_objects"),
+    default = file.path(project_root, "results", "human_cell_atlas", "anndata", "pre_integration_anndata_objects"),
     help = "path to folder where all AnnData files will be saved as HDF5 files"
   )
 )
@@ -62,6 +72,11 @@ if(!file.exists(opt$library_file)){
 library_metadata_df <- readr::read_tsv(opt$library_file)
 library_ids <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
+
+# check that grouping variable is present
+if(!opt$grouping_var %in% colnames(library_metadata_df)){
+  stop("Must provide a grouping_var that is a column in the library metadata file.")
+}
 
 # setup output directory 
 if(!dir.exists(opt$anndata_output_dir)){
@@ -93,20 +108,57 @@ if(length(sce_files) < length(library_ids)){
   )
 }
 
-# Write H5 ---------------------------------------------------------------------
+# Merge by group ---------------------------------------------------------------
 
-# create paths to anndata h5 files 
-anndata_files <- file.path(opt$anndata_output_dir,
-                           paste0(library_ids, 
-                                  "_anndata.h5"))
+# get the library IDs from the SCE file names so that we can name the SCEs in the correct order 
+sce_file_names <- stringr::str_extract(sce_files, pattern = library_search)
+sce_list <- sce_files %>%
+  purrr::set_names(sce_file_names) %>%
+  purrr::map(readr::read_rds)
 
-# small function to read in sce and export as anndata 
-export_anndata <- function(sce_file,
-                           anndata_file){
+# get the names for each group
+group_names <- unlist(unique(library_metadata_df[, opt$grouping_var]))
+
+# create split sce list using the group names 
+split_sce_list <- split(sce_list, group_names)
+
+# create a list of merged SCE objects by group
+merged_sce_list <- split_sce_list %>%
+  purrr::map(combine_sce_objects)
+
+# Subset to HVG ----------------------------------------------------------------
+
+
+#' Identify variable genes for a merged object and subset the object by those genes
+#'
+#' @param merged_sce SCE object that has been merged using combine_sce_objects
+#'
+#' @return merged SCE object with variable genes added to metadata and subset by variable genes
+subset_var_genes <- function(merged_sce){
+ 
+  # grab variable genes
+  var_genes <- perform_hvg_selection(merged_sce)
   
-  sce <- readr::read_rds(sce_file)
-  scpcaTools::sce_to_anndata(sce,anndata_file = anndata_file)
+  # subset SCE to include variable genes only
+  subset_sce <- merged_sce[var_genes,]
+  # add variable genes to metadata
+  metadata(subset_sce)$variable_genes <- var_genes
+  
+  return(subset_sce)
 }
 
-# apply export_anndata function to all sce files
-purrr::walk2(sce_files, anndata_files, export_anndata)
+
+# apply HVG calculation and subsetting to list of merged SCEs
+subset_sce_list <- merged_sce_list %>%
+  purrr::map(subset_var_genes)
+
+# Write H5 ---------------------------------------------------------------------
+
+# create paths to anndata h5 files
+# named with the name of the sce list which corresponds to the grouping variable, not library ID
+anndata_files <- file.path(opt$anndata_output_dir,
+                           paste0(names(subset_sce_list), 
+                                  "_anndata.h5"))
+
+# export to anndata 
+purrr::walk2(subset_sce_list, anndata_files, scpcaTools::sce_to_anndata)
