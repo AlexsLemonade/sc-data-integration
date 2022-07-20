@@ -1,14 +1,21 @@
-# Script used to convert SCE objects to AnnData objects as HDF5 files
+# Script used to prepare SCE objects to be integrated 
+#
+# SCE files are grouped by a specified grouping variable that must be present as 
+# a column in the `library_file`. SCE objects for each group are merged, highly 
+# variable genes for the merged object are calculated, and then merged objects are 
+# stored as RDS files in the `--merged_sce_dir`.
 
 # Option descriptions: 
 # 
 # --library_file: The path to the file listing all libraries that should be included 
 #   in the conversion from loom to SCE. This file must contain the 
 #   `library_biomaterial_id` column
+# --grouping_var: Column name present in the library metadata file to use for 
+# grouping SCE objects and merging prior to performing HVG selection.
 # --sce_dir: Path to folder where SCE objects to be converted are stored, 
 #   each file should contain the library ID in the filename and be stored as an RDS file.
 #   Typically this is the output from running scpca-downstream-analyses 
-# --anndata_output_dir: Path to folder where all AnnData files will be saved as HDF5 files 
+# --merged_sce_dir: Path to folder where all merged SCE objects will be stored 
 # 
 # **Note that any columns present in the `rowData` of an SCE object that contains 
 # duplicated information, e.g. duplicate gene identifiers, are converted to 
@@ -36,6 +43,13 @@ option_list <- list(
     help = "path to file listing all libraries that are to be converted"
   ),
   make_option(
+    opt_str = c("-g", "--grouping_var"), 
+    type = "character",
+    default = "project_name", 
+    help = "Column name present in the library metadata file to use for grouping SCE objects
+    and merging prior to performing HVG selection."
+  ),
+  make_option(
     opt_str = c("--sce_dir"),
     type = "character",
     default = file.path(project_root, "results", "human_cell_atlas", "scpca-downstream-analyses"),
@@ -44,16 +58,9 @@ option_list <- list(
     Typically this is the output from running scpca-downstream-analyses"
   ),
   make_option(
-    opt_str = c("-g", "--grouping_var"), 
+    opt_str = c("--merged_sce_dir"),
     type = "character",
-    default = "project_name", 
-    help = "Column name present in the library metadata file to use for grouping SCE objects
-    and merging prior to performing HVG selection and export to AnnData."
-  ),
-  make_option(
-    opt_str = c("--anndata_output_dir"),
-    type = "character",
-    default = file.path(project_root, "results", "human_cell_atlas", "anndata", "pre_integration_anndata_objects"),
+    default = file.path(project_root, "results", "human_cell_atlas", "merged-sce-objects"),
     help = "path to folder where all AnnData files will be saved as HDF5 files"
   )
 )
@@ -79,8 +86,8 @@ if(!opt$grouping_var %in% colnames(library_metadata_df)){
 }
 
 # setup output directory 
-if(!dir.exists(opt$anndata_output_dir)){
-  dir.create(opt$anndata_output_dir, recursive = TRUE)
+if(!dir.exists(opt$merged_sce_dir)){
+  dir.create(opt$merged_sce_dir, recursive = TRUE)
 }
 
 # Identify SCE files -----------------------------------------------------------
@@ -129,36 +136,41 @@ merged_sce_list <- split_sce_list %>%
 # Subset to HVG ----------------------------------------------------------------
 
 
-#' Identify variable genes for a merged object and subset the object by those genes
+#' Identify variable genes for a merged object and add to metadata
 #'
 #' @param merged_sce SCE object that has been merged using combine_sce_objects
 #'
-#' @return merged SCE object with variable genes added to metadata and subset by variable genes
-subset_var_genes <- function(merged_sce){
+#' @return merged SCE object with variable genes added to metadata
+add_var_genes <- function(merged_sce){
  
   # grab variable genes
   var_genes <- perform_hvg_selection(merged_sce)
   
-  # subset SCE to include variable genes only
-  subset_sce <- merged_sce[var_genes,]
   # add variable genes to metadata
-  metadata(subset_sce)$variable_genes <- var_genes
+  metadata(merged_sce)$variable_genes <- var_genes
   
-  return(subset_sce)
+  return(merged_sce)
 }
 
 
-# apply HVG calculation and subsetting to list of merged SCEs
-subset_sce_list <- merged_sce_list %>%
-  purrr::map(subset_var_genes)
+# apply HVG calculation to list of merged SCEs
+merged_sce_list <- merged_sce_list %>%
+  purrr::map(add_var_genes)
+
+# add PCA and UMAP 
+
+merged_sce_list <- merged_sce_list %>%
+  purrr::map( ~ perform_dim_reduction(.x, 
+                                      var_genes = metadata(.x)$variable_genes,
+                                      pca_type = "multi"))
 
 # Write H5 ---------------------------------------------------------------------
 
-# create paths to anndata h5 files
+# create paths to merged SCE files
 # named with the name of the sce list which corresponds to the grouping variable, not library ID
-anndata_files <- file.path(opt$anndata_output_dir,
-                           paste0(names(subset_sce_list), 
-                                  "_anndata.h5"))
+merged_sce_files <- file.path(opt$merged_sce_dir,
+                              paste0(names(merged_sce_list), 
+                                     "_merged_sce.rds"))
 
-# export to anndata 
-purrr::walk2(subset_sce_list, anndata_files, scpcaTools::sce_to_anndata)
+# export files 
+purrr::walk2(merged_sce_list, merged_sce_files, readr::write_rds)
