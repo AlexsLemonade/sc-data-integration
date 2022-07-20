@@ -115,7 +115,7 @@ combine_sce_objects <- function(sce_list = list(),
 #' @param combined_sce SingleCellExperiment object containing normalized gene expression data 
 #'   from more than one library.
 #' @param num_genes Number of highly variable genes to select. Default is 5000.
-#' @param block_var Column present in colData of the SingleCellExperiment object 
+#' @param batch_column Column present in colData of the SingleCellExperiment object 
 #'   that contains the original identity of each library. Default is "batch". 
 #'
 #' @return Highly variable gene vector
