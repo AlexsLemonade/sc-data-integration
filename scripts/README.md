@@ -1,6 +1,7 @@
 # Scripts for single-cell data integration
 
-This folder holds the scripts that have been used for data integration and processing of single-cell libraries and datasets.
+This directory holds the scripts that have been used for data integration and processing of single-cell libraries and datasets.
+The `utils/` directory contains functions used within these scripts and is separately documented in [`utils/README.md`](./utils/README.md).
 
 <!-- START doctoc generated TOC please keep comment here to allow auto update -->
 <!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
@@ -22,7 +23,7 @@ If working with libraries for the first time that don't yet have `SingleCellExpe
 
 All libraries that are being used for testing should be listed in [`sample-info/hca-processed-libraries.tsv`](../sample-info/hca-processed-libraries.tsv). 
 Before starting analysis, copy the `SingleCellExperiment` objects for libraries listed in `scripts/hca-processed-libraries.tsv` locally using the `--copy_s3` flag. 
-This will copy the `SingleCellExperiment` objects to the `data/human_cell_atlas/sce` folder where libraries will be nested by tissue group and project name. 
+This will copy the `SingleCellExperiment` objects to the `data/human_cell_atlas/sce` directory where libraries will be nested by tissue group and project name. 
 
 ```R
 Rscript 00-obtain-sce.R --copy_s3
