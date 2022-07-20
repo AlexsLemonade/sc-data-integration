@@ -15,7 +15,7 @@ hca_metadata <- readr::read_tsv(
 sce_dir <- here::here("results", 
                       "human_cell_atlas", 
                       "scpca-downstream-analyses")
-tissue <- "kidney"
+tissue <- "brain"
 project_metadata <- hca_metadata %>%
   dplyr::filter(tissue_group == tissue) %>%
   dplyr::mutate(sce_path = file.path(sce_dir,
@@ -36,18 +36,47 @@ names(sce_list) <- c(library_ids[1], library_ids[2]) #, library_ids[3],  library
 combined_sce <- combine_sce_objects(sce_list, 
                                     c("Gene", "ensembl_ids", "gene_names"))
 
-# Test harmony:
-integrate_harmony(combined_sce, from_pca=FALSE)
-integrate_harmony(combined_sce)
-# Should fail:
-# integrate_harmony(combined_sce)
-# integrate_harmony(combined_sce, "not_a_column")
+# get hvg 
+var_genes <- perform_hvg_selection(combined_sce,
+                                   n = 5000)
 
+# run multi batch PCA and UMAP on merged object with hvg selection 
+combined_sce <- perform_dim_reduction(combined_sce, 
+                                      var_genes = var_genes,
+                                      pca_type = "multi")
+
+# single PCA 
+perform_dim_reduction(combined_sce,
+                      var_genes = var_genes,
+                      pca_type = "single")
+
+# should fail PCA 
+#perform_dim_reduction(combined_sce, var_genes = var_genes, pca_type = "pca")
+
+# Test harmony:
+integrate_harmony(combined_sce, "batch", from_pca=FALSE)
+integrated_object <- integrate_harmony(combined_sce, "batch")
+
+# add UMAP from harmony_PCA 
+integrated_object <- perform_dim_reduction(integrated_object, 
+                                           var_genes = var_genes,
+                                           prefix = "harmony")
 
 # Test fastMNN:
 integrate_fastMNN(combined_sce)
+# plot UMAP pre and post integration 
+pre_integration <- scater::plotReducedDim(combined_sce, 
+                                          dimred = "UMAP", 
+                                          colour_by = "batch")
+post_integration <- scater::plotReducedDim(integrated_object, 
+                                           dimred = "harmony_UMAP", 
+                                           colour_by = "batch")
 
+cowplot::plot_grid(pre_integration, post_integration, ncol = 1)
 
+# Should fail:
+# integrate_harmony(combined_sce)
+# integrate_harmony(combined_sce, "not_a_column")
 
 
 
