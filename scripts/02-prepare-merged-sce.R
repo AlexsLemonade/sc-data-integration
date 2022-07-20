@@ -11,7 +11,7 @@
 #   in the conversion from loom to SCE. This file must contain the 
 #   `library_biomaterial_id` column
 # --grouping_var: Column name present in the library metadata file to use for 
-# grouping SCE objects and merging prior to performing HVG selection.
+#   grouping SCE objects and merging prior to performing HVG selection.
 # --sce_dir: Path to folder where SCE objects to be converted are stored, 
 #   each file should contain the library ID in the filename and be stored as an RDS file.
 #   Typically this is the output from running scpca-downstream-analyses 
