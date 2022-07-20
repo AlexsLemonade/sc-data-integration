@@ -11,40 +11,52 @@ library(magrittr) # pipe
 #'  
 #' @param combined_sce A combined SCE object. Must contain a cell column `batch`
 #'   that indicates the different groups to be integrated.
-#' @param covariate_cols Vector containing the covariates to consider during integration.
+#' @param batch_column The variable in `combined_sce` indicating batches. Default 
+#'   is "batch".
+#' @param covariate_cols Optional vector containing additional covariates to consider during integration.
 #' @param from_pca A boolean indicating whether to integrate directly from PCs. Default: TRUE.
-#' @param seed Random seed for harmony integration
+#' @param seed Random seed to set for `harmony` integration. A seed will only
+#'  be set if this is not `NULL` (the default).
 #' @param ... Additional parameters that may be passed to `harmony::HarmonyMatrix()`
 #'
 #' @return An integrated SCE object with the additional reducedDim field `harmony`
 #'   representing the integrated PCs 
 #' @examples 
-#' integrate_harmony(combined_sce, "batch")
-#' integrate_harmony(combined_sce, c("sample", "batch"), from_pca = FALSE) # start from gene expression matrix
+#' integrate_harmony(combined_sce)
+#' integrate_harmony(combined_sce, covariate_cols = "sample", from_pca = FALSE) # start from gene expression matrix
 integrate_harmony <- function(combined_sce, 
+                              batch_column = "batch",
                               covariate_cols = c(), 
                               from_pca = TRUE,
-                              seed = 2022,
+                              seed = NULL,
                               ...) {
   
-  set.seed(2022)
+  if (!(is.null(seed))) {
+    set.seed(seed)
+  }
   
   # Perform checks ----------------------
 
-  # Ensure groupings were provided
-  if (length(covariate_cols) == 0) {
-    stop("You must provide a vector of covariate columns.")
+  # Ensure batch column is present
+  if (!(batch_column %in% names(colData(combined_sce)))) {
+    stop("The provided `batch_column` column must be in `combined_sce` colData.")
   }
-  # Ensure groupings are present in the data
-  if (!(all(covariate_cols %in% names(colData(combined_sce))))) {
-    stop("The combined_sce object must contain the given covariate columns in colData.")
+  
+  # Ensure covariates are present in the data, if provided
+  if (length(covariate_cols) > 0) {
+    if (!(all(covariate_cols %in% names(colData(combined_sce))))) {
+      stop("The combined_sce object must contain the given covariate columns in colData.")
+    }
   }
+  
   # Ensure PCs are present in the combined_sce object
   if (from_pca && !("PCA" %in% reducedDimNames(combined_sce))) {
     stop("The combined_sce object must contain PCs.")
   }
   
   # Create metadata information for input to harmony ---------------------------
+  # First, combine together all the covariates with batch to use together:
+  covariate_cols <- c(batch_column, covariate_cols) 
   harmony_metadata <- tibble::as_tibble(colData(combined_sce), 
                                         rownames = "cell_id") %>%
     dplyr::select(cell_id,
