@@ -3,8 +3,8 @@
 This directory holds the scripts with functions that are used for data integration and processing of single-cell libraries and datasets.
 
 
-- The script `preprocess-sce.R` generates a metadata file for use by the [`scpca-downstream-analyses`](https://github.com/AlexsLemonade/scpca-downstream-analyses/) pipeline. 
-The script also runs this pipeline on SCE objects so they are filtered and normalized before integration.
+- The script `preprocess-sce.R` is used to filter SCE objects using [`scpcaTools::filter_counts`](https://github.com/AlexsLemonade/scpcaTools/blob/main/R/filter_counts.R) and generates a metadata file for use by the [`scpca-downstream-analyses`](https://github.com/AlexsLemonade/scpca-downstream-analyses/) pipeline. 
+To run this script followed by processing SCE through `scpca-downstream-analyses` to complete filtering, normalization, and clustering use the `01-run-downstream-analyses.sh` script in the `scripts` directory. 
 - The script `convert-sce-to-anndata.R` converts SCE objects stored as RDS files to [`anndata`](https://anndata.readthedocs.io/en/latest/) objects stored as HDF5 files for input to the integration method [`Scanorama`](https://github.com/brianhie/scanorama) within the Python package [`scanpy`](https://github.com/scverse/scanpy).
 
 
