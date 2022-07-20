@@ -3,6 +3,8 @@ renv::load(here::here())
 util_dir <- here::here("scripts", "utils")
 source(file.path(util_dir, "integration-helpers.R"))
 source(file.path(util_dir, "integrate-harmony.R"))
+source(file.path(util_dir, "integrate-fastMNN.R"))
+
 
 library(magrittr) # pipe
 
@@ -60,6 +62,8 @@ integrated_object <- perform_dim_reduction(integrated_object,
                                            var_genes = var_genes,
                                            prefix = "harmony")
 
+# Test fastMNN:
+integrate_fastMNN(combined_sce)
 # plot UMAP pre and post integration 
 pre_integration <- scater::plotReducedDim(combined_sce, 
                                           dimred = "UMAP", 
@@ -73,3 +77,6 @@ cowplot::plot_grid(pre_integration, post_integration, ncol = 1)
 # Should fail:
 # integrate_harmony(combined_sce)
 # integrate_harmony(combined_sce, "not_a_column")
+
+
+
