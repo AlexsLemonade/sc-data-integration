@@ -3,7 +3,8 @@
 This directory holds the scripts with functions that are used for data integration and processing of single-cell libraries and datasets.
 
 
-- The script `preprocess-sce.R` generates a metadata file for use by the [`scpca-downstream-analyses`](https://github.com/AlexsLemonade/scpca-downstream-analyses/) pipeline and runs this pipeline on SCE objects so they are filtered and normalized before integratio.
+- The script `preprocess-sce.R` generates a metadata file for use by the [`scpca-downstream-analyses`](https://github.com/AlexsLemonade/scpca-downstream-analyses/) pipeline. 
+The script also runs this pipeline on SCE objects so they are filtered and normalized before integration.
 - The script `convert-sce-to-anndata.R` converts SCE objects stored as RDS files to [`anndata`](https://anndata.readthedocs.io/en/latest/) objects stored as HDF5 files for input to the integration method [`Scanorama`](https://github.com/brianhie/scanorama) within the Python package [`scanpy`](https://github.com/scverse/scanpy).
 
 
@@ -12,9 +13,9 @@ This directory holds the scripts with functions that are used for data integrati
     - `integrate-fastMNN.R` contains the function to perform single-cell library integration using the [`batchelor`](https://bioconductor.org/packages/devel/bioc/html/batchelor.html) R package function `fastMNN()`.
 
 - The script `integration-helpers.R` contains several functions that support integration:
-    - `perform_hvg_selection()` identifies high-variance genes to use during integration
-    - `perform_dim_reduction()` calculate PCA (if specified) and UMAP embeddings from a combined SCE object
-    - `combine_sce_objects()` merges one or more SCE objects that should be integrated
+    - `perform_hvg_selection()` identifies high-variance genes to use during integration.
+    - `perform_dim_reduction()` calculates PCA (if specified) and UMAP embeddings from a combined SCE object.
+    - `combine_sce_objects()` merges one or more SCE objects that should be integrated.
 
 - The script `test_integration-functions.R` is used internally to lightly test functionality of new features. 
 Note that this script does _not_ facilitate true unit testing/regression testing. 
