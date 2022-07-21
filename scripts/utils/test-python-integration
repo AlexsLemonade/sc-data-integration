@@ -35,10 +35,7 @@ if os.path.isdir(integrated_adata_dir)==False:
 merged_adata = adata.read_h5ad(merged_adata_file)
 
 # integrate anndata
-integrated_adata = intScan.integrate_scanorama(merged_adata)
+integrated_adata = intScan.integrate_scanorama(merged_adata, seed = 2022)
 
 # write anndata to h5
 integrated_adata.write(filename = integrated_adata_file)
-
-
-
