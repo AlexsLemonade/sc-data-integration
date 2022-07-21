@@ -91,4 +91,3 @@ def integrate_scanorama(merged_adata,
     integrated_anndata_obj = adata.concat(split_adata, merge = "same")
     
     return integrated_anndata_obj
-    
