@@ -86,4 +86,5 @@ anndata_dir <- file.path(here::here(
   "integrated_scanorama_objects"
 ))
 scanorama_integrated_file <- file.path(anndata_dir, "1M_Immune_Cells_scanorama_integrated.h5")
-scanorama_integrated_sce <- zellkonverter::readH5AD(scanorama_integrated_file)
+scanorama_integrated_sce <- zellkonverter::readH5AD(scanorama_integrated_file,
+                                                    X_name = "counts")
