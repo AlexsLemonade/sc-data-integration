@@ -109,7 +109,7 @@ if(length(sce_files) < length(library_ids)){
   
   stop(
     glue::glue(
-      "Missing SCE object for {missing_libraries}.
+      "\nMissing SCE object for {missing_libraries}.
       Make sure that you have run `01-run-downstream-analyses.sh`."
     )
   )
