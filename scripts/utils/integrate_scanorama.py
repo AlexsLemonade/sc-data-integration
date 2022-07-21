@@ -90,4 +90,7 @@ def integrate_scanorama(merged_adata,
     # merge anndata back together into one integrated object with original and integrated data 
     integrated_anndata_obj = adata.concat(split_adata, merge = "same")
     
+    # add unstructured metadata from original merged object back to integrated object
+    integrated_anndata_obj.uns = merged_adata.uns
+    
     return integrated_anndata_obj
