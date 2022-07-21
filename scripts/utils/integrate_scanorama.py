@@ -84,8 +84,8 @@ def integrate_scanorama(merged_adata,
     
     # add corrected gene expression and embeddings to individual anndata objects 
     for idx, anndata in enumerate(split_adata): 
-        anndata.obsm["scanpy_SVD"] = integrated[idx]
-        anndata.layers["scanpy_corrected"] = corrected[idx]
+        anndata.obsm["scanorama_SVD"] = integrated[idx]
+        anndata.layers["scanorama_corrected"] = corrected[idx]
         
     # merge anndata back together into one integrated object with original and integrated data 
     integrated_anndata_obj = adata.concat(split_adata, merge = "same")
