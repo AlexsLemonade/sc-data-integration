@@ -119,18 +119,40 @@ if(length(sce_files) < length(library_ids)){
 
 # get the library IDs from the SCE file names so that we can name the SCEs in the correct order 
 sce_file_names <- stringr::str_extract(sce_files, pattern = library_search)
-sce_list <- sce_files %>%
-  purrr::set_names(sce_file_names) %>%
-  purrr::map(readr::read_rds)
 
-# get the names for each group
-group_names <- unlist(unique(library_metadata_df[, opt$grouping_var]))
+sce_file_df <- data.frame(sce_files = sce_files, 
+                          library_id= sce_file_names) %>%
+  dplyr::left_join(library_metadata_df, by = c("library_id" = "library_biomaterial_id")) %>%
+  dplyr::select(library_id, opt$grouping_var, sce_files)
 
-# create split sce list using the group names 
-split_sce_list <- split(sce_list, group_names)
+# group dataframe by the grouping variable 
+grouped_sce_file_df <- split(sce_file_df, sce_file_df[,opt$grouping_var])
+
+# create a list of SCE lists that is named by the grouping variable with 
+# each individual inner SCE list named by the library IDs
+create_grouped_sce_list <- function(sce_info_dataframe){
+  
+  library_sce_list = list()
+  for (library_idx in 1:length(sce_info_dataframe$library_id)){
+    
+    # read sce list for each library
+    sce <- readr::read_rds(sce_info_dataframe$sce_files[library_idx])
+    library_name <- sce_info_dataframe$library_id[library_idx]
+    # create a list for each group named by the library IDs
+    library_sce_list[[library_name]] <- sce
+    
+  }
+  
+  return(library_sce_list)
+  
+}  
+
+grouped_sce_list <- grouped_sce_file_df %>%
+  purrr::map(create_grouped_sce_list)
+  
 
 # create a list of merged SCE objects by group
-merged_sce_list <- split_sce_list %>%
+merged_sce_list <- grouped_sce_list %>%
   purrr::map(combine_sce_objects)
 
 # Subset to HVG ----------------------------------------------------------------
