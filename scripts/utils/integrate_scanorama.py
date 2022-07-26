@@ -53,7 +53,6 @@ def integrate_scanorama(merged_adata,
     # create a dictionary with sample and associated cells for that sample
     try:
         library_dict = merged_adata.obs.groupby(batch_column).indices
-        library_names = library_dict.keys()
     except KeyError:
         print(f"Provided  batch_column cannot be found in anndata object."
               f"Make sure it is stored in adata.obs[{batch_column}].")
@@ -64,7 +63,7 @@ def integrate_scanorama(merged_adata,
     split_logcounts = []
     split_genes = [] # need a list of gene lists for input to scanorama
     split_adata = [] # also need to split the anndata object to add the integrated results back 
-    for library in library_names:
+    for library in library_dict:
         # subset merged anndata with cells for each library
         anndata = merged_adata[library_dict[library]]
         split_adata.append(anndata)
