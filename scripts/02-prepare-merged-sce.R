@@ -180,7 +180,6 @@ merged_sce_list <- merged_sce_list %>%
   purrr::map(add_var_genes)
 
 # add PCA and UMAP 
-
 merged_sce_list <- merged_sce_list %>%
   purrr::map( ~ perform_dim_reduction(.x, 
                                       var_genes = metadata(.x)$variable_genes,
