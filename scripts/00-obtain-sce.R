@@ -247,7 +247,7 @@ if(length(missing_sce_files) != 0){
   }
   
   # convert to sce objects and write files 
-  sce_list <- purrr::map2(loom_file_paths,
+  sce_list <- purrr::map2(full_missing_loom_path,
                           missing_sce_files, 
                           loom_to_sce)
   
