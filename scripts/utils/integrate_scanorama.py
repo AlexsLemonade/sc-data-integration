@@ -31,7 +31,7 @@ def integrate_scanorama(merged_adata,
     Returns
     -------
     integrated_anndata_obj : AnnData object containing the highly variable genes and
-        `scanpy_SVD` in the `anndata.obsm` and `scanpy_corrected` gene
+        `scanorama_SVD` in the `anndata.obsm` and `scanorama_corrected` gene
         expression matrix 
 
     """
