@@ -99,7 +99,6 @@ def integrate_scvi(merged_adata,
     
     # create an scvi model object 
     # raw counts are required as input
-    # if have additional covariates can add to `categorical_covariate_keys`
     scvi.model.SCVI.setup_anndata(merged_adata,
                                   categorical_covariate_keys = categorical_covariate_columns,
                                   continuous_covariate_keys = continuous_covariate_columns)
