@@ -19,12 +19,12 @@ anndata_dir = os.path.join(project_root,
 # build merged anndata file paths 
 merged_anndata_dir = os.path.join(anndata_dir,
                                   "merged_anndata_objects")
-merged_adata_file =os.path.join(merged_anndata_dir, "1M_Immune_Cells_anndata.h5")
+merged_adata_file = os.path.join(merged_anndata_dir, "1M_Immune_Cells_anndata.h5")
 
 # build integrated anndata file paths for output
 integrated_adata_dir = os.path.join(anndata_dir,
                                     "integrated_scanorama_objects")
-scanorama_integrated_adata_file= os.path.join(integrated_adata_dir,
+scanorama_integrated_adata_file = os.path.join(integrated_adata_dir,
                                     "1M_Immune_Cells_scanorama_integrated.h5")
 
 # check if output directory exists 
