@@ -118,10 +118,10 @@ if(length(sce_files) < length(library_ids)){
 # Merge by group ---------------------------------------------------------------
 
 # get the library IDs from the SCE file names so that we can name the SCEs in the correct order 
-sce_file_names <- stringr::str_extract(sce_files, pattern = library_search)
+library_ids_sce_order <- stringr::str_extract(sce_files, pattern = library_search)
 
 sce_file_df <- data.frame(sce_files = sce_files, 
-                          library_id= sce_file_names) %>%
+                          library_id= library_ids_sce_order) %>%
   dplyr::left_join(library_metadata_df, by = c("library_id" = "library_biomaterial_id")) %>%
   dplyr::select(library_id, opt$grouping_var, sce_files)
 
@@ -153,7 +153,7 @@ grouped_sce_list <- grouped_sce_file_df %>%
 
 # create a list of merged SCE objects by group
 merged_sce_list <- grouped_sce_list %>%
-  purrr::map(combine_sce_objects)
+  purrr::map(~ combine_sce_objects(.x, preserve_rowdata_columns = c("Gene", "gene_names")))
 
 # Subset to HVG ----------------------------------------------------------------
 
@@ -185,7 +185,7 @@ merged_sce_list <- merged_sce_list %>%
                                       var_genes = metadata(.x)$variable_genes,
                                       pca_type = "multi"))
 
-# Write H5 ---------------------------------------------------------------------
+# Write RDS --------------------------------------------------------------------
 
 # create paths to merged SCE files
 # named with the name of the sce list which corresponds to the grouping variable, not library ID
