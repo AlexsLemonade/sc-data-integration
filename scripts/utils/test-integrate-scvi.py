@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Script to test integration of python based functions 
+Script to test integration with scvi
 """
 
 import os
@@ -9,7 +9,7 @@ import git
 project_root = git.Repo('.', search_parent_directories=True).working_dir
 
 import anndata as adata
-from integrate_scverse import integrate_scvi
+from integrate_scvi import integrate_scvi
 
 anndata_dir = os.path.join(project_root, 
                            "results",
