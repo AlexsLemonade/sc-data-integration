@@ -31,7 +31,7 @@ def integrate_scanorama(merged_adata,
     Returns
     -------
     integrated_anndata_obj : AnnData object containing the highly variable genes and
-        `scanpy_SVD` in the `anndata.obsm` and `scanpy_corrected` gene
+        `scanorama_SVD` in the `anndata.obsm` and `scanorama_corrected` gene
         expression matrix 
 
     """
@@ -54,7 +54,7 @@ def integrate_scanorama(merged_adata,
     try:
         library_dict = merged_adata.obs.groupby(batch_column).indices
     except KeyError:
-        print(f"Provided  batch_column cannot be found in anndata object."
+        print(f"Provided batch_column cannot be found in anndata object."
               f"Make sure it is stored in adata.obs[{batch_column}].")
         sys.exit(1)
     
