@@ -78,5 +78,13 @@ cowplot::plot_grid(pre_integration, post_integration, ncol = 1)
 # integrate_harmony(combined_sce)
 # integrate_harmony(combined_sce, "not_a_column")
 
-
-
+# scanorama integration read integrated object in 
+anndata_dir <- file.path(here::here(
+  "results",
+  "human_cell_atlas", 
+  "anndata",
+  "integrated_scanorama_objects"
+))
+scanorama_integrated_file <- file.path(anndata_dir, "1M_Immune_Cells_scanorama_integrated.h5")
+scanorama_integrated_sce <- zellkonverter::readH5AD(scanorama_integrated_file,
+                                                    X_name = "counts")

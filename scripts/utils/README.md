@@ -13,6 +13,7 @@ The bash script [`scripts/01-run-downstream-analyses.sh`](../01-run-downstream-a
 - There are several scripts that contain functions to perform integration with various methods:
     - `integrate-harmony.R` contains the function to perform single-cell library integration using the [`harmony`](https://github.com/immunogenomics/harmony) R package function `harmonyMatrix()`.
     - `integrate-fastMNN.R` contains the function to perform single-cell library integration using the [`batchelor`](https://bioconductor.org/packages/devel/bioc/html/batchelor.html) R package function `fastMNN()`.
+    - `integrate_scanorama.py` contains the function to perform single-cell library integration using the [`scanorama`](https://github.com/brianhie/scanorama) python package function `scanorama.correct()`.
 
 - The script `integration-helpers.R` contains several functions that support integration:
     - `perform_hvg_selection()` identifies high-variance genes to use during integration.
@@ -21,4 +22,12 @@ The bash script [`scripts/01-run-downstream-analyses.sh`](../01-run-downstream-a
 
 - The script `test_integration-functions.R` is used internally to lightly test functionality of new features. 
 Note that this script does _not_ facilitate true unit testing/regression testing. 
-
+- The script `test-integrate-scanorama.py` can be used to test functionality of the `integrate_scanorama` function
+    - This script is designed to run inside a python environment contianing `scanorama` and it's dependencies. 
+    The `envs` folder in the root directory contains the `scanorama.yaml` file to build the environment necessary to use `scanorama`. 
+    To create the environment, use the following commands: 
+    ```
+    cd sc-data-integration/envs
+    conda env create -f scanorama.yaml
+    conda activate scanorama
+    ```
