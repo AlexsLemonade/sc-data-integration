@@ -4,9 +4,10 @@ util_dir <- here::here("scripts", "utils")
 source(file.path(util_dir, "integration-helpers.R"))
 source(file.path(util_dir, "integrate-harmony.R"))
 source(file.path(util_dir, "integrate-fastMNN.R"))
-
+source(file.path(util_dir, "integrate-seurat.R"))
 
 library(magrittr) # pipe
+library(scpcaTools) # for transformation of sce -> seurat
 
 hca_metadata <- readr::read_tsv(
   here::here("sample-info",
@@ -88,3 +89,22 @@ anndata_dir <- file.path(here::here(
 scanorama_integrated_file <- file.path(anndata_dir, "1M_Immune_Cells_scanorama_integrated.h5")
 scanorama_integrated_sce <- zellkonverter::readH5AD(scanorama_integrated_file,
                                                     X_name = "counts")
+
+# Test Seurat Integration
+
+# Transform sce to seurat
+seurat1 <- scpcaTools::sce_to_seurat(sce1)
+seurat2 <- scpcaTools::sce_to_seurat(sce2)
+
+# Use `Seurat::SCTransform` for normalization
+seurat1 <- Seurat::SCTransform(seurat1)
+seurat2 <- Seurat::SCTransform(seurat2)
+
+# Define seurat list of objects
+seurat_list <- c(seurat1, seurat2)
+
+# Integrate data using reciprocal PCA
+rpca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "rpca")
+
+# Integrate data using canonical correlation analysis
+cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "cca")
