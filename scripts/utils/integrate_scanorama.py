@@ -54,7 +54,7 @@ def integrate_scanorama(merged_adata,
     try:
         library_dict = merged_adata.obs.groupby(batch_column).indices
     except KeyError:
-        print(f"Provided  batch_column cannot be found in anndata object."
+        print(f"Provided batch_column cannot be found in anndata object."
               f"Make sure it is stored in adata.obs[{batch_column}].")
         sys.exit(1)
     
