@@ -173,13 +173,9 @@ merged_sce_obj <- readr::read_rds(opt$merged_sce_file)
 
 # Define helper function for splitting up comma-separated arguments ------
 split_comma_args <- function(arg) {
-  arg %>%
-    # Remove spaces
-    stringr::str_replace_all(" ", "") %>%
-    # Split on ,
-    stringr::str_split(",") %>%
-    # magrittr for the win!
-    extract2(1)
+  # Use this function to convert input like c("a,b,c") with arbitrary spacing
+  #  around the commas into c("a", "b", "c")
+  unlist(stringr::str_split(arg, "\\s*,\\s*"))
 }
 
 # Perform integration with fastMNN, if specified -------------------------
