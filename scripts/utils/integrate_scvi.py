@@ -48,7 +48,7 @@ def integrate_scvi(merged_adata,
 
     """
     # set seed
-    random.seed(seed)
+    scvi.settings.seed = seed
 
     # need to input only HVG to build model so subset to HVG 
     # make sure variable gene list alread exists in merged object first
@@ -57,17 +57,16 @@ def integrate_scvi(merged_adata,
         merged_adata = merged_adata[merged_adata.obs_names, var_genes]
     except KeyError:
         print("Variable genes cannot be found in anndata object."
-              "Make sure they are stored in adata.uns['variable_genes'].")
-        sys.exit(1)
+              " Make sure they are stored in adata.uns['variable_genes'].")
+        raise
 
 
     # if additional covariate columns are provided concatentate with batch column
     if type(batch_column) != list:
         batch_column = [batch_column]
     if len(batch_column) != 1:
-        print("Please provide only one column for batch_column."
-        "If any other covariates should be included, include them as categorical_covariate_columns.")
-        sys.exit(1)
+        raise ValueError("Please provide only one column for batch_column."
+                         " If any other covariates should be included, include them as categorical_covariate_columns.")
 
 
     if categorical_covariate_columns is not None:
