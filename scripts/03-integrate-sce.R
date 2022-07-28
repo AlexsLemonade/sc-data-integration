@@ -1,0 +1,299 @@
+# Script used to perform integration on SCE objects using R-based methods
+#
+# SCE files are grouped by a specified grouping variable that must be present as 
+# a column in the `library_file`. SCE objects for each group are merged, highly 
+# variable genes for the merged object are calculated, and then merged objects are 
+# stored as RDS files in the `--merged_sce_dir`.
+
+# Option descriptions: 
+# 
+# --library_file: The path to the file listing all libraries that should be included 
+#   in the conversion from loom to SCE. This file must contain the 
+#   `library_biomaterial_id` column
+# --grouping_var: Column name present in the library metadata file to use for 
+#   grouping SCE objects and merging prior to performing HVG selection.
+# --sce_dir: Path to folder where SCE objects to be converted are stored, 
+#   each file should contain the library ID in the filename and be stored as an RDS file.
+#   Typically this is the output from running scpca-downstream-analyses 
+# --merged_sce_dir: Path to folder where all merged SCE objects will be stored 
+# 
+# **Note that any columns present in the `rowData` of an SCE object that contains 
+# duplicated information, e.g. duplicate gene identifiers, are converted to 
+# categorical data by the `anndata` package.
+# For context and more information see the comment:
+# https://github.com/AlexsLemonade/sc-data-integration/pull/42#issuecomment-1187703050
+
+# load the R project by finding the root directory using `here::here()`
+project_root <- here::here()
+renv::load(project_root)
+
+# import libraries
+library(magrittr)
+library(optparse)
+
+# source helper functions and integration functions
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+source(file.path(project_root, "scripts", "utils", "integrate-fastMNN.R"))
+source(file.path(project_root, "scripts", "utils", "integrate-harmony.R"))
+
+# Set up optparse options
+option_list <- list(
+  make_option(
+    opt_str = c("-l", "--library_file"),
+    type = "character",
+    default = file.path(project_root, "sample-info", "hca-processed-libraries.tsv"),
+    help = "path to file listing all libraries that are to be converted"
+  ),
+  make_option(
+    opt_str = c("-b", "--batch_column"), 
+    type = "character",
+    default = "batch", 
+    help = "Name of the column in the SCE object that indicates batch groupings."
+  ),
+  make_option(
+    opt_str = c("--seed"),
+    type = "integer",
+    default = 2022,
+    help = "random seed to set during integration"
+  ), 
+  make_option(
+    opt_str = c("-c", "--covariate_columns"), 
+    type = "character",
+    default = NULL, 
+    help = "Optional comma-separated list of columns (e.g. patient, sex) to consider as covariates
+            during integration with `harmony`."
+  ),
+  make_option(
+    opt_str = c("--fastmnn_no_norm"),
+    action = "store_false",
+    help = "Indicate whether to turn off cosine normalization during `fastMNN` integration. 
+    To turn off cosine normalization, use `--fastmnn_no_norm`"
+  ),     
+  make_option(
+    opt_str = c("--harmony_from_expression"),
+    action = "store_false",
+    help = "Indicate whether to use the gene expression matrix, rather than PCs, during `harmony` integration.
+    To use expression instead of PCs (default), use `--harmony_from_expression`"
+  ),     
+  make_option(
+    opt_str = c("--fastmnn_options"),
+    action = "character",
+    default = "",
+    help = "Additional options to pass into `fastMNN` integration"
+  ), 
+  make_option(
+    opt_str = c("--harmony_options"),
+    action = "character",
+    default = "",
+    help = "Additional options to pass into `harmony` integration"
+  ),     
+  make_option(
+    opt_str = c("--merged_sce_dir"),
+    type = "character",
+    default = file.path(project_root, "results", "human_cell_atlas", "merged-sce-objects"),
+    help = "path to folder where all merged SCE objects are stored as RDS files"
+  ),
+  make_option(
+    opt_str = c("--integrated_sce_dir"),
+    type = "character",
+    default = file.path(project_root, "results", "human_cell_atlas", "integrated-sce-objects"),
+    help = "path to folder where all integrated SCE objects will be saved as RDS files"
+  )
+)
+
+# Setup ------------------------------------------------------------------------
+
+# Parse options
+opt <- parse_args(OptionParser(option_list = option_list))
+
+# checks that provided metadata files exist
+if(!file.exists(opt$library_file)){
+  stop("--library_file provided does not exist.")
+}
+
+# read in library metadata to find `project_name`, which corresponds to
+#  the name of saved merged objects as: `{project_name}_merged_sce.rds`
+library_metadata_df <- readr::read_tsv(opt$library_file)
+project_names <- library_metadata_df %>%
+  dplyr::pull(project_name) %>%
+  unique()
+
+
+# setup output directory 
+if(!dir.exists(opt$integrated_sce_dir)){
+  dir.create(opt$integrated_sce_dir, recursive = TRUE)
+}
+
+# Identify SCE files -----------------------------------------------------------
+
+# find SCE files that match library ID 
+# the only files in this directory should be RDS
+project_search <- paste(project_names, collapse = "|")
+merged_sce_files <- list.files(opt$merged_sce_dir,
+                        pattern = project_search, 
+                        recursive = TRUE,
+                        full.names = TRUE)
+
+# if the number of sce files is different than the project names, find the missing files
+if(length(merged_sce_files) < length(project_names)){
+  
+  projects_found <- stringr::str_extract(merged_sce_files, project_search)
+  missing_projects <- setdiff(project_names, projects_found)
+  
+  stop(
+    glue::glue(
+      "\nMissing merged SCE object for {missing_projects}.
+      Make sure that you have run `02-prepare-merged-sce.R`."
+    )
+  )
+}
+
+
+# Read in all merged SCE files -----------------------------
+merged_sce_objs <- merged_sce_files %>%
+  purrr::map(readr::read_rds)
+  
+  
+  
+  create_grouped_sce_list <- function(sce_info_dataframe){
+    
+    library_sce_list = list()
+    for (library_idx in 1:length(sce_info_dataframe$library_id)){
+      
+      # read sce list for each library
+      sce <- readr::read_rds(sce_info_dataframe$sce_files[library_idx])
+      library_name <- sce_info_dataframe$library_id[library_idx]
+      # create a list for each group named by the library IDs
+      library_sce_list[[library_name]] <- sce
+      
+    }
+    
+    return(library_sce_list)
+    
+  }  
+
+grouped_sce_list <- grouped_sce_file_df %>%
+  purrr::map(create_grouped_sce_list)
+
+
+
+
+
+
+# Perform integration with fastMNN -------------------------
+
+
+
+
+integrate_fastMNN <- function(combined_sce, 
+                              batch_column = "batch",
+                              gene_list = NULL, 
+                              cosine_norm = TRUE,
+                              seed = NULL,
+                              ...) {
+
+
+
+
+
+  integrate_harmony <- function(combined_sce, 
+                                batch_column = "batch",
+                                covariate_cols = c(), 
+                                from_pca = TRUE,
+                                seed = NULL,
+                                ...) {
+    
+    
+
+
+
+
+
+
+
+
+
+
+
+
+
+# Merge by group ---------------------------------------------------------------
+
+# get the library IDs from the SCE file names so that we can name the SCEs in the correct order 
+library_ids_sce_order <- stringr::str_extract(sce_files, pattern = library_search)
+
+sce_file_df <- data.frame(sce_files = sce_files, 
+                          library_id= library_ids_sce_order) %>%
+  dplyr::left_join(library_metadata_df, by = c("library_id" = "library_biomaterial_id")) %>%
+  dplyr::select(library_id, opt$grouping_var, sce_files)
+
+# group dataframe by the grouping variable 
+grouped_sce_file_df <- split(sce_file_df, sce_file_df[,opt$grouping_var])
+
+# create a list of SCE lists that is named by the grouping variable with 
+# each individual inner SCE list named by the library IDs
+create_grouped_sce_list <- function(sce_info_dataframe){
+  
+  library_sce_list = list()
+  for (library_idx in 1:length(sce_info_dataframe$library_id)){
+    
+    # read sce list for each library
+    sce <- readr::read_rds(sce_info_dataframe$sce_files[library_idx])
+    library_name <- sce_info_dataframe$library_id[library_idx]
+    # create a list for each group named by the library IDs
+    library_sce_list[[library_name]] <- sce
+    
+  }
+  
+  return(library_sce_list)
+  
+}  
+
+grouped_sce_list <- grouped_sce_file_df %>%
+  purrr::map(create_grouped_sce_list)
+  
+
+# create a list of merged SCE objects by group
+merged_sce_list <- grouped_sce_list %>%
+  purrr::map(~ combine_sce_objects(.x, preserve_rowdata_columns = c("Gene", "gene_names")))
+
+# Subset to HVG ----------------------------------------------------------------
+
+
+#' Identify variable genes for a merged object and add to metadata
+#'
+#' @param merged_sce SCE object that has been merged using combine_sce_objects
+#'
+#' @return merged SCE object with variable genes added to metadata
+add_var_genes <- function(merged_sce){
+ 
+  # grab variable genes
+  var_genes <- perform_hvg_selection(merged_sce)
+  
+  # add variable genes to metadata
+  metadata(merged_sce)$variable_genes <- var_genes
+  
+  return(merged_sce)
+}
+
+
+# apply HVG calculation to list of merged SCEs
+merged_sce_list <- merged_sce_list %>%
+  purrr::map(add_var_genes)
+
+# add PCA and UMAP 
+merged_sce_list <- merged_sce_list %>%
+  purrr::map( ~ perform_dim_reduction(.x, 
+                                      var_genes = metadata(.x)$variable_genes,
+                                      pca_type = "multi"))
+
+# Write RDS --------------------------------------------------------------------
+
+# create paths to merged SCE files
+# named with the name of the sce list which corresponds to the grouping variable, not library ID
+merged_sce_files <- file.path(opt$merged_sce_dir,
+                              paste0(names(merged_sce_list), 
+                                     "_merged_sce.rds"))
+
+# export files 
+purrr::walk2(merged_sce_list, merged_sce_files, readr::write_rds)
