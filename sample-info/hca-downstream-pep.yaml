@@ -1,0 +1,5 @@
+pep_version: 2.1.0
+# see http://pep.databio.org/en/latest/specification/
+sample_table: "hca-downstream-metadata.tsv"
+sample_table_index: "library_id"
+
