@@ -72,17 +72,23 @@ combine_sce_objects <- function(sce_list = list(),
   #  At the same time, we also update the rowData column names to be unique across SCEs
   for (i in 1:length(sce_list)){
     
+    # Find library name
+    library_name <- names(sce_list)[i]
+    
     # Subset to shared genes
     sce_list[[i]] <- sce_list[[i]][shared_genes,]
       
-    # Add relevant sample IDs to rowData column names
-    colnames(rowData(sce_list[[i]])) <- paste0(colnames(rowData(sce_list[[i]])), "-", library_ids[i])
+    # Add relevant library ID to rowData column names
+    colnames(rowData(sce_list[[i]])) <- paste0(colnames(rowData(sce_list[[i]])), "-", library_name)
     
-    # Add relevant sample IDs to colData row names
-    colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), "-", library_ids[i])
+    # Add relevant library ID to colData row names
+    colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), "-", library_name)
+    
+    # Add relevant library ID to metadata names
+    names(metadata(sce_list[[i]])) <- paste0(names(metadata(sce_list[[i]])), "-", library_name)
     
     # Add colData column to track this batch
-    sce_list[[i]]$batch <- library_ids[i]
+    sce_list[[i]]$batch <- library_name
   }
   
   # Combine SCE objects with `cbind()` -----------------------------------------
