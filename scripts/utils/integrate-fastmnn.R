@@ -60,7 +60,12 @@ integrate_fastMNN <- function(combined_sce,
 
   # We will use `_corrected` for fastMNN's `reconstructed` and 
   #  `_PCA` for fastMNN's `corrected`.
-  assay(combined_sce, "fastMNN_corrected")  <- assay(integrated_sce, "reconstructed")
+  
+  # This cannot be merged in if variable genes were used. For now, we will just not 
+  #  or we can just not retain this assay
+  #assay(combined_sce, "fastMNN_corrected")  <- assay(integrated_sce, "reconstructed")
+  
+  # But we can retain the PCs:
   reducedDim(combined_sce, "fastMNN_PCA") <- reducedDim(integrated_sce, "corrected")
   
   # Return SCE object with fastMNN information ---------------
