@@ -34,12 +34,10 @@
 #
 # Rscript 03-integrate-sce.R \
 #  --merged_sce_file ../results/human_cell_atlas/merged-sce-objects/1M_Immune_Cells_merged_sce.rds \
-#  --integrated_sce_dir ../results/human_cell_atlas/integrated-sce-objects \
 #  --method=harmony 
 #
 # Rscript 03-integrate-sce.R \
 #  --merged_sce_file ../results/human_cell_atlas/merged-sce-objects/1M_Immune_Cells_merged_sce.rds \
-#  --integrated_sce_dir ../results/human_cell_atlas/integrated-sce-objects \
 #  --method=fastmnn
 #
 
@@ -66,7 +64,7 @@ option_list <- list(
   make_option(
     opt_str = c("--integrated_sce_dir"),
     type = "character",
-    default = NULL,
+    default = file.path("..", "results", "human_cell_atlas", "integrated-sce-objects"),
     help = "Path to folder where the integrated SCE object will be saved as an RDS file"
   ),
   make_option(
