@@ -76,20 +76,18 @@ def integrate_scvi(merged_adata,
     else:
         raise ValueError("categorial_covariate_columns must be either type str or list.")
 
-
     # make sure that input for covariate columns is a list
     if type(continuous_covariate_columns) != list:
         continuous_covariate_columns = [continuous_covariate_columns]
 
     # check that batch, categorical, and continuous categorical keys are all found in obs
     # batch is now stored in categorical covariates so don't need to check separately
-    # first need to specifically grab column names of column metadata and convert to list
-    obs_keys = set(merged_adata.obs.keys().tolist())
-    missing_cols = [col for col in (continuous_covariate_columns + categorical_covariate_columns) if col not in obs_keys]
+    missing_cols = [col for col in (continuous_covariate_columns + categorical_covariate_columns)
+                if col not in merged_adata.obs]
     if missing_cols:
         raise ValueError("The following columns from batch_column, categorical_covariate_columns,"
-                   " and/or continuous_covariate_columns are not present in adata.obs:\n",
-                   ", ".join(missing_cols))
+                        " and/or continuous_covariate_columns are not present in adata.obs:",
+                        ", ".join(missing_cols))
 
     # convert raw counts to csr matrix
     merged_adata.X = scipy.sparse.csr_matrix(merged_adata.X)
