@@ -1,4 +1,4 @@
-name: scvi-env
+name: scvi
 channels:
   - conda-forge
   - bioconda
