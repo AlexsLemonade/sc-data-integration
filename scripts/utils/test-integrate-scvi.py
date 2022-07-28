@@ -26,11 +26,11 @@ integrated_adata_dir = os.path.join(anndata_dir,
                                     "integrated_scanorama_objects")
 
 scvi_integrated_adata_file= os.path.join(integrated_adata_dir,
-                                    "1M_Immune_Cells_scvi_integrated.h5")
+                                         "1M_Immune_Cells_scvi_integrated.h5")
 
 
 # check if output directory exists 
-if os.path.isdir(integrated_adata_dir)==False:
+if not os.path.isdir(integrated_adata_dir):
     os.makedirs(integrated_adata_dir)
 
 
