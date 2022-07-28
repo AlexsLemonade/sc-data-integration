@@ -123,8 +123,6 @@ option_list <- list(
 # Parse options
 opt <- parse_args(OptionParser(option_list = option_list))
 
-
-
 # Check and assign provided method
 if (is.null(opt$method)) {
   stop("You must specify either `fastMNN` or `harmony` (case-insensitive) to --method.")
@@ -145,7 +143,6 @@ if(is.null(opt$merged_sce_file)) {
   }
 }
     
-
 # setup output directory, which is opt$integrated_sce_dir and a subdirectory for 
 #  the given method
 if(!dir.exists(opt$integrated_sce_dir)){
@@ -155,7 +152,6 @@ method_integrated_sce_dir <- file.path(opt$integrated_sce_dir, integration_metho
 if(!dir.exists(method_integrated_sce_dir)){
   dir.create(method_integrated_sce_dir, recursive = TRUE)
 }
-
 
 # Define final output name
 integrated_sce_file <- file.path(
@@ -170,11 +166,11 @@ integrated_sce_file <- file.path(
 
 
 # Read in all SCE files -----------------------------
+
 merged_sce_obj <- readr::read_rds(opt$merged_sce_file)
 
 
 # Define helper function for splitting up comma-separated arguments ------
-
 split_comma_args <- function(arg) {
   arg %>%
     # Remove spaces
