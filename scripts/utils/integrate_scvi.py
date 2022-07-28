@@ -54,7 +54,7 @@ def integrate_scvi(merged_adata,
         merged_adata = merged_adata[merged_adata.obs_names, var_genes]
     except KeyError:
         print("Variable genes cannot be found in anndata object."
-              " Make sure they are stored in adata.uns['variable_genes'].", 
+              " Make sure they are stored in adata.uns['variable_genes'].",
               file = sys.stderr)
         raise
 
@@ -75,7 +75,7 @@ def integrate_scvi(merged_adata,
     elif type(categorical_covariate_columns) == list:
         categorical_covariate_columns = batch_column + categorical_covariate_columns
     else:
-        raise ValueError("categorial_covariate_columns must be either type str or list.")
+        raise TypeError("categorial_covariate_columns must be either type str or list.")
 
     # make sure that input for covariate columns is a list
     if type(continuous_covariate_columns) != list:
@@ -113,4 +113,4 @@ def integrate_scvi(merged_adata,
     merged_adata.layers["scvi_corrected"] = scvi_model.get_normalized_expression()
 
     return merged_adata
-    
+
