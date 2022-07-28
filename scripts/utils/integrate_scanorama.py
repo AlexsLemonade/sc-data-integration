@@ -44,7 +44,8 @@ def integrate_scanorama(merged_adata,
         var_genes = list(merged_adata.uns['variable_genes'])
     except KeyError:
         print("Variable genes cannot be found in anndata object."
-              " Make sure they are stored in adata.uns['variable_genes'].")
+              " Make sure they are stored in adata.uns['variable_genes'].",
+              file = sys.stderr)
         raise
 
     # subset merged object to only contain variable genes
@@ -55,7 +56,8 @@ def integrate_scanorama(merged_adata,
         library_dict = merged_adata.obs.groupby(batch_column).indices
     except KeyError:
         print("Provided batch_column cannot be found in anndata object."
-              f" Make sure it is stored in adata.obs[{batch_column}].")
+              f" Make sure it is stored in adata.obs[{batch_column}].",
+              file = sys.stderr)
         raise
 
     # split merged object into a list of matrices corresponding to
