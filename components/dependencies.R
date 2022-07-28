@@ -9,3 +9,4 @@
 #
 
 library(zellkonverter)
+library(uwot)
