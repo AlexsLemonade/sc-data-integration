@@ -1,0 +1,12 @@
+name: scpca-renv
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - pandoc
+  - pkg-config
+  - openssl
+  - r-base=4.1.2
+  - r-jsonlite
+  - r-purrr
