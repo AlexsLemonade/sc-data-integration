@@ -37,7 +37,8 @@ integrate_fastMNN <- function(combined_sce,
     stop("The provided `batch_column` column must be in `combined_sce` colData.")
   }
 
-    # Perform integration with fastMNN -------------------
+
+  # Perform integration with fastMNN -------------------
   integrated_sce <- batchelor::fastMNN(combined_sce, 
                                        # Specify batches.
                                        batch = colData(combined_sce)[,batch_column],
