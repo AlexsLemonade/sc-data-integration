@@ -16,14 +16,13 @@
 #   groupings
 # --seed: Random seed to use during integration
 # --harmony_covariate_cols: Optional comma-separated list of additional covariate columns to consider
-#   during integration with `harmony`. This is argument is ignored if the provided
+#   during integration with `harmony`. This argument is ignored if the provided
 #   method is `fastMNN`
 # --harmony_from_expression: Flag to specify that `harmony` integration should be
 #   performed from the expression matrix directly rather than from pre-computed PCs.
-#   This is argument is ignored if the provided method is `fastMNN`
-#   This is argument is ignored if the provided method is `fastMNN`
+#   This argument is ignored if the provided method is `fastMNN`
 # --fastmnn_no_cosine: Flag to specify that `fastMNN` integration should not perform
-#   cosine normalization. This is argument is ignored if the provided method is `harmony`
+#   cosine normalization. This argument is ignored if the provided method is `harmony`
 # --fastmnn_gene_list: Optional comma-separated list of genes for `fastMNN` to consider
 #    during integration, if all genes are not desired.
 # --integration_options: CURRENTLY NOT USED. Additional options to pass into the specified
@@ -95,14 +94,16 @@ option_list <- list(
   make_option(
     opt_str = c("--harmony_from_expression"),
     action = "store_false",
+    default = TRUE,
     help = "Indicate whether to use the gene expression matrix, rather than PCs, during `harmony` integration.
     To use expression instead of PCs (default), use `--harmony_from_expression`"
   ),
   make_option(
     opt_str = c("--fastmnn_no_cosine"),
     action = "store_false",
+    default = TRUE,
     help = "Indicate whether to turn off cosine normalization during `fastMNN` integration. 
-    To turn off cosine normalization, use `--fastmnn_no_norm`"
+    To turn off cosine normalization, use `--fastmnn_no_cosine`"
   ),
   make_option(
     opt_str = c("--fastmnn_gene_list"),
@@ -185,12 +186,6 @@ split_comma_args <- function(arg) {
 
 if (integration_method == "fastmnn") {
 
-  # Set up `cosine_norm` argument based on user options
-  if (is.null(opt$fastmnn_no_norm)) {
-    fastmnn_cosine_norm <- TRUE
-  } else {
-    fastmnn_cosine_norm <- FALSE
-  }
   # Set up `gene_list` argument based on user options
   if (is.null(opt$fastmnn_gene_list)) {
     fastmnn_gene_list <- NULL
@@ -204,8 +199,8 @@ if (integration_method == "fastmnn") {
     integrated_sce_obj <- integrate_fastMNN(
       merged_sce_obj,
       batch_column = opt$batch_column,
-      cosine_norm  = fastmnn_cosine_norm,
-      gene_list    = fastmnn_gene_list,
+      cosine_norm  = opt$fastmnn_no_cosine,
+      gene_list    = opt$fastmnn_gene_list,
       seed         = opt$seed
     )
  # } else {
@@ -227,11 +222,6 @@ if (integration_method == "harmony") {
 
   
   # Set up `from_pca` argument based on user options
-  if (is.null(opt$harmony_from_expression)) {
-    harmony_from_pca <- TRUE
-  } else {
-    harmony_from_pca <- FALSE
-  }
   
   # Set up `covariate_cols` argument based on user options
   if (is.null(opt$harmony_covariate_cols)) {
@@ -245,8 +235,8 @@ if (integration_method == "harmony") {
     integrated_sce_obj <- integrate_harmony(
       merged_sce_obj,
       batch_column = opt$batch_column,
-      covariate_cols = harmony_covariate_cols,
-      from_pca = harmony_from_pca,
+      covariate_cols = opt$harmony_covariate_cols,
+      from_pca = opt$harmony_from_expression,
       seed = opt$seed
     )
   #} else {
