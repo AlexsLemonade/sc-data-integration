@@ -12,6 +12,9 @@ results/
 
 # ignore snakemake outputs 
 .snakemake/
+.snakemake_timestamp
 
 # metadata files for downstream analyses 
 sample-info/*-downstream-metadata.tsv
+
+
