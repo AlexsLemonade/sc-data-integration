@@ -147,13 +147,6 @@ if(!dir.exists(integrated_sce_dir)){
 merged_sce_obj <- readr::read_rds(opt$merged_sce_file)
 
 
-# Define helper function for splitting up comma-separated arguments ------
-split_comma_args <- function(arg) {
-  # Use this function to convert input like c("a,b,c") with arbitrary spacing
-  #  around the commas into c("a", "b", "c")
-  unlist(stringr::str_split(arg, "\\s*,\\s*"))
-}
-
 # Perform integration with fastMNN, if specified -------------------------
 
 if (integration_method == "fastmnn") {
@@ -189,7 +182,7 @@ if (integration_method == "harmony") {
   if (is.null(opt$harmony_covariate_cols)) {
     harmony_covariate_cols <- c()
   } else {
-    harmony_covariate_cols <- split_comma_args(opt$harmony_covariate_cols)
+    harmony_covariate_cols <- unlist(stringr::str_split(opt$harmony_covariate_cols, "\\s*,\\s*"))
   }
 
   # Run harmony, without additional options passed in
