@@ -1,23 +1,19 @@
-# Script used to perform integration on SCE objects using R-based methods
+# Script used to perform integration on a given merged SCE object using R-based methods
 #
-# Merged SCE files, which have been grouped by a specified grouping variable that 
-# must be present as a column in the `library_file`, are read in. Integration is 
+# A merged SCE file, which has been grouped by a specified grouping variable that 
+# must be present as a column in the `library_file`, is read in. Integration is 
 # performed with either `fastMNN` or `harmony`, depending on user specification, 
-# and integrated SCE objects are stored as RDS files in the `--integrated_sce_dir`.
+# and the integrated SCE object is saved as RDS files in a nested folder within
+# `--integrated_sce_dir` named for the given integration method.
 
 # Option descriptions: 
 #
-# --library_file: The path to the file listing all libraries that should be included 
-#   in the conversion from loom to SCE. This file must contain the 
-#   `library_biomaterial_id` column
-# --grouping_var: Column name present in the library metadata file that identifies 
-#   combined SCE objects
-# --merged_sce_dir: Path to folder where all merged SCE objects have been stored 
+# --merged_sce_file: Path to RDS file with merged SCE object to integrate
 # --integrated_sce_dir: Path to folder where all integrated SCE objects will be stored. 
 #   Inside this folder are nested folders for results from each integration method
+# --method: The integration method to use, either `fastMNN` or `harmony` (case-insensitive).
 # --batch_column: Column name present in SCE object colData slot that indicates batch
 #   groupings
-# --method: The integration method to use, either `fastMNN` or `harmony` (case-insensitive).
 # --seed: Random seed to use during integration
 # --harmony_covariate_cols: Optional comma-separated list of additional covariate columns to consider
 #   during integration with `harmony`. This is argument is ignored if the provided
@@ -33,15 +29,19 @@
 # --integration_options: CURRENTLY NOT USED. Additional options to pass into the specified
 #   method 
 # 
+# 
 # Usage examples:
-# Rscript 03-integrate-sce.R --method=fastMNN   # Default fastMNN usage
-# Rscript 03-integrate-sce.R --method=fastMNN --fastmnn_no_cosine   # fastMNN without cosine normalization
 #
-# Rscript 03-integrate-sce.R --method=harmony   # Default harmony usage
-# Rscript 03-integrate-sce.R --method=harmony --harmony_from_expression   # harmony starting from expression matrix
-
-
-
+# Rscript 03-integrate-sce.R \
+#  --merged_sce_file ../results/human_cell_atlas/merged-sce-objects/1M_Immune_Cells_merged_sce.rds \
+#  --integrated_sce_dir ../results/human_cell_atlas/integrated-sce-objects \
+#  --method=harmony 
+#
+# Rscript 03-integrate-sce.R \
+#  --merged_sce_file ../results/human_cell_atlas/merged-sce-objects/1M_Immune_Cells_merged_sce.rds \
+#  --integrated_sce_dir ../results/human_cell_atlas/integrated-sce-objects \
+#  --method=fastmnn
+#
 
 # load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
@@ -51,36 +51,23 @@ renv::load(project_root)
 library(magrittr)
 library(optparse)
 
-# source helper functions and integration functions
-source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+# source integration functions
 source(file.path(project_root, "scripts", "utils", "integrate-fastMNN.R"))
 source(file.path(project_root, "scripts", "utils", "integrate-harmony.R"))
 
 # Set up optparse options
 option_list <- list(
   make_option(
-    opt_str = c("-l", "--library_file"),
+    opt_str = c("--merged_sce_file"),
     type = "character",
-    default = file.path(project_root, "sample-info", "hca-processed-libraries.tsv"),
-    help = "path to file listing all libraries that are to be converted"
-  ),
-  make_option(
-    opt_str = c("-g", "--grouping_var"), 
-    type = "character",
-    default = "project_name", 
-    help = "Column name present in the library metadata file that identifies combined SCE objects"
-  ),
-  make_option(
-    opt_str = c("--merged_sce_dir"),
-    type = "character",
-    default = file.path(project_root, "results", "human_cell_atlas", "merged-sce-objects"),
-    help = "path to folder where all merged SCE objects are stored as RDS files"
+    default = NULL,
+    help = "Path to RDS file that contains the merged SCE object to integrate"
   ),
   make_option(
     opt_str = c("--integrated_sce_dir"),
     type = "character",
-    default = file.path(project_root, "results", "human_cell_atlas", "integrated-sce-objects"),
-    help = "path to folder where all integrated SCE objects will be saved as RDS files"
+    default = NULL,
+    help = "Path to folder where the integrated SCE object will be saved as an RDS file"
   ),
   make_option(
     opt_str = c("--method"),
@@ -138,21 +125,6 @@ option_list <- list(
 # Parse options
 opt <- parse_args(OptionParser(option_list = option_list))
 
-# checks that provided metadata files exist
-if(!file.exists(opt$library_file)){
-  stop("--library_file provided does not exist.")
-}
-
-# read in library metadata to find `grouping_var` names, which corresponds to
-#  the name of saved merged objects as: `{grouping_var}_merged_sce.rds`
-library_metadata_df <- readr::read_tsv(opt$library_file)
-grouping_var <- as.symbol(opt$grouping_var)
-group_names <- library_metadata_df %>%
-  # arrange to ensure proper mapping when naming merged list later
-  dplyr::arrange({{grouping_var}}) %>%
-  dplyr::pull({{grouping_var}}) %>%
-  unique()
-
 
 
 # Check and assign provided method
@@ -165,6 +137,16 @@ if (is.null(opt$method)) {
   }
 }
 
+# Check that provided input file exists
+if(is.null(opt$merged_sce_file)) {
+  stop("You must provide the path to the RDS file with merged SCEs to --merged_sce_file")
+} else {
+  if(!file.exists(opt$merged_sce_file)) {
+    stop("Provided --merged_sce_file file does not exist. Make sure that you have 
+          run `02-prepare-merged-sce.R` or the provided path is correct.")
+  }
+}
+    
 
 # setup output directory, which is opt$integrated_sce_dir and a subdirectory for 
 #  the given method
@@ -176,34 +158,21 @@ if(!dir.exists(method_integrated_sce_dir)){
   dir.create(method_integrated_sce_dir, recursive = TRUE)
 }
 
-# Identify SCE files -----------------------------------------------------------
 
-# find SCE files that match library ID 
-# the only files in this directory should be RDS
-group_search <- paste(group_names, collapse = "|")
-merged_sce_files <- list.files(opt$merged_sce_dir,
-                        pattern = group_search, 
-                        recursive = TRUE,
-                        full.names = TRUE)
-
-# if the number of sce files is different than the project names, find the missing files
-if(length(merged_sce_files) < length(group_names)){
-  
-  groups_found <- stringr::str_extract(merged_sce_files, group_search)
-  missing_groups <- setdiff(group_names, groups_found)
-  
-  stop(
-    glue::glue(
-      "\nMissing merged SCE object(s) for {missing_projects}.
-      Make sure that you have run `02-prepare-merged-sce.R`."
-    )
+# Define final output name
+integrated_sce_file <- file.path(
+  method_integrated_sce_dir,
+  # Replace _merged_ with _integrated_
+  stringr::str_replace(
+    basename(opt$merged_sce_file), 
+    "_merged_", 
+    "_integrated_"
   )
-}
+)
 
 
-# Read in all merged SCE files -----------------------------
-merged_sce_objs <- merged_sce_files %>%
-  purrr::map(readr::read_rds)
+# Read in all SCE files -----------------------------
+merged_sce_obj <- readr::read_rds(opt$merged_sce_file)
 
 
 # Define helper function for splitting up comma-separated arguments ------
@@ -238,27 +207,23 @@ if (integration_method == "fastmnn") {
     
   # Run fastMNN, with or without additional options passed in
  # if (is.null(opt$integration_options)) {
-    integrated_sce_objs <- merged_sce_objs %>%
-      purrr::map(
-        ~integrate_fastMNN(
-          .x,
-          batch_column = opt$batch_column,
-          cosine_norm  = fastmnn_cosine_norm,
-          gene_list    = fastmnn_gene_list,
-          seed         = opt$seed
-        ))
+    integrated_sce_obj <- integrate_fastMNN(
+      merged_sce_obj,
+      batch_column = opt$batch_column,
+      cosine_norm  = fastmnn_cosine_norm,
+      gene_list    = fastmnn_gene_list,
+      seed         = opt$seed
+    )
  # } else {
- #   # DOES NOT WORK, HOW TO PASS IN `...` FROM OPTPARSE ARGS?
- #   integrated_sce_objs <- merged_sce_objs %>%
- #     purrr::map(
- #       ~integrate_fastMNN(
- #         .x,
- #         batch_column = opt$batch_column,
- #         cosine_norm  = fastmnn_cosine_norm,
- #         gene_list    = fastmnn_gene_list,
- #         seed         = opt$seed, 
- #         opt$integration_options
- #       ))
+ #   # DOES NOT WORK
+ #   integrated_sce_obj <- integrate_fastMNN(
+ #     merged_sce_obj,
+ #     batch_column = opt$batch_column,
+ #     cosine_norm  = fastmnn_cosine_norm,
+ #     gene_list    = fastmnn_gene_list,
+ #     seed         = opt$seed, 
+ #     opt$integration_options
+ #   )
  # }
 }
 
@@ -283,38 +248,28 @@ if (integration_method == "harmony") {
 
   # Run harmony, with or without additional options passed in
   #if (is.null(opt$integration_options)) {
-    integrated_sce_objs <- merged_sce_objs %>%
-      purrr::map(
-        ~integrate_harmony(
-          .x,
-          batch_column = opt$batch_column,
-          covariate_cols = harmony_covariate_cols,
-          from_pca = harmony_from_pca,
-          seed = opt$seed
-      ))
+    integrated_sce_obj <- integrate_harmony(
+      merged_sce_obj,
+      batch_column = opt$batch_column,
+      covariate_cols = harmony_covariate_cols,
+      from_pca = harmony_from_pca,
+      seed = opt$seed
+    )
   #} else {
-  #  # DOES NOT WORK, HOW TO PASS IN `...` FROM OPTPARSE ARGS?
-  #  integrated_sce_objs <- merged_sce_objs %>%
-  #    purrr::map(
-  #      ~integrate_harmony(
-  #        .x,
-  #        batch_column = opt$batch_column,
-  #        covariate_cols = harmony_covariate_cols,
-  #        from_pca = harmony_from_pca,
-  #        seed = opt$seed,
-  #        opt$integration_options
-  #      ))
+  #  # DOES NOT WORK
+  #  integrated_sce_obj <- integrate_harmony(
+  #    merged_sce_obj,
+  #    batch_column = opt$batch_column,
+  #    covariate_cols = harmony_covariate_cols,
+  #    from_pca = harmony_from_pca,
+  #    seed = opt$seed,
+  #    opt$integration_options
+  #  )
   #}
   
 }
 
 
-# Write integrated SCE objects to RDS --------------------------------------------------------------------
+# Write integrated SCE object to RDS -------------------
 
-# create paths to integrated SCE files
-integrated_sce_files <- file.path(method_integrated_sce_dir,
-                              paste0(group_names, 
-                                     "_integrated_sce.rds"))
-
-# export files 
-purrr::walk2(integrated_sce_objs, integrated_sce_files, readr::write_rds)
+readr::write_rds(integrated_sce_obj, integrated_sce_file)
