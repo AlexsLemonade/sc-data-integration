@@ -48,13 +48,14 @@ def integrate_scvi(merged_adata,
     scvi.settings.seed = seed
 
     # need to input only HVG to build model so subset to HVG
-    # make sure variable gene list alread exists in merged object first
+    # make sure variable gene list already exists in merged object first
     try:
         var_genes = list(merged_adata.uns['variable_genes'])
         merged_adata = merged_adata[merged_adata.obs_names, var_genes]
     except KeyError:
         print("Variable genes cannot be found in anndata object."
-              " Make sure they are stored in adata.uns['variable_genes'].")
+              " Make sure they are stored in adata.uns['variable_genes'].", 
+              file = sys.stderr)
         raise
 
 
@@ -83,11 +84,11 @@ def integrate_scvi(merged_adata,
     # check that batch, categorical, and continuous categorical keys are all found in obs
     # batch is now stored in categorical covariates so don't need to check separately
     missing_cols = [col for col in (continuous_covariate_columns + categorical_covariate_columns)
-                if col not in merged_adata.obs]
+                    if col not in merged_adata.obs]
     if missing_cols:
         raise ValueError("The following columns from batch_column, categorical_covariate_columns,"
-                        " and/or continuous_covariate_columns are not present in adata.obs:",
-                        ", ".join(missing_cols))
+                         " and/or continuous_covariate_columns are not present in adata.obs:",
+                         ", ".join(missing_cols))
 
     # convert raw counts to csr matrix
     merged_adata.X = scipy.sparse.csr_matrix(merged_adata.X)
@@ -112,3 +113,4 @@ def integrate_scvi(merged_adata,
     merged_adata.layers["scvi_corrected"] = scvi_model.get_normalized_expression()
 
     return merged_adata
+    
