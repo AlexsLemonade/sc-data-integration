@@ -100,11 +100,15 @@ seurat2 <- scpcaTools::sce_to_seurat(sce2)
 seurat1 <- Seurat::SCTransform(seurat1)
 seurat2 <- Seurat::SCTransform(seurat2)
 
+# Add batch column to the metadata
+seurat1 <- Seurat::AddMetaData(seurat1, library_ids[1], "batch")
+seurat2 <- Seurat::AddMetaData(seurat2, library_ids[2], "batch")
+
 # Define seurat list of objects
 seurat_list <- c(seurat1, seurat2)
 
 # Integrate data using reciprocal PCA
-rpca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "rpca")
+rpca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "rpca", integration_dims = c(1:50))
 
 # Integrate data using canonical correlation analysis
-cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "cca")
+cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "cca", integration_dims = c(1:50))
