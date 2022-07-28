@@ -61,7 +61,7 @@ option_list <- list(
     opt_str = c("--merged_sce_dir"),
     type = "character",
     default = file.path(project_root, "results", "human_cell_atlas", "merged-sce-objects"),
-    help = "path to folder where all AnnData files will be saved as HDF5 files"
+    help = "path to folder where all merged SCE objects files will be saved as RDS files"
   )
 )
 
