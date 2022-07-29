@@ -1,29 +1,38 @@
+# I realized that this is not used at all, but I'm leaving it for thinking
 pepfile: "sample-info/hca-downstream-pep.yaml"
 
 rule target:
     input:
-        "rtest.log"
+        "results/human_cell_atlas/merged-sce-objects"
         # expand("{sample}.txt", sample=pep.sample_table["sample_id"])
 
-# Dummy rule used for building conda & renv environment
+# Rule used for building conda & renv environment
 rule build_renv:
-    input: "renv.lock"
+    input: workflow.source_path("renv.lock")
     output: "renv/.snakemake_timestamp"
     conda: "envs/scpca-renv.yaml"
     shell:
       """
-      Rscript -e "renv::restore()"
+      Rscript -e "renv::restore('{input}')"
       date -u -Iseconds  > {output}
       """
 
 
 
-rule test_R_integration:
+rule merge_sces:
     conda: "envs/scpca-renv.yaml"
     input:
-        script = workflow.source_path("scripts/utils/test_integration-functions.R")
+        processed_tsv = "sample-info/hca-processed-libraries.tsv",
+        sce_dir = "results/human_cell_atlas/scpca-downstream-analyses"
     output:
-        "rtest.log"
-    conda: "envs/scpca-renv.yaml"
+        directory("results/human_cell_atlas/merged-sce-objects")
+    params:
+        grouping_var = "project_name"
     shell:
-        "Rscript {input.script} > {output}"
+        """
+        Rscript scripts/02-prepare-merged-sce.R \
+          --library_file {input.processed_tsv} \
+          --grouping_var {params.grouping_var} \
+          --sce_dir {input.sce_dir} \
+          --merged_sce_dir {output}
+        """
