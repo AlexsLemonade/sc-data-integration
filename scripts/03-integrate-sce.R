@@ -27,8 +27,6 @@
 #   during integration instead of, by default, using only the previously-identified HVGs, 
 #   stored in the `variable_genes` column of metadata slot. This argument is ignored if 
 #   the provided method is `harmony`
-# --integration_options: CURRENTLY NOT USED. Additional options to pass into the specified
-#   method 
 # 
 # 
 # Usage examples:
