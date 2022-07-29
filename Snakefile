@@ -1,12 +1,11 @@
-# I realized that this is not used at all, but I'm leaving it for thinking
-pepfile: "sample-info/hca-downstream-pep.yaml"
+pepfile: "sample-info/hca-project-pep.yaml"
 
 rule target:
     input:
         "results/human_cell_atlas/anndata/merged_anndata_objects",
-        "results/human_cell_atlas/integrated-sce-objects/1M_Immune_Cells_integrated_fastmnn_sce.rds",
-        "results/human_cell_atlas/integrated-sce-objects/1M_Immune_Cells_integrated_harmony_sce.rds"
-        # expand("{sample}.txt", sample=pep.sample_table["sample_id"])
+        expand("results/human_cell_atlas/integrated-sce-objects/{project}_integrated_{sce_method}_sce.rds",
+               project = pep.sample_table["project_name"],
+               sce_method = ["fastmnn", "harmony"])
 
 # Rule used for building conda & renv environment
 rule build_renv:
