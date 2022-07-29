@@ -179,7 +179,6 @@ if (integration_method == "fastmnn") {
 
 # Perform integration with harmony, if specified -------------------------
 if (integration_method == "harmony") {
-
   
   # Set up `covariate_cols` argument based on user options
   if (is.null(opt$harmony_covariate_cols)) {
