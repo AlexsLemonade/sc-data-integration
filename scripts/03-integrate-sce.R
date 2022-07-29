@@ -68,7 +68,7 @@ option_list <- list(
     opt_str = c("--integrated_sce_file"),
     type = "character",
     default = NULL,
-    help = "Path to folder where the integrated SCE object will be saved as an RDS file"
+    help = "Path to RDS file where the integrated SCE object will be saved"
   ),
   make_option(
     opt_str = c("--method"),
