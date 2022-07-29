@@ -1,15 +1,13 @@
 # Script used to perform integration on a given merged SCE object using R-based methods
 #
-# A merged SCE file, which has been grouped by a specified grouping variable that 
-# must be present as a column in the `library_file`, is read in. Integration is 
-# performed with either `fastMNN` or `harmony`, depending on user specification, 
-# and the integrated SCE object is saved as RDS files in a nested folder within
-# `--integrated_sce_dir` named for the given integration method.
+# A merged SCE file in RDS format is read in. Integration is performed with either `fastMNN` 
+# or `harmony`, depending on user specification, and the integrated SCE object 
+# is saved as an RDS file in the provided output file.
 
 # Option descriptions: 
 #
-# --merged_sce_file: Path to RDS file with merged SCE object to integrate
-# --integrated_sce_file: Path to RDS file where the integrated SCE object will be saved. 
+# --input_sce_file: Path to RDS file with merged SCE object to integrate
+# --output_sce_file: Path to RDS file where the integrated SCE object will be saved. 
 #   Inside this folder are nested folders for results from each integration method
 # --method: The integration method to use, either `fastMNN` or `harmony` (case-insensitive).
 # --batch_column: Column name present in SCE object colData slot that indicates batch
@@ -27,20 +25,18 @@
 #   during integration instead of, by default, using only the previously-identified HVGs, 
 #   stored in the `variable_genes` column of metadata slot. This argument is ignored if 
 #   the provided method is `harmony`
-# --integration_options: CURRENTLY NOT USED. Additional options to pass into the specified
-#   method 
 # 
 # 
 # Usage examples:
 #
 # Rscript 03-integrate-sce.R \
-#  --merged_sce_file ../results/human_cell_atlas/merged-sce-objects/1M_Immune_Cells_merged_sce.rds \
-#  --integrated_sce_file ../results/human_cell_atlas/integrated-sce-objects/harmony/1M_Immune_Cells_merged_sce.rds \
+#  --input_sce_file ../results/human_cell_atlas/merged-sce-objects/1M_Immune_Cells_merged_sce.rds \
+#  --output_sce_file ../results/human_cell_atlas/integrated-sce-objects/harmony/1M_Immune_Cells_merged_sce.rds \
 #  --method=harmony 
 #
 # Rscript 03-integrate-sce.R \
-#  --merged_sce_file ../results/human_cell_atlas/merged-sce-objects/1M_Immune_Cells_merged_sce.rds \
-#  --integrated_sce_file ../results/human_cell_atlas/integrated-sce-objects/fastMNN/1M_Immune_Cells_merged_sce.rds \
+#  --input_sce_file ../results/human_cell_atlas/merged-sce-objects/1M_Immune_Cells_merged_sce.rds \
+#  --output_sce_file ../results/human_cell_atlas/integrated-sce-objects/fastMNN/1M_Immune_Cells_merged_sce.rds \
 #  --method=fastmnn
 #
 
@@ -59,16 +55,16 @@ source(file.path(project_root, "scripts", "utils", "integrate-harmony.R"))
 # Set up optparse options
 option_list <- list(
   make_option(
-    opt_str = c("--merged_sce_file"),
+    opt_str = c("--input_sce_file"),
     type = "character",
     default = NULL,
     help = "Path to RDS file that contains the merged SCE object to integrate"
   ),
   make_option(
-    opt_str = c("--integrated_sce_file"),
+    opt_str = c("--output_sce_file"),
     type = "character",
     default = NULL,
-    help = "Path to folder where the integrated SCE object will be saved as an RDS file"
+    help = "Path to RDS file where the integrated SCE object will be saved"
   ),
   make_option(
     opt_str = c("--method"),
@@ -115,12 +111,6 @@ option_list <- list(
     default = FALSE,
     help = "Indicate whether to use all genes instead of only HVGs during `fastMNN` integration. 
     To use all genes, use `--fastmnn_use_all_genes`"
-  ),  
-  make_option(
-    opt_str = c("--integration_options"),
-    type = "character",
-    default = NULL,
-    help = "CURRENTLY NOT USED. Additional options to pass into the given integration method"
   )
 )
 
@@ -138,28 +128,36 @@ if (is.null(opt$method)) {
   }
 }
 
-# Check that provided input file exists
-if(is.null(opt$merged_sce_file)) {
-  stop("You must provide the path to the RDS file with merged SCEs to --merged_sce_file")
+# Check that provided input file exists and is an RDS file
+if(is.null(opt$input_sce_file)) {
+  stop("You must provide the path to the RDS file with merged SCEs to --input_sce_file")
 } else {
-  if(!file.exists(opt$merged_sce_file)) {
-    stop("Provided --merged_sce_file file does not exist. Make sure that you have 
+  if(!file.exists(opt$input_sce_file)) {
+    stop("Provided --input_sce_file file does not exist. Make sure that you have 
           run `02-prepare-merged-sce.R` or the provided path is correct.")
   }
 }
 
-# Check that directory for output file exists
-integrated_sce_dir <- dirname(opt$integrated_sce_file)
+# Check that both input and output files have RDS extensions
+if(!(grepl("\\.rds$", opt$input_sce_file, ignore.case = TRUE)) ||
+   !(grepl("\\.rds$", opt$output_sce_file, ignore.case = TRUE))) {
+  stop("The provided --input_sce_file and --output_sce_file files must be RDS files.")
+}
+
+
+# Check that directory for output file exists and the specified file is an RDS file
+integrated_sce_dir <- dirname(opt$output_sce_file)
 if(!dir.exists(integrated_sce_dir)){
   dir.create(integrated_sce_dir, recursive = TRUE)
 }
 
+
+
 # Read in SCE file -----------------------------
-merged_sce_obj <- readr::read_rds(opt$merged_sce_file)
+merged_sce_obj <- readr::read_rds(opt$input_sce_file)
 
 
 # Perform integration with fastMNN, if specified -------------------------
-
 if (integration_method == "fastmnn") {
     
   # Prepare `gene_list` argument
@@ -169,30 +167,17 @@ if (integration_method == "fastmnn") {
     fastmnn_gene_list <- metadata(merged_sce_obj)$variable_genes
   }
   
-  # Run fastMNN, without additional options passed in
- # if (is.null(opt$integration_options)) {
-    integrated_sce_obj <- integrate_fastMNN(
-      merged_sce_obj,
-      batch_column = opt$batch_column,
-      cosine_norm  = opt$fastmnn_no_cosine,
-      gene_list    = fastmnn_gene_list,
-      seed         = opt$seed
-    )
- # } else {
- #   # DOES NOT WORK
- #   integrated_sce_obj <- integrate_fastMNN(
- #     merged_sce_obj,
- #     batch_column = opt$batch_column,
- #     cosine_norm  = fastmnn_cosine_norm,
- #     gene_list    = fastmnn_gene_list,
- #     seed         = opt$seed, 
- #     opt$integration_options
- #   )
- # }
+  # Perform integration
+  integrated_sce_obj <- integrate_fastMNN(
+    merged_sce_obj,
+    batch_column = opt$batch_column,
+    cosine_norm  = opt$fastmnn_no_cosine,
+    gene_list    = fastmnn_gene_list,
+    seed         = opt$seed
+  )
 }
 
 # Perform integration with harmony, if specified -------------------------
-
 if (integration_method == "harmony") {
 
   
@@ -203,30 +188,16 @@ if (integration_method == "harmony") {
     harmony_covariate_cols <- unlist(stringr::str_split(opt$harmony_covariate_cols, "\\s*,\\s*"))
   }
 
-  # Run harmony, without additional options passed in
-  #if (is.null(opt$integration_options)) {
-    integrated_sce_obj <- integrate_harmony(
-      merged_sce_obj,
-      batch_column = opt$batch_column,
-      covariate_cols = opt$harmony_covariate_cols,
-      from_pca = opt$harmony_from_expression,
-      seed = opt$seed
-    )
-  #} else {
-  #  # DOES NOT WORK
-  #  integrated_sce_obj <- integrate_harmony(
-  #    merged_sce_obj,
-  #    batch_column = opt$batch_column,
-  #    covariate_cols = harmony_covariate_cols,
-  #    from_pca = harmony_from_pca,
-  #    seed = opt$seed,
-  #    opt$integration_options
-  #  )
-  #}
-  
+  # Perform integration
+  integrated_sce_obj <- integrate_harmony(
+    merged_sce_obj,
+    batch_column = opt$batch_column,
+    covariate_cols = opt$harmony_covariate_cols,
+    from_pca = opt$harmony_from_expression,
+    seed = opt$seed
+  )
 }
 
 
 # Write integrated SCE object to RDS -------------------
-
-readr::write_rds(integrated_sce_obj, opt$integrated_sce_file)
+readr::write_rds(integrated_sce_obj, opt$output_sce_file)
