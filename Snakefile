@@ -3,7 +3,8 @@ pepfile: "sample-info/hca-downstream-pep.yaml"
 
 rule target:
     input:
-        "results/human_cell_atlas/merged-sce-objects"
+        "results/human_cell_atlas/merged-sce-objects",
+        "results/human_cell_atlas/anndata/merged_anndata_objects"
         # expand("{sample}.txt", sample=pep.sample_table["sample_id"])
 
 # Rule used for building conda & renv environment
@@ -17,15 +18,13 @@ rule build_renv:
       date -u -Iseconds  > {output}
       """
 
-
-
 rule merge_sces:
     conda: "envs/scpca-renv.yaml"
     input:
         processed_tsv = "sample-info/hca-processed-libraries.tsv",
-        sce_dir = "results/human_cell_atlas/scpca-downstream-analyses"
+        sce_dir = "{basedir}/scpca-downstream-analyses"
     output:
-        directory("results/human_cell_atlas/merged-sce-objects")
+        directory("{basedir}/merged-sce-objects")
     params:
         grouping_var = "project_name"
     shell:
@@ -35,4 +34,21 @@ rule merge_sces:
           --grouping_var {params.grouping_var} \
           --sce_dir {input.sce_dir} \
           --merged_sce_dir {output}
+        """
+
+rule convert_sce_anndata:
+    input:
+        processed_tsv = "sample-info/hca-processed-libraries.tsv",
+        merged_sce_dir = "{basedir}/merged-sce-objects"
+    output:
+        directory("{basedir}/anndata/merged_anndata_objects")
+    params:
+        grouping_var = "project_name"
+    shell:
+        """
+        Rscript scripts/02a-convert-sce-to-anndata.R \
+          --library_file {input.processed_tsv} \
+          --merged_sce_dir {input.merged_sce_dir} \
+          --grouping_var {params.grouping_var} \
+          --anndata_output_dir {output}
         """
