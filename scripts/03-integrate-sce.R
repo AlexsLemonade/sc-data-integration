@@ -170,25 +170,14 @@ if (integration_method == "fastmnn") {
   }
   
   # Run fastMNN, without additional options passed in
- # if (is.null(opt$integration_options)) {
-    integrated_sce_obj <- integrate_fastMNN(
-      merged_sce_obj,
-      batch_column = opt$batch_column,
-      cosine_norm  = opt$fastmnn_no_cosine,
-      gene_list    = fastmnn_gene_list,
-      seed         = opt$seed
-    )
- # } else {
- #   # DOES NOT WORK
- #   integrated_sce_obj <- integrate_fastMNN(
- #     merged_sce_obj,
- #     batch_column = opt$batch_column,
- #     cosine_norm  = fastmnn_cosine_norm,
- #     gene_list    = fastmnn_gene_list,
- #     seed         = opt$seed, 
- #     opt$integration_options
- #   )
- # }
+  integrated_sce_obj <- integrate_fastMNN(
+    merged_sce_obj,
+    batch_column = opt$batch_column,
+    cosine_norm  = opt$fastmnn_no_cosine,
+    gene_list    = fastmnn_gene_list,
+    seed         = opt$seed
+  )
+
 }
 
 # Perform integration with harmony, if specified -------------------------
