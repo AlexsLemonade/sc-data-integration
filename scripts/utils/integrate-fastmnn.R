@@ -1,9 +1,12 @@
 library(SingleCellExperiment) 
 
-source(here::here(),
-       "scripts", 
-       "utils", 
-       "integration-helpers.R")
+source(
+  here::here(
+    "scripts", 
+    "utils",
+    "integration-helpers.R"
+  )
+)
 
 
 #' Integrated combined SCE objects with `fastMNN`

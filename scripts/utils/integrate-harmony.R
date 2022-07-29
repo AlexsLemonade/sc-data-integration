@@ -1,10 +1,14 @@
 library(SingleCellExperiment)
 library(magrittr) 
 
-source(here::here(),
-       "scripts", 
-       "utils", 
-       "integration-helpers.R")
+source(
+  here::here(
+    "scripts", 
+    "utils",
+    "integration-helpers.R"
+  )
+)
+
 
 #' Integrate a combined SCE with `harmony`
 #' 
