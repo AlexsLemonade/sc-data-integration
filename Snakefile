@@ -57,6 +57,8 @@ rule convert_sce_anndata:
 rule integrate_fastmnn:
     conda: "envs/scpca-renv.yaml"
     input:
+        # The input has to be the merged directory so snakemake can find it.
+        # We will add the file name with params.
         merged_sce_dir = "{basedir}/merged-sce-objects"
     output:
         "{basedir}/integrated-sce-objects/{project}_integrated_fastmnn_sce.rds"
@@ -75,6 +77,8 @@ rule integrate_fastmnn:
 rule integrate_harmony:
     conda: "envs/scpca-renv.yaml"
     input:
+        # The input has to be the merged directory so snakemake can find it.
+        # We will add the file name with params.
         merged_sce_dir = "{basedir}/merged-sce-objects"
     output:
         "{basedir}/integrated-sce-objects/{project}_integrated_harmony_sce.rds"
