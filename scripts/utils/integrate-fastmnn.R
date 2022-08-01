@@ -37,7 +37,8 @@ integrate_fastMNN <- function(combined_sce,
     stop("The provided `batch_column` column must be in `combined_sce` colData.")
   }
 
-    # Perform integration with fastMNN -------------------
+
+  # Perform integration with fastMNN -------------------
   integrated_sce <- batchelor::fastMNN(combined_sce, 
                                        # Specify batches.
                                        batch = colData(combined_sce)[,batch_column],
@@ -59,7 +60,13 @@ integrate_fastMNN <- function(combined_sce,
 
   # We will use `_corrected` for fastMNN's `reconstructed` and 
   #  `_PCA` for fastMNN's `corrected`.
-  assay(combined_sce, "fastMNN_corrected")  <- assay(integrated_sce, "reconstructed")
+  
+  # Only add this information if all genes were used, meaning dimensions are compatible
+  if (is.null(gene_list)){
+    assay(combined_sce, "fastMNN_corrected")  <- assay(integrated_sce, "reconstructed")
+  }
+  
+  # Add in the PCs, regardless of the gene list
   reducedDim(combined_sce, "fastMNN_PCA") <- reducedDim(integrated_sce, "corrected")
   
   # Return SCE object with fastMNN information ---------------
