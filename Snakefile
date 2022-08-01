@@ -2,8 +2,8 @@ pepfile: "sample-info/hca-project-pep.yaml"
 
 rule target:
     input:
-        "results/human_cell_atlas/anndata/merged_anndata_objects",
-        expand("results/human_cell_atlas/integrated-sce-objects/{project}_integrated_{sce_method}_sce.rds",
+        "results/human_cell_atlas/merged_anndata",
+        expand("results/human_cell_atlas/integrated_sce/{project}_integrated_{sce_method}_sce.rds",
                project = pep.sample_table["project_name"],
                sce_method = ["fastmnn", "harmony"])
 
@@ -24,7 +24,7 @@ rule merge_sces:
         processed_tsv = "sample-info/hca-processed-libraries.tsv",
         sce_dir = "{basedir}/scpca-downstream-analyses"
     output:
-        directory("{basedir}/merged-sce-objects")
+        directory("{basedir}/merged_sce")
     params:
         grouping_var = "project_name"
     shell:
@@ -39,9 +39,9 @@ rule merge_sces:
 rule convert_sce_anndata:
     input:
         processed_tsv = "sample-info/hca-processed-libraries.tsv",
-        merged_sce_dir = "{basedir}/merged-sce-objects"
+        merged_sce_dir = "{basedir}/merged_sce"
     output:
-        directory("{basedir}/anndata/merged_anndata_objects")
+        directory("{basedir}/merged_anndata")
     params:
         grouping_var = "project_name"
     shell:
@@ -59,9 +59,9 @@ rule integrate_fastmnn:
     input:
         # The input has to be the merged directory so snakemake can find it.
         # We will add the file name with params.
-        merged_sce_dir = "{basedir}/merged-sce-objects"
+        merged_sce_dir = "{basedir}/merged_sce"
     output:
-        "{basedir}/integrated-sce-objects/{project}_integrated_fastmnn_sce.rds"
+        "{basedir}/integrated_sce/{project}_integrated_fastmnn_sce.rds"
     params:
         merged_sce_file = "{project}_merged_sce.rds",
         seed = 2022
@@ -79,9 +79,9 @@ rule integrate_harmony:
     input:
         # The input has to be the merged directory so snakemake can find it.
         # We will add the file name with params.
-        merged_sce_dir = "{basedir}/merged-sce-objects"
+        merged_sce_dir = "{basedir}/merged_sce"
     output:
-        "{basedir}/integrated-sce-objects/{project}_integrated_harmony_sce.rds"
+        "{basedir}/integrated_sce/{project}_integrated_harmony_sce.rds"
     params:
         merged_sce_file = "{project}_merged_sce.rds",
         seed = 2022
