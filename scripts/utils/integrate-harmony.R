@@ -1,5 +1,14 @@
 library(SingleCellExperiment)
-library(magrittr) # pipe
+library(magrittr) 
+
+source(
+  here::here(
+    "scripts", 
+    "utils",
+    "integration-helpers.R"
+  )
+)
+
 
 #' Integrate a combined SCE with `harmony`
 #' 
@@ -85,7 +94,11 @@ integrate_harmony <- function(combined_sce,
   
   # Add new PCs back into the combined_sce ----------------
   reducedDim(combined_sce, "harmony_PCA") <- harmony_results
-
+  
+  # Perform UMAP with the new PCs --------------------------
+  combined_sce <- perform_dim_reduction(combined_sce, prefix = "harmony")
+  
+  
   # Return the integrated SCE --------------------------------------------------
   return(combined_sce)
   
