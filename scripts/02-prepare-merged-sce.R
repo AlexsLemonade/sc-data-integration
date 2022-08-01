@@ -17,11 +17,6 @@
 #   Typically this is the output from running scpca-downstream-analyses 
 # --merged_sce_dir: Path to folder where all merged SCE objects will be stored 
 # 
-# **Note that any columns present in the `rowData` of an SCE object that contains 
-# duplicated information, e.g. duplicate gene identifiers, are converted to 
-# categorical data by the `anndata` package.
-# For context and more information see the comment:
-# https://github.com/AlexsLemonade/sc-data-integration/pull/42#issuecomment-1187703050
 
 # load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
@@ -61,7 +56,7 @@ option_list <- list(
     opt_str = c("--merged_sce_dir"),
     type = "character",
     default = file.path(project_root, "results", "human_cell_atlas", "merged-sce-objects"),
-    help = "path to folder where all AnnData files will be saved as HDF5 files"
+    help = "path to folder where all merged SCE objects files will be saved as RDS files"
   )
 )
 
