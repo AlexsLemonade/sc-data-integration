@@ -2,7 +2,12 @@
 """
 Script to perform integration on a merged AnnData object using Scanorama
 
-Takes
+Takes an HDF5 file as input containing a merged AnnData object across at least 2 single-cell libraries
+and performs correction with scanorama. The output is an HDF5 file containing the integrated AnnData object.
+Requires a `batch_column` to be present as a column in the `obs` of the AnnData which corresponds to the
+original library ID for each cell. To return only the corrected data, removing the `X` matrix containing
+the raw counts and the `logcounts` layer containing the log-normalized data, use the `--corrected_only` flag.
+
 """
 
 
