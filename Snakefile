@@ -67,7 +67,7 @@ rule integrate_fastmnn:
         seed = 2022
     shell:
        """
-       Rscript scripts/03-integrate-sce.R \
+       Rscript scripts/03a-integrate-sce.R \
          --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
          --output_sce_file "{output}" \
          --method fastMNN \
@@ -87,7 +87,7 @@ rule integrate_harmony:
         seed = 2022
     shell:
        """
-       Rscript scripts/03-integrate-sce.R \
+       Rscript scripts/03a-integrate-sce.R \
          --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
          --output_sce_file "{output}" \
          --method harmony \
