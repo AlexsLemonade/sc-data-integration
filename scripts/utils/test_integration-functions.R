@@ -108,7 +108,7 @@ seurat2 <- Seurat::AddMetaData(seurat2, library_ids[2], "batch")
 seurat_list <- c(seurat1, seurat2)
 
 # Integrate data using reciprocal PCA
-rpca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "rpca", integration_dims = c(1:50))
+rpca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "rpca")
 
 # Integrate data using canonical correlation analysis
-cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "cca", integration_dims = c(1:50))
+cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "cca")

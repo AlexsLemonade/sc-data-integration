@@ -1,6 +1,5 @@
-#' Integrated combined SCE objects with Seurat's `IntegrateData`
+#' Integrated list of Seurat objects with Seurat's `IntegrateData`
 #' 
-library(SingleCellExperiment)
 library(Seurat)
 library(magrittr)
 
@@ -9,13 +8,17 @@ library(magrittr)
 #' @param seurat_list List of seurat objects normalized with Seurat::SCTransform()
 #' @param reduction_method The Seurat reduction method to implement with 
 #' Seurat::FindIntegrationAnchors(), can be "rpca" or "cca"
-#' @param num_genes Number of variable features to use for integration
+#' @param num_genes Number of variable features to use for integration. Default
+#' is 2000, same as Seurat's default.
 #' @param batch_column The column variable indicating batches, which would 
 #' typically corresponds to the library ID. Default is "batch".
 #' @param integration_dims The range of values to supply to the `dims` argument
-#' when implementing the integration functions
+#' when implementing the integration functions.  Default is 1:30, same as 
+#' Seurat's default.
 #' @param umap_dims The range of values to supply to the `dims` argument when
-#' implementing the `runUMAP()` function. Default is 1:10.
+#' implementing the runUMAP() function. Default is 1:30.
+#' @param ... Allows for any additional parameters that a user may want to pass
+#' to the Seurat::IntegrateData() function
 #'
 #' @return integrated seurat object
 #'
@@ -23,10 +26,10 @@ library(magrittr)
 
 integrate_seurat <- function(seurat_list,
                              reduction_method,
-                             num_genes = 3000,
+                             num_genes = 2000,
                              batch_column = "batch",
-                             integration_dims,
-                             umap_dims = c(1:10),
+                             integration_dims = 1:30,
+                             umap_dims = 1:30,
                              ...){
   
   # check that all objects contain the `SCT` assay as default assay
@@ -68,7 +71,8 @@ integrate_seurat <- function(seurat_list,
   integrated_object <- Seurat::IntegrateData(anchorset = anchors,
                                              normalization.method = "SCT",
                                              features.to.integrate = shared_genes,
-                                             dims = integration_dims)
+                                             dims = integration_dims,
+                                             ...)
   
   # set idents as the batch column
   Seurat::Idents(integrated_object) <- batch_column
