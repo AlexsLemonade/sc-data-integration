@@ -25,8 +25,8 @@ def integrate_scanorama(merged_adata,
         found in `anndata.uns['variable_genes']`.
     batch_column : The name of the column in `anndata.obs` that indicates the batches
         for each cell, typically this corresponds to the library id.
-    seed : Random seed to set prior to scanorama. A seed will only be set if this
-        is not `None`.
+    seed : Random seed to provide to scanorama's correct() function. A seed will 
+        only be set if this is not `None`.
 
     Returns
     -------
@@ -35,9 +35,6 @@ def integrate_scanorama(merged_adata,
         expression matrix
 
     """
-
-    # set seed
-    random.seed(seed)
 
     # grab variable gene list from merged object
     try:
@@ -81,7 +78,8 @@ def integrate_scanorama(merged_adata,
     # perform integration with returning embeddings (SVD)
     integrated, corrected, genes = scanorama.correct(split_logcounts,
                                                      split_genes,
-                                                     return_dimred = True)
+                                                     return_dimred = True, 
+                                                     seed = seed)
 
     # add corrected gene expression and embeddings to individual anndata objects
     for idx, anndata in enumerate(split_adata):
