@@ -57,13 +57,11 @@ perform_dim_reduction(combined_sce,
 integrate_harmony(combined_sce, "batch", from_pca=FALSE)
 integrated_object <- integrate_harmony(combined_sce, "batch")
 
-# add UMAP from harmony_PCA 
-integrated_object <- perform_dim_reduction(integrated_object, 
-                                           var_genes = var_genes,
-                                           prefix = "harmony")
 
 # Test fastMNN:
-integrate_fastMNN(combined_sce)
+integrated_object <-integrate_fastMNN(combined_sce)
+
+
 # plot UMAP pre and post integration 
 pre_integration <- scater::plotReducedDim(combined_sce, 
                                           dimred = "UMAP", 
