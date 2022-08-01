@@ -86,8 +86,7 @@ integrate_fastMNN <- function(combined_sce,
   
   # Remove uncorrected expression values, unless otherwise specified ----
   if (!return_uncorrected_expression) {
-    assay(combined_sce, "counts") <- NULL
-    assay(combined_sce, "logcounts") <- NULL
+    combined_sce <- remove_uncorrected_expression(combined_sce)
   }
   
   # Return SCE object with fastMNN information ---------------
