@@ -22,6 +22,9 @@ source(
 #'   performed prior to calculating PCs for integration. Default: `TRUE`. 
 #' @param seed Random seed to set for `fastMNN` integration. A seed will only
 #'  be set if this is not `NULL` (the default).
+#' @param return_uncorrected_expression Boolean indicating whether to return the
+#'  uncorrected expression values in the returned SCE object. Default: `FALSE`.
+#'  TODO: This is the opposite of what Ally implemented for scanorama, so make sure the final logic is consistent!!
 #' @param ... Additional arguments to pass into `batchelor::fastMNN()`
 #'
 #' @return The integrated SCE object
@@ -30,6 +33,7 @@ integrate_fastMNN <- function(combined_sce,
                               gene_list = NULL, 
                               cosine_norm = TRUE,
                               seed = NULL,
+                              return_uncorrected_expression = FALSE,
                               ...) {
   
   if (!(is.null(seed))) {
@@ -66,12 +70,12 @@ integrate_fastMNN <- function(combined_sce,
   #  (after cosine normalization, if cos.norm=TRUE) but should not be 
   #  used for quantitative analyses.
 
-  # We will use `_corrected` for fastMNN's `reconstructed` and 
+  # We will use `_reconstructed` for fastMNN's `reconstructed` and 
   #  `_PCA` for fastMNN's `corrected`.
   
   # Only add this information if all genes were used, meaning dimensions are compatible
   if (is.null(gene_list)){
-    assay(combined_sce, "fastMNN_corrected")  <- assay(integrated_sce, "reconstructed")
+    assay(combined_sce, "fastMNN_reconstructed")  <- assay(integrated_sce, "reconstructed")
   }
   
   # Add in the PCs, regardless of the gene list
@@ -79,6 +83,12 @@ integrate_fastMNN <- function(combined_sce,
   
   # Perform UMAP with the new PCs -----------------
   combined_sce <- perform_dim_reduction(combined_sce, prefix = "fastMNN")
+  
+  # Remove uncorrected expression values, unless otherwise specified ----
+  if (!return_uncorrected_expression) {
+    assay(combined_sce, "counts") <- NULL
+    assay(combined_sce, "logcounts") <- NULL
+  }
   
   # Return SCE object with fastMNN information ---------------
   return(combined_sce)
