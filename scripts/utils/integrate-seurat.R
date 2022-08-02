@@ -16,7 +16,9 @@ library(magrittr)
 #' when implementing the integration functions.  Default is 1:30, same as 
 #' Seurat's default.
 #' @param umap_dims The range of values to supply to the `dims` argument when
-#' implementing the runUMAP() function. Default is 1:30.
+#' implementing the runUMAP() function. Default is 1:30, same as implemented
+#' in the single cell integration vignette found at 
+#' https://www.singlecellcourse.org/scrna-seq-dataset-integration.html#seurat-v3-3-vs-5-10k-pbmc
 #' @param ... Allows for any additional parameters that a user may want to pass
 #' to the Seurat::IntegrateData() function
 #'
@@ -81,10 +83,12 @@ integrate_seurat <- function(seurat_list,
   Seurat::DefaultAssay(integrated_object) <- "integrated"
   
   # add PCA and UMAP to the integrated object
+  seurat_prefix <- paste("seurat", reduction_method, sep = ".")
   integrated_object <- integrated_object %>%
-    Seurat::RunPCA(reduction.name = paste0("seurat", reduction_method, "_PCA")) %>%
-    Seurat::RunUMAP(reduction.name = paste0("seurat", reduction_method, "_UMAP"),
-                    reduction = paste0("seurat", reduction_method, "_PCA"), dims = umap_dims)
+    Seurat::RunPCA(reduction.name = paste0(seurat_prefix, "_PCA")) %>%
+    Seurat::RunUMAP(reduction.name = paste0(seurat_prefix, "_UMAP"),
+                    reduction = paste0(seurat_prefix, "_PCA"), 
+                    dims = umap_dims)
   
   return(integrated_object)
   
