@@ -66,12 +66,12 @@ integrate_fastMNN <- function(combined_sce,
   #  (after cosine normalization, if cos.norm=TRUE) but should not be 
   #  used for quantitative analyses.
 
-  # We will use `_reconstructed` for fastMNN's `reconstructed` and 
+  # We will use `_corrected` for fastMNN's `reconstructed` and 
   #  `_PCA` for fastMNN's `corrected`.
   
   # Only add this information if all genes were used, meaning dimensions are compatible
   if (is.null(gene_list)){
-    assay(combined_sce, "fastMNN_reconstructed")  <- assay(integrated_sce, "reconstructed")
+    assay(combined_sce, "fastMNN_corrected")  <- assay(integrated_sce, "reconstructed")
   }
   
   # Add in the PCs, regardless of the gene list
