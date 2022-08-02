@@ -80,7 +80,6 @@ integrate_fastMNN <- function(combined_sce,
   # Perform UMAP with the new PCs -----------------
   combined_sce <- perform_dim_reduction(combined_sce, prefix = "fastMNN")
   
-  
   # Return SCE object with fastMNN information ---------------
   return(combined_sce)
   
