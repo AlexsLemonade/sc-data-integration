@@ -7,6 +7,7 @@ import scipy
 
 def integrate_scvi(merged_adata,
                    batch_column = ['batch'],
+                   variable_genes = None,
                    categorical_covariate_columns = None,
                    continuous_covariate_columns = ['subsets_mito_percent'],
                    seed=None):
@@ -46,18 +47,6 @@ def integrate_scvi(merged_adata,
     """
     # set seed
     scvi.settings.seed = seed
-
-    # need to input only HVG to build model so subset to HVG
-    # make sure variable gene list already exists in merged object first
-    try:
-        var_genes = list(merged_adata.uns['variable_genes'])
-        merged_adata = merged_adata[merged_adata.obs_names, var_genes]
-    except KeyError:
-        print("Variable genes cannot be found in anndata object."
-              " Make sure they are stored in adata.uns['variable_genes'].",
-              file = sys.stderr)
-        raise
-
 
     # if additional covariate columns are provided concatentate with batch column
     if type(batch_column) != list:
