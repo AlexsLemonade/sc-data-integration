@@ -178,10 +178,11 @@ merged_sce_list <- grouped_sce_list %>%
 
 # only perform HVG if --select_hvg is used
 # apply HVG calculation to list of merged SCEs
-merged_sce_list <- merged_sce_list %>%
-  purrr::map(~ add_var_genes(.x, 
-                             num_genes = opt$num_genes,
-                             select_hvg = opt$select_hvg))
+if(!is.null(opt$select_hvg)){
+  merged_sce_list <- merged_sce_list %>%
+    purrr::map(~ add_var_genes(.x, 
+                               num_genes = opt$num_genes))
+}
 
 # add PCA and UMAP 
 # use rownames of merged SCE as input genes to PCA
