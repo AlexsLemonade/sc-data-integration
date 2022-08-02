@@ -82,7 +82,7 @@ cowplot::plot_grid(pre_integration, post_integration, ncol = 1)
 anndata_dir <- file.path(here::here(
   "results",
   "human_cell_atlas", 
-  "integrated_anndata_objects"
+  "integrated_anndata"
 ))
 scanorama_integrated_file <- file.path(anndata_dir, "1M_Immune_Cells_integrated_scanorama.h5")
 scanorama_integrated_sce <- zellkonverter::readH5AD(scanorama_integrated_file, skip_assays = TRUE)
