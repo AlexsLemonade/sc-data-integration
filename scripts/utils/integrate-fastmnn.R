@@ -1,4 +1,12 @@
-library(SingleCellExperiment) # Needed for assays() function
+library(SingleCellExperiment) 
+
+source(
+  here::here(
+    "scripts", 
+    "utils",
+    "integration-helpers.R"
+  )
+)
 
 
 #' Integrated combined SCE objects with `fastMNN`
@@ -68,6 +76,9 @@ integrate_fastMNN <- function(combined_sce,
   
   # Add in the PCs, regardless of the gene list
   reducedDim(combined_sce, "fastMNN_PCA") <- reducedDim(integrated_sce, "corrected")
+  
+  # Perform UMAP with the new PCs -----------------
+  combined_sce <- perform_dim_reduction(combined_sce, prefix = "fastMNN")
   
   # Return SCE object with fastMNN information ---------------
   return(combined_sce)
