@@ -107,8 +107,8 @@ rule integrate_scanorama:
         seed = 2022
     shell:
         """
-        python 03b-integrate-scanorama.py \
+        python scripts/03b-integrate-scanorama.py \
           --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
-          --output_anndata "merged_anndata_file" \
+          --output_anndata "{output}" \
           --seed {params.seed}
         """
