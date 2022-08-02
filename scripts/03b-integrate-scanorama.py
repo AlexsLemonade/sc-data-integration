@@ -38,22 +38,28 @@ parser.add_argument('--corrected_only',
 parser.add_argument('-s', '--seed',
                     dest = 'seed',
                     default = None,
-                    help = 'Random seed to set prior to scanorama.')
+                    help = 'Random seed to set during scanorama.')
 
 args = parser.parse_args()
 
-# check that input file has correct extension
+# compile extension regex
 file_ext = re.compile(r"\.hdf5$|.h5$", re.IGNORECASE)
-if not file_ext.search(args.input_anndata):
-        raise ValueError("--input_anndata must end in either .hdf5 or .h5 and contain a merged AnnData object.")
 
+# check that input file exists, if it does exist, make sure it's an h5 file
+if not os.path.exists(args.input_anndata):
+        raise FileExistsError("--input_anndata file not found.")
+else:
+        if not file_ext.search(args.input_anndata):
+                raise ValueError("--input_anndata must end in either .hdf5 or .h5 and contain a merged AnnData object.")
+
+# make sure output file path is h5 file
 if not file_ext.search(args.output_anndata):
         raise ValueError("--output_anndata must provide a file path ending in either .hdf5 or .h5.")
 
 # check that output file directory exists and create directory if doesn't exist
 integrated_adata_dir = os.path.dirname(args.output_anndata)
 if not os.path.isdir(integrated_adata_dir):
-    os.makedirs(integrated_adata_dir)
+    os.makedirs(integrated_adata_dir, exist_ok = True)
 
 # read in merged anndata object
 merged_adata = adata.read_h5ad(args.input_anndata)
