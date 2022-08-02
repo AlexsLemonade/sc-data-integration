@@ -14,12 +14,10 @@ from integrate_scvi import integrate_scvi
 anndata_dir = os.path.join(project_root,
                            "results",
                            "human_cell_atlas",
-                           "anndata")
+                           "merged_anndata")
 
 # build merged anndata file paths
-merged_anndata_dir = os.path.join(anndata_dir,
-                                  "merged_anndata_objects")
-merged_adata_file =os.path.join(merged_anndata_dir, "1M_Immune_Cells_anndata.h5")
+merged_adata_file =os.path.join(anndata_dir, "1M_Immune_Cells_anndata.h5")
 
 # build integrated anndata file paths for output
 integrated_adata_dir = os.path.join(anndata_dir,
