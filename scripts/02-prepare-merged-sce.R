@@ -29,6 +29,7 @@ renv::load(project_root)
 # import libraries
 library(magrittr)
 library(optparse)
+library(SingleCellExperiment)
 
 # source helper functions 
 source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
@@ -50,6 +51,7 @@ option_list <- list(
   ),
   make_option(
     opt_str = c("--select_hvg"), 
+    default = FALSE,
     action = "store_true",
     help = "Indicates whether or not to identify and select highly variable genes.
       If --select_hvg is used, highly variable genes will be determined and the merged
@@ -95,6 +97,11 @@ library_ids <- library_metadata_df %>%
 # check that grouping variable is present
 if(!opt$grouping_var %in% colnames(library_metadata_df)){
   stop("Must provide a grouping_var that is a column in the library metadata file.")
+}
+
+# check that num genes provided is an integer 
+if(!is.integer(opt$num_genes)){
+  stop("--num-genes must be an integer.")
 }
 
 # setup output directory 
@@ -170,18 +177,11 @@ merged_sce_list <- grouped_sce_list %>%
 # HVG and dim reduction --------------------------------------------------------
 
 # only perform HVG if --select_hvg is used
-if(opt$select_hvg){
-  # apply HVG calculation to list of merged SCEs
-  merged_sce_list <- merged_sce_list %>%
-    purrr::map(~ add_var_genes(.x, num_genes = opt$num_genes))
-} else {
-  
-  # if no HVG selection, set variable genes to NULL 
-  merged_sce_list <- lapply(merged_sce_list, function(x){
-    metadata(x)$variable_genes <- NULL
-  })
-  
-}
+# apply HVG calculation to list of merged SCEs
+merged_sce_list <- merged_sce_list %>%
+  purrr::map(~ add_var_genes(.x, 
+                             num_genes = opt$num_genes,
+                             select_hvg = opt$select_hvg))
 
 # add PCA and UMAP 
 # use rownames of merged SCE as input genes to PCA
