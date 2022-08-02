@@ -22,7 +22,8 @@ library(magrittr)
 #' @param ... Allows for any additional parameters that a user may want to pass
 #' to the Seurat::IntegrateData() function
 #'
-#' @return integrated seurat object
+#' @return integrated seurat object with `rpca_` and `cca_` prefixed reducedDims slots
+
 #'
 #'
 
@@ -51,6 +52,12 @@ integrate_seurat <- function(seurat_list,
     stop("The provided `batch_column` column must be in the seurat object's metadata.")
   }
   
+  # check that reduction method is valid
+  reduction_method <- tolower(reduction_method)
+  if (!reduction_method %in% c("cca", "rpca")) {
+    stop("The `reduction_method` must be one of `cca` or `rpca` (case-insentitive)").
+  }
+  
   # find common variable features for integration
   common_features <- Seurat::SelectIntegrationFeatures(seurat_list, nfeatures = num_genes)
   
@@ -65,6 +72,8 @@ integrate_seurat <- function(seurat_list,
     purrr::map(Seurat::RunPCA, features = common_features, verbose = FALSE)
   
   # find anchors and perform integration
+  # note that Seurat implements a default seed value of 42 in the applicable
+  # functions below, to ensure that the results are reproducible
   anchors <- Seurat::FindIntegrationAnchors(object.list = seurat_list,
                                             reduction = reduction_method,
                                             dims = integration_dims)
