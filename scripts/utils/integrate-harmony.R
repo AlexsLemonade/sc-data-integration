@@ -26,8 +26,6 @@ source(
 #' @param from_pca A boolean indicating whether to integrate directly from PCs. Default: TRUE.
 #' @param seed Random seed to set for `harmony` integration. A seed will only
 #'  be set if this is not `NULL` (the default).
-#' @param return_uncorrected_expression Boolean indicating whether to return the
-#'  uncorrected expression values in the returned SCE object. Default: `FALSE`.
 #' @param ... Additional parameters that may be passed to `harmony::HarmonyMatrix()`
 #'
 #' @return An integrated SCE object with the additional reducedDim field `harmony`
@@ -40,7 +38,6 @@ integrate_harmony <- function(combined_sce,
                               covariate_cols = c(), 
                               from_pca = TRUE,
                               seed = NULL,
-                              return_uncorrected_expression = FALSE,
                               ...) {
   
   if (!(is.null(seed))) {
@@ -101,10 +98,6 @@ integrate_harmony <- function(combined_sce,
   # Perform UMAP with the new PCs --------------------------
   combined_sce <- perform_dim_reduction(combined_sce, prefix = "harmony")
   
-  # Remove uncorrected expression values, unless otherwise specified ----
-  if (!return_uncorrected_expression) {
-    combined_sce <- remove_uncorrected_expression(combined_sce)
-  }
   
   # Return the integrated SCE --------------------------------------------------
   return(combined_sce)
