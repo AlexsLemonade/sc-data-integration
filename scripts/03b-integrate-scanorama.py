@@ -38,7 +38,7 @@ parser.add_argument('--corrected_only',
 parser.add_argument('-s', '--seed',
                     dest = 'seed',
                     default = None,
-                    help = 'Random seed to set during scanorama.')
+                    help = 'Random seed to set for scanorama.')
 
 args = parser.parse_args()
 
@@ -47,14 +47,13 @@ file_ext = re.compile(r"\.hdf5$|.h5$", re.IGNORECASE)
 
 # check that input file exists, if it does exist, make sure it's an h5 file
 if not os.path.exists(args.input_anndata):
-        raise FileExistsError("--input_anndata file not found.")
-else:
-        if not file_ext.search(args.input_anndata):
-                raise ValueError("--input_anndata must end in either .hdf5 or .h5 and contain a merged AnnData object.")
+    raise FileExistsError("--input_anndata file not found.")
+elif not file_ext.search(args.input_anndata):
+    raise ValueError("--input_anndata must end in either .hdf5 or .h5 and contain a merged AnnData object.")
 
 # make sure output file path is h5 file
 if not file_ext.search(args.output_anndata):
-        raise ValueError("--output_anndata must provide a file path ending in either .hdf5 or .h5.")
+    raise ValueError("--output_anndata must provide a file path ending in either .hdf5 or .h5.")
 
 # check that output file directory exists and create directory if doesn't exist
 integrated_adata_dir = os.path.dirname(args.output_anndata)
@@ -71,9 +70,9 @@ scanorama_integrated_adata = integrate_scanorama(merged_adata,
 
 # remove raw data and logcounts to minimize space if corrected_only is true
 if args.corrected_only:
-        print("Removing raw data and log-normalized data. Only corrected data will be returned.")
-        scanorama_integrated_adata.X = None
-        del scanorama_integrated_adata.layers["logcounts"]
+    print("Removing raw data and log-normalized data. Only corrected data will be returned.")
+    scanorama_integrated_adata.X = None
+    del scanorama_integrated_adata.layers["logcounts"]
 
 # write anndata to h5
 scanorama_integrated_adata.write(filename = args.output_anndata)
