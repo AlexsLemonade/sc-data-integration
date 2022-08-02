@@ -25,6 +25,8 @@
 #   during integration instead of, by default, using only the previously-identified HVGs, 
 #   stored in the `variable_genes` column of metadata slot. This argument is ignored if 
 #   the provided method is `harmony`
+# --return_uncorrected_expression: Flag to specify that uncorrected gene expression values
+#   should also be returned in the integrated SCE object. Default: `FALSE`.
 # 
 # 
 # Usage examples:
@@ -48,9 +50,11 @@ renv::load(project_root)
 library(magrittr)
 library(optparse)
 
-# source integration functions
+# source integration functions and helper functions
 source(file.path(project_root, "scripts", "utils", "integrate-fastMNN.R"))
 source(file.path(project_root, "scripts", "utils", "integrate-harmony.R"))
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+
 
 # Set up optparse options
 option_list <- list(
@@ -111,6 +115,13 @@ option_list <- list(
     default = FALSE,
     help = "Indicate whether to use all genes instead of only HVGs during `fastMNN` integration. 
     To use all genes, use `--fastmnn_use_all_genes`"
+  ),
+  make_option(
+    opt_str = c("--return_uncorrected_expression"),
+    action = "store_true", 
+    default = FALSE,
+    help = "Indicate whether to return the uncorrected expression values in the returned SCE object. 
+    To return uncorrected expression, use `--return_uncorrected_expression`"
   )
 )
 
@@ -195,6 +206,12 @@ if (integration_method == "harmony") {
     from_pca = opt$harmony_from_expression,
     seed = opt$seed
   )
+}
+
+
+# Remove uncorrected expression values, unless otherwise specified ----
+if (!return_uncorrected_expression) {
+  integrated_sce_obj <- remove_uncorrected_expression(integrated_sce_obj)
 }
 
 
