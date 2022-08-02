@@ -11,7 +11,11 @@
 #   in the conversion from loom to SCE. This file must contain the 
 #   `library_biomaterial_id` column
 # --grouping_var: Column name present in the library metadata file to use for 
-#   grouping SCE objects and merging prior to performing HVG selection.
+#   grouping SCE objects and merging.
+# --select_hvg: Indicates whether or not to identify and select highly variable genes.
+#   If --select_hvg is used, highly variable genes will be determined and the merged
+#   SCE object will only contain genes identified as highly variable genes.
+# --num_genes: Number of highly variable genes to use if --select_hvg is being used.
 # --sce_dir: Path to folder where SCE objects to be converted are stored, 
 #   each file should contain the library ID in the filename and be stored as an RDS file.
 #   Typically this is the output from running scpca-downstream-analyses 
@@ -42,7 +46,20 @@ option_list <- list(
     type = "character",
     default = "project_name", 
     help = "Column name present in the library metadata file to use for grouping SCE objects
-    and merging prior to performing HVG selection."
+    and merging."
+  ),
+  make_option(
+    opt_str = c("--select_hvg"), 
+    action = "store_true",
+    help = "Indicates whether or not to identify and select highly variable genes.
+      If --select_hvg is used, highly variable genes will be determined and the merged
+      SCE object will only contain genes identified as highly variable genes."
+  ),
+  make_option(
+    opt_str = c("-n", "--num_genes"),
+    type = "integer",
+    default = 5000,
+    help = "Number of highly variable genes to use if --select_hvg is being used."
   ),
   make_option(
     opt_str = c("--sce_dir"),
@@ -55,7 +72,7 @@ option_list <- list(
   make_option(
     opt_str = c("--merged_sce_dir"),
     type = "character",
-    default = file.path(project_root, "results", "human_cell_atlas", "merged-sce-objects"),
+    default = file.path(project_root, "results", "human_cell_atlas", "merged-sce"),
     help = "path to folder where all merged SCE objects files will be saved as RDS files"
   )
 )
@@ -150,35 +167,30 @@ grouped_sce_list <- grouped_sce_file_df %>%
 merged_sce_list <- grouped_sce_list %>%
   purrr::map(~ combine_sce_objects(.x, preserve_rowdata_columns = c("Gene", "gene_names")))
 
-# Subset to HVG ----------------------------------------------------------------
+# HVG and dim reduction --------------------------------------------------------
 
-
-#' Identify variable genes for a merged object and add to metadata
-#'
-#' @param merged_sce SCE object that has been merged using combine_sce_objects
-#'
-#' @return merged SCE object with variable genes added to metadata
-add_var_genes <- function(merged_sce){
- 
-  # grab variable genes
-  var_genes <- perform_hvg_selection(merged_sce)
+# only perform HVG if --select_hvg is used
+if(opt$select_hvg){
+  # apply HVG calculation to list of merged SCEs
+  merged_sce_list <- merged_sce_list %>%
+    purrr::map(~ add_var_genes(.x, num_genes = opt$num_genes))
+} else {
   
-  # add variable genes to metadata
-  metadata(merged_sce)$variable_genes <- var_genes
+  # if no HVG selection, set variable genes to NULL 
+  merged_sce_list <- lapply(merged_sce_list, function(x){
+    metadata(x)$variable_genes <- NULL
+  })
   
-  return(merged_sce)
 }
 
-
-# apply HVG calculation to list of merged SCEs
-merged_sce_list <- merged_sce_list %>%
-  purrr::map(add_var_genes)
-
 # add PCA and UMAP 
+# use rownames of merged SCE as input genes to PCA
+# if --select_hvg is used, rownames correspond to HVG only, otherwise uses all genes
 merged_sce_list <- merged_sce_list %>%
   purrr::map( ~ perform_dim_reduction(.x, 
-                                      var_genes = metadata(.x)$variable_genes,
+                                      var_genes = rownames(.x),
                                       pca_type = "multi"))
+
 
 # Write RDS --------------------------------------------------------------------
 
