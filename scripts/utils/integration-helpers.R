@@ -260,7 +260,28 @@ perform_dim_reduction <- function(combined_sce,
 }
 
 
-
+#' Identify variable genes for a merged object, add to metadata, and return
+#' merged object with only gene expression data corresponding to variable genes
+#'
+#' @param combined_sce SCE object that has been merged using combine_sce_objects
+#' @param num_genes Number of highly variable genes to select.
+#'
+#' @return combined SCE object subset to variable genes with variable genes added to metadata
+add_var_genes <- function(combined_sce,
+                          num_genes){
+  
+  # grab variable genes
+  var_genes <- perform_hvg_selection(combined_sce = combined_sce, 
+                                     num_genes = num_genes)
+  
+  # add variable genes to metadata
+  metadata(combined_sce)$variable_gene_list <- var_genes
+  
+  # subset to only variable genes
+  combined_sce <- combined_sce[var_genes,] 
+  
+  return(combined_sce)
+}
 
 
 #' Remove original uncorrected expression matrices from an SCE object
