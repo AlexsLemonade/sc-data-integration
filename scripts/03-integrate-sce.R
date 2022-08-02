@@ -21,10 +21,6 @@
 #   This argument is ignored if the provided method is `fastMNN`
 # --fastmnn_no_cosine: Flag to specify that `fastMNN` integration should not perform
 #   cosine normalization. This argument is ignored if the provided method is `harmony`
-# --fastmnn_use_all_genes: Flag to specify that `fastMNN` integration should all genes in
-#   during integration instead of, by default, using only the previously-identified HVGs, 
-#   stored in the `variable_genes` column of metadata slot. This argument is ignored if 
-#   the provided method is `harmony`
 # --corrected_only: Flag to specify that only corrected gene expression values should
 #   be returned in the integrated SCE object. Default usage of this script will
 #   return all data. 
@@ -112,13 +108,6 @@ option_list <- list(
     To turn off cosine normalization, use `--fastmnn_no_cosine`"
   ),
   make_option(
-    opt_str = c("--fastmnn_use_all_genes"),
-    action = "store_true", 
-    default = FALSE,
-    help = "Indicate whether to use all genes instead of only HVGs during `fastMNN` integration. 
-    To use all genes, use `--fastmnn_use_all_genes`"
-  ),
-  make_option(
     opt_str = c("--corrected_only"),
     action = "store_true", 
     default = FALSE,
@@ -178,20 +167,13 @@ merged_sce_obj <- readr::read_rds(opt$input_sce_file)
 
 # Perform integration with fastMNN, if specified -------------------------
 if (integration_method == "fastmnn") {
-    
-  # Prepare `gene_list` argument
-  if (opt$fastmnn_use_all_genes) {
-    fastmnn_gene_list <- NULL
-  } else {
-    fastmnn_gene_list <- metadata(merged_sce_obj)$variable_genes
-  }
   
   # Perform integration
   integrated_sce_obj <- integrate_fastMNN(
     merged_sce_obj,
     batch_column = opt$batch_column,
     cosine_norm  = opt$fastmnn_no_cosine,
-    gene_list    = fastmnn_gene_list,
+    gene_list    = rownames(merged_sce_obj),
     seed         = opt$seed
   )
 }
