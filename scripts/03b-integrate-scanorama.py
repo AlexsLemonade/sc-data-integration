@@ -37,6 +37,7 @@ parser.add_argument('--corrected_only',
                     ' Default will return all data. To return only corrected data, use --corrected_only.')
 parser.add_argument('-s', '--seed',
                     dest = 'seed',
+                    type=int,
                     default = None,
                     help = 'Random seed to set for scanorama.')
 
