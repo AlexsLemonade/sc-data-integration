@@ -43,7 +43,7 @@ parser.add_argument('-s', '--seed',
 args = parser.parse_args()
 
 # check that input file has correct extension
-file_ext = re.compile(r"\.hdf5$|.h5$")
+file_ext = re.compile(r"\.hdf5$|.h5$", re.IGNORECASE)
 if not file_ext.search(args.input_anndata):
         raise ValueError("--input_anndata must end in either .hdf5 or .h5 and contain a merged AnnData object.")
 
@@ -65,7 +65,7 @@ scanorama_integrated_adata = integrate_scanorama(merged_adata,
 
 # remove raw data and logcounts to minimize space if corrected_only is true
 if args.corrected_only:
-        print("Removing raw data and log-normalied data, only corrected data will be returned.")
+        print("Removing raw data and log-normalized data. Only corrected data will be returned.")
         scanorama_integrated_adata.X = None
         del scanorama_integrated_adata.layers["logcounts"]
 
