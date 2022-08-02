@@ -9,6 +9,7 @@
 - [Metadata](#metadata)
 - [Shared data files](#shared-data-files)
   - [Processed SingleCellExperiment objects to use for data integration](#processed-singlecellexperiment-objects-to-use-for-data-integration)
+- [Running the integration workflow](#running-the-integration-workflow)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
 
@@ -141,3 +142,14 @@ bash scripts/01-run-downstream-analyses.sh \
   --downstream_repo <full path to scpca-downstream-analyses-repo> \
   --s3_bucket "s3://sc-data-integration/human_cell_atlas_results/scpca-downstream-analyses"
 ```
+
+## Running the integration workflow
+
+To run the integration workflow, invoke `snakemake` from the `sc-data-integration` directory with the following command:
+
+```
+snakemake -c4 --use-conda
+```
+
+You can adjust the number of cores used by adjust the `-c4` flag with however many cores you want to us.
+Note that you will want to have [set up the R conda environment already](#snakemakeconda-setup), especially if you are on an Apple Silicon Mac.
