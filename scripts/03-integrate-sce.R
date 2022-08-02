@@ -52,9 +52,10 @@ library(magrittr)
 library(optparse)
 
 # source integration functions and helper functions
-source(file.path(project_root, "scripts", "utils", "integrate-fastMNN.R"))
-source(file.path(project_root, "scripts", "utils", "integrate-harmony.R"))
-source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+utils_dir <- file.path(project_root, "scripts", "utils")
+source(file.path(utils_dir, "integrate-fastMNN.R"))
+source(file.path(utils_dir, "integrate-harmony.R"))
+source(file.path(utils_dir, "integration-helpers.R"))
 
 
 # Set up optparse options
