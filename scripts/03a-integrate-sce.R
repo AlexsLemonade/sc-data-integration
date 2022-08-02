@@ -25,6 +25,9 @@
 #   during integration instead of, by default, using only the previously-identified HVGs, 
 #   stored in the `variable_genes` column of metadata slot. This argument is ignored if 
 #   the provided method is `harmony`
+# --corrected_only: Flag to specify that only corrected gene expression values should
+#   be returned in the integrated SCE object. Default usage of this script will
+#   return all data. 
 # 
 # 
 # Usage examples:
@@ -48,9 +51,12 @@ renv::load(project_root)
 library(magrittr)
 library(optparse)
 
-# source integration functions
-source(file.path(project_root, "scripts", "utils", "integrate-fastMNN.R"))
-source(file.path(project_root, "scripts", "utils", "integrate-harmony.R"))
+# source integration functions and helper functions
+utils_dir <- file.path(project_root, "scripts", "utils")
+source(file.path(utils_dir, "integrate-fastMNN.R"))
+source(file.path(utils_dir, "integrate-harmony.R"))
+source(file.path(utils_dir, "integration-helpers.R"))
+
 
 # Set up optparse options
 option_list <- list(
@@ -111,8 +117,21 @@ option_list <- list(
     default = FALSE,
     help = "Indicate whether to use all genes instead of only HVGs during `fastMNN` integration. 
     To use all genes, use `--fastmnn_use_all_genes`"
+  ),
+  make_option(
+    opt_str = c("--corrected_only"),
+    action = "store_true", 
+    default = FALSE,
+    help = "Indicate whether to only return the corrected gene expression data, and
+    not uncorrected expression, in the integrated SCE object. To return only 
+    corrected expression, use `--corrected_only`."
   )
 )
+
+
+# --corrected_only: Flag to specify that only corrected gene expression values should
+#   be returned in the integrated SCE object. Default usage of this script will
+#   return all data. 
 
 # Setup ------------------------------------------------------------------------
 # Parse options
@@ -195,6 +214,12 @@ if (integration_method == "harmony") {
     from_pca = opt$harmony_from_expression,
     seed = opt$seed
   )
+}
+
+
+# Remove uncorrected expression values, if specified ----------
+if (corrected_only) {
+  integrated_sce_obj <- remove_uncorrected_expression(integrated_sce_obj)
 }
 
 
