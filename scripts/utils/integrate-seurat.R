@@ -83,11 +83,10 @@ integrate_seurat <- function(seurat_list,
   Seurat::DefaultAssay(integrated_object) <- "integrated"
   
   # add PCA and UMAP to the integrated object
-  seurat_prefix <- paste("seurat", reduction_method, sep = ".")
   integrated_object <- integrated_object %>%
-    Seurat::RunPCA(reduction.name = paste0(seurat_prefix, "_PCA")) %>%
-    Seurat::RunUMAP(reduction.name = paste0(seurat_prefix, "_UMAP"),
-                    reduction = paste0(seurat_prefix, "_PCA"), 
+    Seurat::RunPCA(reduction.name = paste0(reduction_method, "_PCA")) %>%
+    Seurat::RunUMAP(reduction.name = paste0(reduction_method, "_UMAP"),
+                    reduction = paste0(reduction_method, "_PCA"), 
                     dims = umap_dims)
   
   return(integrated_object)
