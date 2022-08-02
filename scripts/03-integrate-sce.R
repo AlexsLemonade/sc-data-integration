@@ -25,8 +25,9 @@
 #   during integration instead of, by default, using only the previously-identified HVGs, 
 #   stored in the `variable_genes` column of metadata slot. This argument is ignored if 
 #   the provided method is `harmony`
-# --return_uncorrected_expression: Flag to specify that uncorrected gene expression values
-#   should also be returned in the integrated SCE object. Default: `FALSE`.
+# --corrected_only: Flag to specify that only corrected gene expression values should
+#   be returned in the integrated SCE object. Default usage of this script will
+#   return all data. 
 # 
 # 
 # Usage examples:
@@ -117,13 +118,19 @@ option_list <- list(
     To use all genes, use `--fastmnn_use_all_genes`"
   ),
   make_option(
-    opt_str = c("--return_uncorrected_expression"),
+    opt_str = c("--corrected_only"),
     action = "store_true", 
     default = FALSE,
-    help = "Indicate whether to return the uncorrected expression values in the returned SCE object. 
-    To return uncorrected expression, use `--return_uncorrected_expression`"
+    help = "Indicate whether to only return the corrected gene expression data, and
+    not uncorrected expression, in the integrated SCE object. To return only 
+    corrected expression, use `--corrected_only`."
   )
 )
+
+
+# --corrected_only: Flag to specify that only corrected gene expression values should
+#   be returned in the integrated SCE object. Default usage of this script will
+#   return all data. 
 
 # Setup ------------------------------------------------------------------------
 # Parse options
@@ -209,8 +216,8 @@ if (integration_method == "harmony") {
 }
 
 
-# Remove uncorrected expression values, unless otherwise specified ----
-if (!return_uncorrected_expression) {
+# Remove uncorrected expression values, if specified ----------
+if (corrected_only) {
   integrated_sce_obj <- remove_uncorrected_expression(integrated_sce_obj)
 }
 
