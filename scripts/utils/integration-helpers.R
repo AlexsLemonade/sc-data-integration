@@ -271,7 +271,7 @@ perform_dim_reduction <- function(combined_sce,
 #'   identified as highly variable genes.
 #'
 #' @return combined SCE object with variable genes added to metadata
-add_var_genes <- function(combined_sce,
+set_var_genes <- function(combined_sce,
                           num_genes = 5000,
                           subset_hvg = FALSE){
   
