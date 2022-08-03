@@ -6,6 +6,37 @@ suppressPackageStartupMessages({
     library(magrittr)
 })
 
+
+
+#' Convert a merged SCE object into a list of Seurat objects that are normalized
+#'  with `Seurat::SCTransform()`
+#'
+#' @param combined_sce A merged SCE object containing two or more libraries to 
+#'  be integrated
+#'
+#' @return List of normalized Seurat objects to be integrated
+#' 
+prepare_seurat_list <- function(combined_sce) {
+
+  # convert to Seurat
+  combined_seurat <- scpcaTools::sce_to_seurat(combined_sce)
+  
+  # split into list
+  # note that the `batch` metadata column is retained during the split
+  seurat_list <- SplitObject(combined_seurat, split.by = "batch")
+  
+  # normalize each Seurat object in the list
+  seurat_list <- purrr::map(
+    seurat_list, 
+    Seurat::SCTransform
+  )
+  
+  return(seurat_list)
+  
+}
+
+
+
 #' Integrate seurat objects with Seurat reciprocal PCA or CCA
 #'
 #' @param seurat_list List of seurat objects normalized with Seurat::SCTransform()
@@ -26,10 +57,8 @@ suppressPackageStartupMessages({
 #' to the Seurat::IntegrateData() function
 #'
 #' @return integrated seurat object with `rpca_` and `cca_` prefixed reducedDims slots
-
 #'
 #'
-
 integrate_seurat <- function(seurat_list,
                              reduction_method,
                              num_genes = 2000,
