@@ -1,6 +1,16 @@
 #!/usr/bin/env python3
 """
-Script to test integration with scvi
+Script to perform integration on a merged AnnData object using scVI
+
+Takes an HDF5 file as input containing a merged AnnData object across at least 2 single-cell libraries
+and performs correction with scVI. The output is an HDF5 file containing the integrated AnnData object.
+Requires a `batch_column` to be present as a column in the `obs` of the AnnData which corresponds to the
+original library ID for each cell. Can also provide either `continuous_covariates` or `categorical_covariates`
+to be considered for integration. The provided covariates must be included as columns in the `obs` of the AnnData.
+To return only the corrected data, removing the `X` matrix containing
+the raw counts and the `logcounts` layer containing the log-normalized data, use the `--corrected_only` flag.
+To use only highly variable genes for integration, use the `--use_hvg` flag. When this flag is used the returned object
+will only contain highly variable genes.
 """
 
 import os
