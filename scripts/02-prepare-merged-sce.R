@@ -191,7 +191,7 @@ merged_sce_list <- grouped_sce_list %>%
 # apply HVG calculation to list of merged SCEs
 # object will only be subset to HVG if subset_hvg is true
 merged_sce_list <- merged_sce_list %>%
-  purrr::map(~ add_var_genes(.x, 
+  purrr::map(~ set_var_genes(.x, 
                              num_genes = opt$num_genes,
                              subset_hvg = opt$subset_hvg))
 
