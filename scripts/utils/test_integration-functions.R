@@ -89,19 +89,7 @@ scanorama_integrated_sce <- zellkonverter::readH5AD(scanorama_integrated_file, s
 # Test Seurat Integration
 
 # Transform sce to seurat
-seurat1 <- scpcaTools::sce_to_seurat(sce1)
-seurat2 <- scpcaTools::sce_to_seurat(sce2)
-
-# Use `Seurat::SCTransform` for normalization
-seurat1 <- Seurat::SCTransform(seurat1)
-seurat2 <- Seurat::SCTransform(seurat2)
-
-# Add batch column to the metadata
-seurat1 <- Seurat::AddMetaData(seurat1, library_ids[1], "batch")
-seurat2 <- Seurat::AddMetaData(seurat2, library_ids[2], "batch")
-
-# Define seurat list of objects
-seurat_list <- c(seurat1, seurat2)
+seurat_list <- prepare_seurat_list(combined_sce)
 
 # Integrate data using reciprocal PCA
 rpca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "rpca")
