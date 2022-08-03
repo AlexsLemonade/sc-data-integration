@@ -35,8 +35,7 @@ rule merge_sces:
           --library_file "{input.processed_tsv}" \
           --sce_dir "{input.sce_dir}" \
           --grouping_var {params.grouping_var} \
-          --merged_sce_dir "{output}" \
-          --use_hvg
+          --merged_sce_dir "{output}"
         """
 
 rule convert_sce_anndata:

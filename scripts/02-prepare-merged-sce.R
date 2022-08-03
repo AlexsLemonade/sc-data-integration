@@ -12,9 +12,12 @@
 #   `library_biomaterial_id` column
 # --grouping_var: Column name present in the library metadata file to use for 
 #   grouping SCE objects and merging.
-# --select_hvg: Indicates whether or not to subset the merged SCE object by highly variable genes.
+# --subset_hvg: Indicates whether or not to subset the merged SCE object by highly variable genes.
 #   If --subset_hvg is used, the merged SCE object will only contain genes 
 #   identified as highly variable genes.
+# --use_all_genes: Indicates whether or not to use the all genes as input to performing 
+#   principal component analysis. Otherwise only highly variable genes are used 
+#   as input.
 # --num_genes: Number of highly variable genes to use if --select_hvg is being used.
 # --sce_dir: Path to folder where SCE objects to be converted are stored, 
 #   each file should contain the library ID in the filename and be stored as an RDS file.
@@ -58,11 +61,11 @@ option_list <- list(
       identified as highly variable genes."
   ),
   make_option(
-    opt_str = c("--use_hvg"), 
+    opt_str = c("--use_all_genes"), 
     default = FALSE,
     action = "store_true",
-    help = "Indicates whether or not to use the identified highly variable genes as 
-      input to performing principal component analysis. Otherwise all genes are used 
+    help = "Indicates whether or not to use the all genes as input to performing 
+      principal component analysis. Otherwise only highly variable genes are used 
       as input."
   ),
   make_option(
@@ -192,16 +195,16 @@ merged_sce_list <- merged_sce_list %>%
                              subset_hvg = opt$subset_hvg))
 
 # add PCA and UMAP 
-# if --use_hvg is used, use only HVG, otherwise uses all genes
-if(opt$use_hvg){
+# if --use_all_genes is used, use all genes, otherwise only HVG are used
+if(opt$use_all_genes){
   merged_sce_list <- merged_sce_list %>%
     purrr::map( ~ perform_dim_reduction(.x, 
-                                        var_genes = metadata(.x)$variable_genes,
+                                        var_genes = rownames(.x),
                                         pca_type = "multi"))
 } else {
   merged_sce_list <- merged_sce_list %>%
     purrr::map( ~ perform_dim_reduction(.x, 
-                                        var_genes = rownames(.x),
+                                        var_genes = metadata(.x)$variable_genes,
                                         pca_type = "multi")) 
 }
 
