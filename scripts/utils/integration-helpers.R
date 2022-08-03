@@ -275,7 +275,7 @@ add_var_genes <- function(combined_sce,
                           num_genes,
                           subset_hvg = FALSE){
   
-  if(!is.boolean(subset_hvg)){
+  if(!is.logical(subset_hvg)){
     stop("--subset_hvg must be either TRUE or FALSE")
   }
   
