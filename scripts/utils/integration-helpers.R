@@ -265,10 +265,18 @@ perform_dim_reduction <- function(combined_sce,
 #'
 #' @param combined_sce SCE object that has been merged using combine_sce_objects
 #' @param num_genes Number of highly variable genes to select. Default is set to 5000.
+#' @param subset_hvg Indicates whether or not to subset the merged SCE object by highly variable genes.
+#'   If --subset_hvg is TRUE, the merged SCE object will only contain genes 
+#'   identified as highly variable genes.
 #'
-#' @return combined SCE object subset to variable genes with variable genes added to metadata
+#' @return combined SCE object with variable genes added to metadata
 add_var_genes <- function(combined_sce,
-                          num_genes){
+                          num_genes,
+                          subset_hvg = FALSE){
+  
+  if(!is.boolean(subset_hvg)){
+    stop("--subset_hvg must be either TRUE or FALSE")
+  }
   
   # grab variable genes
   var_genes <- perform_hvg_selection(combined_sce = combined_sce, 
@@ -277,8 +285,14 @@ add_var_genes <- function(combined_sce,
   # add variable genes to metadata
   metadata(combined_sce)$variable_genes <- var_genes
   
-  # subset to only variable genes
-  combined_sce <- combined_sce[var_genes,]
+  if(subset_hvg){
+    
+    # subset to only variable genes
+    combined_sce <- combined_sce[var_genes,] 
+  }
+  
+  # indicate in metadata if object has been subset by HVG or not
+  metadata(combined_sce)$subset_hvg <- subset_hvg
   
   return(combined_sce)
 }
