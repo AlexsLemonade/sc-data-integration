@@ -46,7 +46,7 @@ option_list <- list(
   make_option(
     opt_str = c("--merged_sce_dir"),
     type = "character",
-    default = file.path(project_root, "results", "human_cell_atlas", "merged-sce"),
+    default = file.path(project_root, "results", "human_cell_atlas", "merged_sce"),
     help = "Path to folder where SCE objects to be converted are stored, 
     each file should contain the library ID in the filename and be stored as an RDS file.
     Typically this is the output from running scpca-downstream-analyses"

@@ -82,7 +82,7 @@ option_list <- list(
   make_option(
     opt_str = c("--merged_sce_dir"),
     type = "character",
-    default = file.path(project_root, "results", "human_cell_atlas", "merged-sce"),
+    default = file.path(project_root, "results", "human_cell_atlas", "merged_sce"),
     help = "path to folder where all merged SCE objects files will be saved as RDS files"
   )
 )
