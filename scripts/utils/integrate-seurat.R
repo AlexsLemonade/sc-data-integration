@@ -13,26 +13,24 @@ suppressPackageStartupMessages({
 #'
 #' @param combined_sce A merged SCE object containing two or more libraries to 
 #'  be integrated
+#' @param batch_column The column variable indicating batches, which would 
+#' typically corresponds to the library ID. Default is "batch".
 #'
 #' @return List of normalized Seurat objects to be integrated
 #' 
-prepare_seurat_list <- function(combined_sce) {
-
-  # convert to Seurat
-  combined_seurat <- scpcaTools::sce_to_seurat(combined_sce)
+prepare_seurat_list <- function(combined_sce, 
+                                batch_column = "batch") {
   
-  # split into list
-  # note that the `batch` metadata column is retained during the split
-  seurat_list <- SplitObject(combined_seurat, split.by = "batch")
-  
-  # normalize each Seurat object in the list
-  seurat_list <- purrr::map(
-    seurat_list, 
-    Seurat::SCTransform
-  )
+  seurat_list <- combined_sce %>%
+    # convert to Seurat
+    scpcaTools::sce_to_seurat() %>%
+    # split into list
+    # note that the batch_column metadata column is retained during the split
+    Seurat::SplitObject(split.by = batch_column) %>%
+    # normalize each Seurat object in the list
+    purrr::map(Seurat::SCTransform)
   
   return(seurat_list)
-  
 }
 
 
