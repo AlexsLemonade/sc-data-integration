@@ -4,7 +4,7 @@ rule target:
     input:
         expand("results/human_cell_atlas/integrated_sce/{project}_integrated_{sce_method}_sce.rds",
                project = pep.sample_table["project_name"],
-               sce_method = ["fastmnn", "harmony"]),
+               sce_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca"]),
         expand("results/human_cell_atlas/integrated_anndata/{project}_integrated_{py_method}.h5",
                project = pep.sample_table["project_name"],
                py_method = ["scanorama"])
@@ -94,6 +94,46 @@ rule integrate_harmony:
           --output_sce_file "{output}" \
           --method harmony \
           --seed {params.seed}
+        """
+
+rule integrate_seurat_cca:
+    conda: "envs/scpca-renv.yaml"
+    input:
+        # The input has to be the merged directory so snakemake can find it.
+        # We will add the file name with params.
+        merged_sce_dir = "{basedir}/merged_sce"
+    output:
+        "{basedir}/integrated_sce/{project}_integrated_seurat-cca_sce.rds"
+    params:
+        merged_sce_file = "{project}_merged_sce.rds",
+        reduction_method = "cca"
+    shell:
+        """
+        Rscript scripts/03a-integrate-sce.R \
+          --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
+          --output_sce_file "{output}" \
+          --method seurat \
+          --seurat_reduction_method "{params.reduction_method}"
+        """
+
+rule integrate_seurat_rpca:
+    conda: "envs/scpca-renv.yaml"
+    input:
+        # The input has to be the merged directory so snakemake can find it.
+        # We will add the file name with params.
+        merged_sce_dir = "{basedir}/merged_sce"
+    output:
+        "{basedir}/integrated_sce/{project}_integrated_seurat-rpca_sce.rds"
+    params:
+        merged_sce_file = "{project}_merged_sce.rds",
+        reduction_method = "rpca"
+    shell:
+        """
+        Rscript scripts/03a-integrate-sce.R \
+          --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
+          --output_sce_file "{output}" \
+          --method seurat \
+          --seurat_reduction_method "{params.reduction_method}"
         """
 
 rule integrate_scanorama:
