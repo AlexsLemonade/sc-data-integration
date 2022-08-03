@@ -1,7 +1,10 @@
-#' Integrated list of Seurat objects with Seurat's `IntegrateData`
-#' 
-library(Seurat)
-library(magrittr)
+# Integrated list of Seurat objects with Seurat's `IntegrateData`
+# 
+
+suppressPackageStartupMessages({
+    library(Seurat)
+    library(magrittr)
+})
 
 #' Integrate seurat objects with Seurat reciprocal PCA or CCA
 #'
@@ -55,7 +58,7 @@ integrate_seurat <- function(seurat_list,
   # check that reduction method is valid
   reduction_method <- tolower(reduction_method)
   if (!reduction_method %in% c("cca", "rpca")) {
-    stop("The `reduction_method` must be one of `cca` or `rpca` (case-insentitive)").
+    stop("The `reduction_method` must be one of `cca` or `rpca` (case-insentitive).")
   }
   
   # find common variable features for integration
