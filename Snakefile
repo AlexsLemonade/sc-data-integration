@@ -29,13 +29,15 @@ rule merge_sces:
         directory("{basedir}/merged_sce")
     params:
         grouping_var = "project_name"
+        num_hvg = 5000
     shell:
         """
         Rscript scripts/02-prepare-merged-sce.R \
           --library_file "{input.processed_tsv}" \
           --sce_dir "{input.sce_dir}" \
           --grouping_var {params.grouping_var} \
-          --merged_sce_dir "{output}"
+          --merged_sce_dir "{output}" \
+          --num_hvg {params.num_hvg}
         """
 
 rule convert_sce_anndata:
