@@ -155,7 +155,7 @@ The `SingleCellExperiment` objects present in `human_cell_atlas_results/scpca-do
 
 These files were produced and synced to S3 using the following script:
 
-**Note:** To run the below script, you must have available in your path R (v4.1.2),  [Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html#installation-via-conda-mamba) and [`pandoc`](https://pandoc.org/installing.html#macos).
+**Note:** To run the below script, you must have available in your path R (v4.1.2), [Snakemake](https://snakemake.readthedocs.io/en/stable/getting_started/installation.html#installation-via-conda-mamba) and [`pandoc`](https://pandoc.org/installing.html#macos).
 `pandoc` must be version 1.12.3 or higher, which can be checked using the `pandoc -v` command.
 
 ```
@@ -172,5 +172,5 @@ To run the integration workflow, invoke `snakemake` from the `sc-data-integratio
 snakemake -c4 --use-conda
 ```
 
-You can adjust the number of cores used by adjust the `-c4` flag with however many cores you want to us.
+You can adjust the number of cores used by adjusting the `-c4` flag with however many cores you want to use where the given number represents the number of desired cores (here, 4).
 Note that you will want to have [set up the R conda environment already](#snakemakeconda-setup), especially if you are on an Apple Silicon Mac.
