@@ -113,7 +113,8 @@ rule integrate_seurat_cca:
           --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
           --output_sce_file "{output}" \
           --method seurat \
-          --seurat_reduction_method "{params.reduction_method}"
+          --seurat_reduction_method "{params.reduction_method}" \
+          --corrected_only
         """
 
 rule integrate_seurat_rpca:
@@ -133,7 +134,8 @@ rule integrate_seurat_rpca:
           --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
           --output_sce_file "{output}" \
           --method seurat \
-          --seurat_reduction_method "{params.reduction_method}"
+          --seurat_reduction_method "{params.reduction_method}" \
+          --corrected_only
         """
 
 rule integrate_scanorama:
