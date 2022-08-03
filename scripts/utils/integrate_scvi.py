@@ -6,6 +6,7 @@ import scvi
 import scipy
 
 def integrate_scvi(merged_adata,
+                   integrate_genes,
                    batch_column = ['batch'],
                    categorical_covariate_columns = None,
                    continuous_covariate_columns = ['subsets_mito_percent'],
@@ -28,6 +29,9 @@ def integrate_scvi(merged_adata,
     merged_adata : AnnData object that contains the merged data from all libraries
         to be integrated. This object must include a list of highly variable genes
         found in `anndata.uns['variable_genes']`.
+    integrate_genes : List of genes to use for integration. AnnData objects will be
+        subset to contain only these genes before integration. Typically this corresponds
+        to a list of highly variable genes.
     batch_column : The name of the column in `anndata.obs` that indicates the batches
         for each cell, typically this corresponds to the library id. Default is `batch`.
     categorical_covariate_columns : A list of columns containing additional categorical
@@ -47,14 +51,15 @@ def integrate_scvi(merged_adata,
     # set seed
     scvi.settings.seed = seed
 
-    # need to input only HVG to build model so subset to HVG
-    # make sure variable gene list already exists in merged object first
+    # make sure type of integrate_genes is a list
+    if not type(integrate_genes) is list:
+        raise TypeError("--integrate_genes must be a list.")
+
+    # subset merged object to only contain genes used for integration
     try:
-        var_genes = list(merged_adata.uns['variable_genes'])
         merged_adata = merged_adata[merged_adata.obs_names, var_genes]
     except KeyError:
-        print("Variable genes cannot be found in anndata object."
-              " Make sure they are stored in adata.uns['variable_genes'].",
+        print("Genes provided in --integrate_genes are not found as rows in the AnnData object.",
               file = sys.stderr)
         raise
 
