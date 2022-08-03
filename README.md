@@ -31,9 +31,30 @@ Then rerun `renv::snapshot()`.
 
 ### Snakemake/conda setup
 
-The main workflow for the integration scripts is written wiht snakemake, which will handle most dependencies internally, including the `renv` environment.
-Python-based environments will build automatically, but the environment for R should be built before running the workflow.
-To create or update the necessary environment, which includes an isolated version of R, pandoc, and the `renv` package installation, run the following command:
+The main workflow for the integration scripts is written with Snakemake, which will handle most dependencies internally, including the `renv` environment.
+
+You will need the latest version of `snakemake` and the `peppy` python package.
+The easiest way to install these is with `conda` and/or `mamba`, which you will want to set up to use the `bioconda` and `conda-forge` channels using the following series of commands:
+
+```
+conda config --add channels defaults
+conda config --add channels bioconda
+conda config --add channels conda-forge
+conda config --set channel_priority strict
+```
+
+You can then install `snakemake` and `peppy` into your preferred environment with:
+
+```
+mamba install snakemake peppy
+```
+
+(Use `conda install` if you do not have `mamba` installed.)
+
+
+
+Python-based environments will be built automatically by Snakemake when the workflow is run, but the environment for R should be built before running the workflow.
+To create or update the necessary environment for the R scripts, which includes an isolated version of `R`, `pandoc`, and the `renv` package installation, run the following command:
 
 ```
 snakemake --use-conda --conda-create-envs-only -c2 build_renv
