@@ -57,7 +57,7 @@
 #
 # Rscript 03-integrate-sce.R \
 #  --input_sce_file ../results/human_cell_atlas/merged-sce/1M_Immune_Cells_merged_sce.rds \
-#  --output_sce_file ../results/human_cell_atlas/integrated-sce/fastMNN/1M_Immune_Cells_integrated_rpca_sce.rds \
+#  --output_sce_file ../results/human_cell_atlas/integrated-sce/fastMNN/1M_Immune_Cells_integrated_seurat-rpca_sce.rds \
 #  --method=seurat --seurat_reduction_method=rpca
 #
 # load the R project by finding the root directory using `here::here()`
@@ -282,7 +282,7 @@ if (integration_method == "seurat") {
   # Perform integration
   integrated_seurat_obj <- integrate_seurat(
     seurat_list,
-    seurat_reduction_method, # integrate_seurat() will check this argument
+    opt$seurat_reduction_method, # integrate_seurat() will check this argument
     batch_column = opt$batch_column,
     num_genes = opt$seurat_num_genes,
     integration_dims = 1:opt$seurat_integration_dims,
@@ -296,8 +296,8 @@ if (integration_method == "seurat") {
   #   `as.SingleCellExperiment` makes them all uppercase
   reducedDimNames(integrated_sce_obj) <- stringr::str_replace_all(
     reducedDimNames(integrated_sce_obj),
-    toupper(seurat_reduction_method),
-    seurat_reduction_method
+    toupper(opt$seurat_reduction_method),
+    opt$seurat_reduction_method
   )
   
   # Restore the original `counts` assay into integrated_sce_obj because
@@ -305,7 +305,6 @@ if (integration_method == "seurat") {
   counts(integrated_sce_obj) <- counts(merged_sce_obj)
 
 }
-
 
 
 
