@@ -1,13 +1,13 @@
 # Script used to perform integration on a given merged SCE object using R-based methods
 #
-# A merged SCE file in RDS format is read in. Integration is performed with either `fastMNN` 
-# or `harmony`, depending on user specification, and the integrated SCE object 
+# A merged SCE file in RDS format is read in. Integration is performed with either `fastMNN`
+# or `harmony`, depending on user specification, and the integrated SCE object
 # is saved as an RDS file in the provided output file.
 
-# Option descriptions: 
+# Option descriptions:
 #
 # --input_sce_file: Path to RDS file with merged SCE object to integrate
-# --output_sce_file: Path to RDS file where the integrated SCE object will be saved. 
+# --output_sce_file: Path to RDS file where the integrated SCE object will be saved.
 #   Inside this folder are nested folders for results from each integration method
 # --method: The integration method to use, either `fastMNN` or `harmony` (case-insensitive).
 # --batch_column: Column name present in SCE object colData slot that indicates batch
@@ -22,20 +22,20 @@
 # --fastmnn_no_cosine: Flag to specify that `fastMNN` integration should not perform
 #   cosine normalization. This argument is ignored if the provided method is `harmony`
 # --fastmnn_use_all_genes: Flag to specify that `fastMNN` integration should all genes in
-#   during integration instead of, by default, using only the previously-identified HVGs, 
-#   stored in the `variable_genes` column of metadata slot. This argument is ignored if 
+#   during integration instead of, by default, using only the previously-identified HVGs,
+#   stored in the `variable_genes` column of metadata slot. This argument is ignored if
 #   the provided method is `harmony`
 # --corrected_only: Flag to specify that only corrected gene expression values should
 #   be returned in the integrated SCE object. Default usage of this script will
-#   return all data. 
-# 
-# 
+#   return all data.
+#
+#
 # Usage examples:
 #
 # Rscript 03-integrate-sce.R \
 #  --input_sce_file ../results/human_cell_atlas/merged-sce-objects/1M_Immune_Cells_merged_sce.rds \
 #  --output_sce_file ../results/human_cell_atlas/integrated-sce-objects/harmony/1M_Immune_Cells_merged_sce.rds \
-#  --method=harmony 
+#  --method=harmony
 #
 # Rscript 03-integrate-sce.R \
 #  --input_sce_file ../results/human_cell_atlas/merged-sce-objects/1M_Immune_Cells_merged_sce.rds \
@@ -79,9 +79,9 @@ option_list <- list(
     help = "Integration method to use, either `fastMNN` or `harmony` (case-insensitive)."
   ),
   make_option(
-    opt_str = c("-b", "--batch_column"), 
+    opt_str = c("-b", "--batch_column"),
     type = "character",
-    default = "batch", 
+    default = "batch",
     help = "Name of the column in the SCE object that indicates batch groupings."
   ),
   make_option(
@@ -91,9 +91,9 @@ option_list <- list(
     help = "random seed to set during integration"
   ),
   make_option(
-    opt_str = c("--harmony_covariate_cols"), 
+    opt_str = c("--harmony_covariate_cols"),
     type = "character",
-    default = NULL, 
+    default = NULL,
     help = "Optional comma-separated list of columns (e.g. patient, sex) to consider as covariates
             during integration with `harmony`."
   ),
@@ -108,22 +108,22 @@ option_list <- list(
     opt_str = c("--fastmnn_no_cosine"),
     action = "store_false",
     default = TRUE,
-    help = "Indicate whether to turn off cosine normalization during `fastMNN` integration. 
+    help = "Indicate whether to turn off cosine normalization during `fastMNN` integration.
     To turn off cosine normalization, use `--fastmnn_no_cosine`"
   ),
   make_option(
     opt_str = c("--fastmnn_use_all_genes"),
-    action = "store_true", 
+    action = "store_true",
     default = FALSE,
-    help = "Indicate whether to use all genes instead of only HVGs during `fastMNN` integration. 
+    help = "Indicate whether to use all genes instead of only HVGs during `fastMNN` integration.
     To use all genes, use `--fastmnn_use_all_genes`"
   ),
   make_option(
     opt_str = c("--corrected_only"),
-    action = "store_true", 
+    action = "store_true",
     default = FALSE,
     help = "Indicate whether to only return the corrected gene expression data, and
-    not uncorrected expression, in the integrated SCE object. To return only 
+    not uncorrected expression, in the integrated SCE object. To return only
     corrected expression, use `--corrected_only`."
   )
 )
@@ -131,7 +131,7 @@ option_list <- list(
 
 # --corrected_only: Flag to specify that only corrected gene expression values should
 #   be returned in the integrated SCE object. Default usage of this script will
-#   return all data. 
+#   return all data.
 
 # Setup ------------------------------------------------------------------------
 # Parse options
@@ -152,7 +152,7 @@ if(is.null(opt$input_sce_file)) {
   stop("You must provide the path to the RDS file with merged SCEs to --input_sce_file")
 } else {
   if(!file.exists(opt$input_sce_file)) {
-    stop("Provided --input_sce_file file does not exist. Make sure that you have 
+    stop("Provided --input_sce_file file does not exist. Make sure that you have
           run `02-prepare-merged-sce.R` or the provided path is correct.")
   }
 }
@@ -178,14 +178,14 @@ merged_sce_obj <- readr::read_rds(opt$input_sce_file)
 
 # Perform integration with fastMNN, if specified -------------------------
 if (integration_method == "fastmnn") {
-    
+
   # Prepare `gene_list` argument
   if (opt$fastmnn_use_all_genes) {
     fastmnn_gene_list <- NULL
   } else {
     fastmnn_gene_list <- metadata(merged_sce_obj)$variable_genes
   }
-  
+
   # Perform integration
   integrated_sce_obj <- integrate_fastMNN(
     merged_sce_obj,
@@ -198,7 +198,7 @@ if (integration_method == "fastmnn") {
 
 # Perform integration with harmony, if specified -------------------------
 if (integration_method == "harmony") {
-  
+
   # Set up `covariate_cols` argument based on user options
   if (is.null(opt$harmony_covariate_cols)) {
     harmony_covariate_cols <- c()
@@ -218,7 +218,7 @@ if (integration_method == "harmony") {
 
 
 # Remove uncorrected expression values, if specified ----------
-if (corrected_only) {
+if (opt$corrected_only) {
   integrated_sce_obj <- remove_uncorrected_expression(integrated_sce_obj)
 }
 
