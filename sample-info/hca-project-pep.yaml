@@ -3,3 +3,7 @@ pep_version: 2.1.0
 sample_table: "hca-project-metadata.tsv"
 sample_table_index: "project_name"
 
+# Add sample_name to support older peppy
+sample_modifiers:
+  duplicate:
+    project_name: sample_name
