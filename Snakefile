@@ -28,7 +28,7 @@ rule merge_sces:
     output:
         directory("{basedir}/merged_sce")
     params:
-        grouping_var = "project_name"
+        grouping_var = "project_name",
         num_hvg = 5000
     shell:
         """
@@ -37,7 +37,8 @@ rule merge_sces:
           --sce_dir "{input.sce_dir}" \
           --grouping_var {params.grouping_var} \
           --merged_sce_dir "{output}" \
-          --num_hvg {params.num_hvg}
+          --num_hvg {params.num_hvg} \
+          --subset_hvg
         """
 
 rule convert_sce_anndata:
