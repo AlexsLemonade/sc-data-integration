@@ -34,9 +34,10 @@ if not os.path.isdir(integrated_adata_dir):
 
 # read in merged anndata object
 merged_adata = adata.read_h5ad(merged_adata_file)
+var_genes = list(merged_adata.uns['variable_genes'])
 
 # integrate anndata with scvi
-scvi_integrated_adata = integrate_scvi(merged_adata, seed = 2022)
+scvi_integrated_adata = integrate_scvi(merged_adata, integrate_genes = var_genes, seed = 2022)
 # should fail
 # integrate_scvi(merged_adata, seed = 2022, categorical_covariate_columns = "no_column")
 
