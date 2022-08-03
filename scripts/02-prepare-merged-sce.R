@@ -18,7 +18,7 @@
 # --pca_use_all_genes: Indicates whether or not to use the all genes as input to performing 
 #   principal component analysis. Otherwise only highly variable genes are used 
 #   as input.
-# --num_genes: Number of highly variable genes to use if --select_hvg is being used.
+# --num_hvg: Number of highly variable genes to select.
 # --sce_dir: Path to folder where SCE objects to be converted are stored, 
 #   each file should contain the library ID in the filename and be stored as an RDS file.
 #   Typically this is the output from running scpca-downstream-analyses 
@@ -69,7 +69,8 @@ option_list <- list(
       as input."
   ),
   make_option(
-    opt_str = c("-n", "--num_genes"),
+    opt_str = c("-n", "--num_hvg"),
+    dest = "num_genes",
     type = "integer",
     default = 5000,
     help = "Number of highly variable genes to select."
@@ -112,7 +113,7 @@ if(!opt$grouping_var %in% colnames(library_metadata_df)){
 
 # check that num genes provided is an integer 
 if(!is.integer(opt$num_genes)){
-  stop("--num-genes must be an integer.")
+  stop("--num_hvg must be an integer.")
 }
 
 # setup output directory 
