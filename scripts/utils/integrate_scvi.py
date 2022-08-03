@@ -57,7 +57,7 @@ def integrate_scvi(merged_adata,
 
     # subset merged object to only contain genes used for integration
     try:
-        merged_adata = merged_adata[merged_adata.obs_names, var_genes]
+        merged_adata = merged_adata[merged_adata.obs_names, integrate_genes]
     except KeyError:
         print("Genes provided in --integrate_genes are not found as rows in the AnnData object.",
               file = sys.stderr)
