@@ -12,9 +12,9 @@
 #   `library_biomaterial_id` column
 # --grouping_var: Column name present in the library metadata file to use for 
 #   grouping SCE objects and merging.
-# --select_hvg: Indicates whether or not to identify and select highly variable genes.
-#   If --select_hvg is used, highly variable genes will be determined and the merged
-#   SCE object will only contain genes identified as highly variable genes.
+# --select_hvg: Indicates whether or not to subset the merged SCE object by highly variable genes.
+#   If --subset_hvg is used, the merged SCE object will only contain genes 
+#   identified as highly variable genes.
 # --num_genes: Number of highly variable genes to use if --select_hvg is being used.
 # --sce_dir: Path to folder where SCE objects to be converted are stored, 
 #   each file should contain the library ID in the filename and be stored as an RDS file.
@@ -50,18 +50,26 @@ option_list <- list(
     and merging."
   ),
   make_option(
-    opt_str = c("--select_hvg"), 
+    opt_str = c("--subset_hvg"), 
     default = FALSE,
     action = "store_true",
-    help = "Indicates whether or not to identify and select highly variable genes.
-      If --select_hvg is used, highly variable genes will be determined and the merged
-      SCE object will only contain genes identified as highly variable genes."
+    help = "Indicates whether or not to subset the merged SCE object by highly variable genes.
+      If --subset_hvg is used, the merged SCE object will only contain genes 
+      identified as highly variable genes."
+  ),
+  make_option(
+    opt_str = c("--use_hvg"), 
+    default = FALSE,
+    action = "store_true",
+    help = "Indicates whether or not to use the identified highly variable genes as 
+      input to performing principal component analysis. Otherwise all genes are used 
+      as input."
   ),
   make_option(
     opt_str = c("-n", "--num_genes"),
     type = "integer",
     default = 5000,
-    help = "Number of highly variable genes to use if --select_hvg is being used."
+    help = "Number of highly variable genes to select."
   ),
   make_option(
     opt_str = c("--sce_dir"),
@@ -176,21 +184,26 @@ merged_sce_list <- grouped_sce_list %>%
 
 # HVG and dim reduction --------------------------------------------------------
 
-# only perform HVG if --select_hvg is used
 # apply HVG calculation to list of merged SCEs
-if(opt$select_hvg){
-  merged_sce_list <- merged_sce_list %>%
-    purrr::map(~ add_var_genes(.x, 
-                               num_genes = opt$num_genes))
-}
+# object will only be subset to HVG if subset_hvg is true
+merged_sce_list <- merged_sce_list %>%
+  purrr::map(~ add_var_genes(.x, 
+                             num_genes = opt$num_genes,
+                             subset_hvg = opt$subset_hvg))
 
 # add PCA and UMAP 
-# use rownames of merged SCE as input genes to PCA
-# if --select_hvg is used, rownames correspond to HVG only, otherwise uses all genes
-merged_sce_list <- merged_sce_list %>%
-  purrr::map( ~ perform_dim_reduction(.x, 
-                                      var_genes = rownames(.x),
-                                      pca_type = "multi"))
+# if --use_hvg is used, use only HVG, otherwise uses all genes
+if(opt$use_hvg){
+  merged_sce_list <- merged_sce_list %>%
+    purrr::map( ~ perform_dim_reduction(.x, 
+                                        var_genes = metadata(.x)$variable_genes,
+                                        pca_type = "multi"))
+} else {
+  merged_sce_list <- merged_sce_list %>%
+    purrr::map( ~ perform_dim_reduction(.x, 
+                                        var_genes = rownames(.x),
+                                        pca_type = "multi")) 
+}
 
 
 # Write RDS --------------------------------------------------------------------
