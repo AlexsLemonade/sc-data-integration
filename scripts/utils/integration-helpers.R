@@ -272,7 +272,7 @@ perform_dim_reduction <- function(combined_sce,
 #'
 #' @return combined SCE object with variable genes added to metadata
 add_var_genes <- function(combined_sce,
-                          num_genes,
+                          num_genes = 5000,
                           subset_hvg = FALSE){
   
   if(!is.logical(subset_hvg)){
@@ -281,13 +281,12 @@ add_var_genes <- function(combined_sce,
   
   # grab variable genes
   var_genes <- perform_hvg_selection(combined_sce = combined_sce, 
-                                     num_genes = 5000)
+                                     num_genes = num_genes)
   
   # add variable genes to metadata
   metadata(combined_sce)$variable_genes <- var_genes
   
   if(subset_hvg){
-    
     # subset to only variable genes
     combined_sce <- combined_sce[var_genes,] 
   }

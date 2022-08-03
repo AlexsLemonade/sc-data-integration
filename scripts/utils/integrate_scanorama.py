@@ -42,13 +42,13 @@ def integrate_scanorama(merged_adata,
 
     # make sure type of integrate_genes is a list
     if not type(integrate_genes) is list:
-        raise TypeError("--integrate_genes must be a list.")
+        raise TypeError("`integrate_genes` must be a list.")
 
     # subset merged object to only contain genes used for integration
     try:
         merged_adata = merged_adata[merged_adata.obs_names, integrate_genes]
     except KeyError:
-        print("Genes provided in --integrate_genes are not found as rows in the AnnData object.",
+        print("Genes provided in `integrate_genes` are not present as rows in the AnnData object.",
               file = sys.stderr)
         raise
 
