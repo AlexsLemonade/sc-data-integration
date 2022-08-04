@@ -304,6 +304,7 @@ if (integration_method == "seurat") {
   # Restore the original `counts` assay into integrated_sce_obj because
   #  `as.SingleCellExperiment` only keeps the `logcounts` assay
   counts(integrated_sce_obj) <- counts(merged_sce_obj)
+  
 
 }
 
@@ -311,8 +312,7 @@ if (integration_method == "seurat") {
 
 # Remove uncorrected expression values, if specified ----------
 if (opt$corrected_only) {
-  assay(integrated_sce_obj, "counts") <- NULL
-  assay(integrated_sce_obj, "logcounts") <- NULL
+  integrated_sce_obj <- remove_uncorrected_expression(integrated_sce_obj)
 }
 
 
