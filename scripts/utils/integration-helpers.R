@@ -274,6 +274,6 @@ perform_dim_reduction <- function(combined_sce,
 remove_uncorrected_expression <- function(sce_object, 
                                           assays_to_remove = c("counts", "logcounts")) {
   for (assay_name in assays_to_remove) {
-    assay(combined_sce, assay_name) <- NULL
+    assay(sce_object, assay_name) <- NULL
   }
 }
