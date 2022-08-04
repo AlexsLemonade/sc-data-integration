@@ -185,7 +185,7 @@ grouped_sce_list <- grouped_sce_file_df %>%
 # create a list of merged SCE objects by group
 #  In this default usage, a batch column named `batch` will get created
 merged_sce_list <- grouped_sce_list %>%
-  purrr::map(~ combine_sce_objects(.x, preserve_rowdata_columns = c("Gene", "gene_names")))
+  purrr::map(combine_sce_objects, preserve_rowdata_columns = c("Gene", "gene_names"))
 
 # HVG and dim reduction --------------------------------------------------------
 
