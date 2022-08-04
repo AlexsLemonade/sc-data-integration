@@ -35,9 +35,6 @@
 #   This argument is ignored if the provided method is not `seurat`.
 # --seurat_umap_dims: Number of dimensions Seurat should use during UMAP.
 #   This argument is ignored if the provided method is not `seurat`.
-#   during integration instead of, by default, using only the previously-identified HVGs,
-#   stored in the `variable_genes` column of metadata slot. This argument is ignored if
-#   the provided method is `harmony`
 # --corrected_only: Flag to specify that only corrected gene expression values should
 #   be returned in the integrated SCE object. Default usage of this script will
 #   return all data.
