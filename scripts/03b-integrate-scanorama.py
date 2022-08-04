@@ -37,7 +37,8 @@ parser.add_argument('--use_hvg',
                     action = 'store_true',
                     default = False,
                     help = 'Boolean indicating whether or not to use only highly variable genes for data integration.'
-                    'If --use_hvg is used, the returned integrated object will only contain the highly variable genes.')
+                    'If --use_hvg is used, integration will only consider highly variable genes, and similarly '
+                    'the returned integrated object will only contain the highly variable genes.')
 parser.add_argument('--corrected_only',
                     dest = 'corrected_only',
                     action = 'store_true',

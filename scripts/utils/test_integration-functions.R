@@ -16,7 +16,7 @@ hca_metadata <- readr::read_tsv(
 sce_dir <- here::here("results", 
                       "human_cell_atlas", 
                       "scpca-downstream-analyses")
-tissue <- "brain"
+tissue <- "blood"
 project_metadata <- hca_metadata %>%
   dplyr::filter(tissue_group == tissue) %>%
   dplyr::mutate(sce_path = file.path(sce_dir,
@@ -35,7 +35,7 @@ names(sce_list) <- c(library_ids[1], library_ids[2]) #, library_ids[3],  library
 
 # cbind it up!
 combined_sce <- combine_sce_objects(sce_list, 
-                                    c("Gene", "ensembl_ids", "gene_names"))
+                                    preserve_rowdata_columns = c("Gene", "ensembl_ids", "gene_names"))
 
 # get hvg 
 var_genes <- perform_hvg_selection(combined_sce,
@@ -89,19 +89,7 @@ scanorama_integrated_sce <- zellkonverter::readH5AD(scanorama_integrated_file, s
 # Test Seurat Integration
 
 # Transform sce to seurat
-seurat1 <- scpcaTools::sce_to_seurat(sce1)
-seurat2 <- scpcaTools::sce_to_seurat(sce2)
-
-# Use `Seurat::SCTransform` for normalization
-seurat1 <- Seurat::SCTransform(seurat1)
-seurat2 <- Seurat::SCTransform(seurat2)
-
-# Add batch column to the metadata
-seurat1 <- Seurat::AddMetaData(seurat1, library_ids[1], "batch")
-seurat2 <- Seurat::AddMetaData(seurat2, library_ids[2], "batch")
-
-# Define seurat list of objects
-seurat_list <- c(seurat1, seurat2)
+seurat_list <- prepare_seurat_list(combined_sce)
 
 # Integrate data using reciprocal PCA
 rpca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "rpca")

@@ -4,7 +4,7 @@ rule target:
     input:
         expand("results/human_cell_atlas/integrated_sce/{project}_integrated_{sce_method}_sce.rds",
                project = pep.sample_table["project_name"],
-               sce_method = ["fastmnn", "harmony"]),
+               sce_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca"]),
         expand("results/human_cell_atlas/integrated_anndata/{project}_integrated_{py_method}.h5",
                project = pep.sample_table["project_name"],
                py_method = ["scanorama", "scvi"])
@@ -28,14 +28,17 @@ rule merge_sces:
     output:
         directory("{basedir}/merged_sce")
     params:
-        grouping_var = "project_name"
+        grouping_var = "project_name",
+        num_hvg = 5000
     shell:
         """
         Rscript scripts/02-prepare-merged-sce.R \
           --library_file "{input.processed_tsv}" \
           --sce_dir "{input.sce_dir}" \
           --grouping_var {params.grouping_var} \
-          --merged_sce_dir "{output}"
+          --merged_sce_dir "{output}" \
+          --num_hvg {params.num_hvg} \
+          --subset_hvg
         """
 
 rule convert_sce_anndata:
@@ -95,6 +98,30 @@ rule integrate_harmony:
           --output_sce_file "{output}" \
           --method harmony \
           --seed {params.seed} \
+          --corrected_only
+        """
+
+rule integrate_seurat:
+    conda: "envs/scpca-renv.yaml"
+    input:
+        # The input has to be the merged directory so snakemake can find it.
+        # We will add the file name with params.
+        merged_sce_dir = "{basedir}/merged_sce"
+    output:
+        "{basedir}/integrated_sce/{project}_integrated_seurat-{method}_sce.rds"
+    wildcard_constraints:
+        method = "cca|rpca"
+    params:
+        merged_sce_file = "{project}_merged_sce.rds",
+        num_genes = 2000
+    shell:
+        """
+        Rscript scripts/03a-integrate-sce.R \
+          --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
+          --output_sce_file "{output}" \
+          --method seurat \
+          --seurat_reduction_method {wildcards.method} \
+          --num_genes "{params.num_genes}" \
           --corrected_only
         """
 
