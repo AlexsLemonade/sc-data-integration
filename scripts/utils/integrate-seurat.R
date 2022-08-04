@@ -21,17 +21,6 @@ suppressPackageStartupMessages({
 prepare_seurat_list <- function(combined_sce, 
                                 batch_column = "batch") {
   
-  # internal function to subset Seurat meta.data columns
-  clean_seurat_meta.data <- function(seurat_list_item) {
-    seurat_list_item@meta.data <- seurat_list_item@meta.data %>%
-      dplyr::select(
-        {{batch_column}},
-        dplyr::starts_with("nCount_", ),
-        dplyr::starts_with("nFeature_", )
-      )
-    return(seurat_list_item)
-  }
-  
   # Convert and normalize
   seurat_list <- combined_sce %>%
     # convert to Seurat
@@ -40,10 +29,7 @@ prepare_seurat_list <- function(combined_sce,
     # note that the batch_column metadata column is retained during the split
     Seurat::SplitObject(split.by = batch_column) %>%
     # normalize each Seurat object in the list
-    purrr::map(Seurat::SCTransform) %>%
-    # Clean up meta.data columns for successful integration, specifically
-    #  during the merging step in `Seurat::FindIntegrationAnchors()`
-    purrr::map(clean_seurat_meta.data)
+    purrr::map(Seurat::SCTransform)
 
   return(seurat_list)
 }
