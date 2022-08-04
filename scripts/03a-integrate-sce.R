@@ -292,6 +292,7 @@ if (integration_method == "seurat") {
   # Converted the integrated seurat object into an SCE object
   integrated_sce_obj <- as.SingleCellExperiment(integrated_seurat_obj)
   
+  
   # Convert reducedDims names back to <lowercase>_<UPPERCASE> because 
   #   `as.SingleCellExperiment` makes them all uppercase
   reducedDimNames(integrated_sce_obj) <- stringr::str_replace_all(
@@ -299,7 +300,7 @@ if (integration_method == "seurat") {
     toupper(opt$seurat_reduction_method),
     opt$seurat_reduction_method
   )
-  
+
   # Restore the original `counts` assay into integrated_sce_obj because
   #  `as.SingleCellExperiment` only keeps the `logcounts` assay
   counts(integrated_sce_obj) <- counts(merged_sce_obj)
@@ -310,7 +311,8 @@ if (integration_method == "seurat") {
 
 # Remove uncorrected expression values, if specified ----------
 if (opt$corrected_only) {
-  integrated_sce_obj <- remove_uncorrected_expression(integrated_sce_obj)
+  assay(integrated_sce_obj, "counts") <- NULL
+  assay(integrated_sce_obj, "logcounts") <- NULL
 }
 
 
