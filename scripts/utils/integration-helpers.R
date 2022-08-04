@@ -261,7 +261,41 @@ perform_dim_reduction <- function(combined_sce,
 }
 
 
-
+#' Identify variable genes for a merged object, add to metadata, and return
+#' merged object with only gene expression data corresponding to variable genes
+#'
+#' @param combined_sce SCE object that has been merged using combine_sce_objects
+#' @param num_genes Number of highly variable genes to select. Default is set to 5000.
+#' @param subset_hvg Indicates whether or not to subset the merged SCE object by highly variable genes.
+#'   If --subset_hvg is TRUE, the merged SCE object will only contain genes 
+#'   identified as highly variable genes.
+#'
+#' @return combined SCE object with variable genes added to metadata
+set_var_genes <- function(combined_sce,
+                          num_genes = 5000,
+                          subset_hvg = FALSE){
+  
+  if(!is.logical(subset_hvg)){
+    stop("--subset_hvg must be either TRUE or FALSE")
+  }
+  
+  # grab variable genes
+  var_genes <- perform_hvg_selection(combined_sce = combined_sce, 
+                                     num_genes = num_genes)
+  
+  # add variable genes to metadata
+  metadata(combined_sce)$variable_genes <- var_genes
+  
+  if(subset_hvg){
+    # subset to only variable genes
+    combined_sce <- combined_sce[var_genes,] 
+  }
+  
+  # indicate in metadata if object has been subset by HVG or not
+  metadata(combined_sce)$subset_hvg <- subset_hvg
+  
+  return(combined_sce)
+}
 
 
 #' Remove original uncorrected expression matrices from an SCE object
@@ -274,6 +308,6 @@ perform_dim_reduction <- function(combined_sce,
 remove_uncorrected_expression <- function(sce_object, 
                                           assays_to_remove = c("counts", "logcounts")) {
   for (assay_name in assays_to_remove) {
-    assay(combined_sce, assay_name) <- NULL
+    assay(sce_object, assay_name) <- NULL
   }
 }

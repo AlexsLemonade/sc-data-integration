@@ -28,14 +28,17 @@ rule merge_sces:
     output:
         directory("{basedir}/merged_sce")
     params:
-        grouping_var = "project_name"
+        grouping_var = "project_name",
+        num_hvg = 5000
     shell:
         """
         Rscript scripts/02-prepare-merged-sce.R \
           --library_file "{input.processed_tsv}" \
           --sce_dir "{input.sce_dir}" \
           --grouping_var {params.grouping_var} \
-          --merged_sce_dir "{output}"
+          --merged_sce_dir "{output}" \
+          --num_hvg {params.num_hvg} \
+          --subset_hvg
         """
 
 rule convert_sce_anndata:
@@ -73,7 +76,8 @@ rule integrate_fastmnn:
           --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
           --output_sce_file "{output}" \
           --method fastMNN \
-          --seed {params.seed}
+          --seed {params.seed} \
+          --corrected_only
         """
 
 rule integrate_harmony:
@@ -93,7 +97,8 @@ rule integrate_harmony:
           --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
           --output_sce_file "{output}" \
           --method harmony \
-          --seed {params.seed}
+          --seed {params.seed} \
+          --corrected_only
         """
 
 rule integrate_scanorama:
@@ -110,5 +115,7 @@ rule integrate_scanorama:
         python scripts/03b-integrate-scanorama.py \
           --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
           --output_anndata "{output}" \
-          --seed {params.seed}
+          --seed {params.seed} \
+          --use_hvg \
+          --corrected_only
         """
