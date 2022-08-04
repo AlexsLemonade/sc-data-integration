@@ -112,7 +112,7 @@ rule integrate_seurat:
     wildcard_constraints:
         method = "cca|rpca"
     params:
-        merged_sce_file = "{project}_merged_sce.rds"
+        merged_sce_file = "{project}_merged_sce.rds",
         num_genes = 2000
     shell:
         """
