@@ -1,21 +1,23 @@
 #!/usr/bin/env python3
 """
-Script to perform integration on a merged AnnData object using Scanorama
+Script to perform integration on a merged AnnData object using scVI
 
 Takes an HDF5 file as input containing a merged AnnData object across at least 2 single-cell libraries
-and performs correction with scanorama. The output is an HDF5 file containing the integrated AnnData object.
+and performs correction with scVI. The output is an HDF5 file containing the integrated AnnData object.
 Requires a `batch_column` to be present as a column in the `obs` of the AnnData which corresponds to the
-original library ID for each cell. To return only the corrected data, removing the `X` matrix containing
+original library ID for each cell. Can also provide either `continuous_covariates` or `categorical_covariates`
+to be considered for integration. The provided covariates must be included as columns in the `obs` of the AnnData.
+To return only the corrected data, removing the `X` matrix containing
 the raw counts and the `logcounts` layer containing the log-normalized data, use the `--corrected_only` flag.
-
+To use only highly variable genes for integration, use the `--use_hvg` flag. When this flag is used the returned object
+will only contain highly variable genes.
 """
-
 
 import os
 import anndata as adata
 import argparse
 import re
-from utils.integrate_scanorama import integrate_scanorama
+from utils.integrate_scvi import integrate_scvi
 
 # define arguments
 parser = argparse.ArgumentParser()
@@ -32,13 +34,24 @@ parser.add_argument('-b', '--batch_column',
                     default = 'batch',
                     help = 'The name of the column in `anndata.obs` that indicates the batches for each cell, '
                             ' typically this corresponds to the library id.')
+parser.add_argument('--categorical_covariates',
+                    dest = 'categorical_covariates',
+                    default = None,
+                    type = str,
+                    help = 'A comma-separated list of columns containing additional categorical data to be'
+                    ' included as a covariate. Default is None.')
+parser.add_argument('--continuous_covariates',
+                    dest = 'continuous_covariates',
+                    default = "subsets_mito_percent",
+                    type = str,
+                    help = 'A comma-separated list of columns containing additional continous data to be'
+                    ' included as a covariate. Default is "subsets_mito_percent".')
 parser.add_argument('--use_hvg',
                     dest = 'use_hvg',
                     action = 'store_true',
                     default = False,
                     help = 'Boolean indicating whether or not to use only highly variable genes for data integration.'
-                    'If --use_hvg is used, integration will only consider highly variable genes, and similarly '
-                    'the returned integrated object will only contain the highly variable genes.')
+                    'If --use_hvg is used, the returned integrated object will only contain the highly variable genes.')
 parser.add_argument('--corrected_only',
                     dest = 'corrected_only',
                     action = 'store_true',
@@ -67,8 +80,7 @@ if not file_ext.search(args.output_anndata):
 
 # check that output file directory exists and create directory if doesn't exist
 integrated_adata_dir = os.path.dirname(args.output_anndata)
-if not os.path.isdir(integrated_adata_dir):
-    os.makedirs(integrated_adata_dir, exist_ok = True)
+os.makedirs(integrated_adata_dir, exist_ok = True)
 
 # read in merged anndata object
 merged_adata = adata.read_h5ad(args.input_anndata)
@@ -83,17 +95,31 @@ if args.use_hvg:
 else:
     var_genes = list(merged_adata.var_names)
 
-# integrate anndata with scanorama
-scanorama_integrated_adata = integrate_scanorama(merged_adata,
-                                                 integrate_genes = var_genes,
-                                                 batch_column = args.batch_column,
-                                                 seed = args.seed)
+# split covariates from comma separated strings into lists
+if args.categorical_covariates:
+    categorical_covariates = [covariate.strip() for covariate in args.categorical_covariates.split(',')]
+else:
+    categorical_covariates = None
+
+if args.continuous_covariates:
+    continuous_covariates = [covariate.strip() for covariate in args.continuous_covariates.split(',')]
+else:
+    continuous_covariates = None
+
+# integrate anndata with scvi
+scvi_integrated_adata = integrate_scvi(merged_adata,
+                                       integrate_genes = var_genes,
+                                       batch_column = args.batch_column,
+                                       categorical_covariate_columns = categorical_covariates,
+                                       continuous_covariate_columns = continuous_covariates,
+                                       seed = args.seed)
 
 # remove raw data and logcounts to minimize space if corrected_only is true
 if args.corrected_only:
     print("Removing raw data and log-normalized data. Only corrected data will be returned.")
-    scanorama_integrated_adata.X = None
-    del scanorama_integrated_adata.layers["logcounts"]
+    scvi_integrated_adata.X = None
+    del scvi_integrated_adata.layers["logcounts"]
+
 
 # write anndata to h5
-scanorama_integrated_adata.write(filename = args.output_anndata)
+scvi_integrated_adata.write(filename = args.output_anndata)
