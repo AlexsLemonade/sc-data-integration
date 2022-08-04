@@ -21,15 +21,17 @@ from utils.integrate_scanorama import integrate_scanorama
 parser = argparse.ArgumentParser()
 parser.add_argument('-m', '--input_anndata',
                     dest = 'input_anndata',
+                    required = True,
                     help = 'Path to HDF5 file with merged AnnData object to integrate')
 parser.add_argument('-i', '--output_anndata',
                     dest = 'output_anndata',
+                    required = True,
                     help = 'Path to HDF5 file to save the integrated AnnData object')
 parser.add_argument('-b', '--batch_column',
                     dest = 'batch_column',
                     default = 'batch',
-                    help = ('The name of the column in `anndata.obs` that indicates the batches for each cell, '
-                            ' typically this corresponds to the library id.'))
+                    help = 'The name of the column in `anndata.obs` that indicates the batches for each cell, '
+                            ' typically this corresponds to the library id.')
 parser.add_argument('--use_hvg',
                     dest = 'use_hvg',
                     action = 'store_true',

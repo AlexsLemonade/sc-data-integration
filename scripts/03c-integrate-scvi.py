@@ -32,16 +32,18 @@ parser.add_argument('-o', '--output_anndata',
 parser.add_argument('-b', '--batch_column',
                     dest = 'batch_column',
                     default = 'batch',
-                    help = ('The name of the column in `anndata.obs` that indicates the batches for each cell, '
-                            ' typically this corresponds to the library id.'))
+                    help = 'The name of the column in `anndata.obs` that indicates the batches for each cell, '
+                            ' typically this corresponds to the library id.')
 parser.add_argument('--categorical_covariates',
                     dest = 'categorical_covariates',
                     default = None,
+                    type = str,
                     help = 'A comma-separated list of columns containing additional categorical data to be'
                     ' included as a covariate. Default is None.')
 parser.add_argument('--continuous_covariates',
                     dest = 'continuous_covariates',
                     default = "subsets_mito_percent",
+                    type = str,
                     help = 'A comma-separated list of columns containing additional continous data to be'
                     ' included as a covariate. Default is "subsets_mito_percent".')
 parser.add_argument('--use_hvg',
