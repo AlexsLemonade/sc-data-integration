@@ -121,7 +121,7 @@ rule integrate_seurat:
           --output_sce_file "{output}" \
           --method seurat \
           --seurat_reduction_method {wildcards.method} \
-          --num_genes "{params.num_genes}" \
+          --num_genes {params.num_genes} \
           --corrected_only
         """
 
