@@ -95,21 +95,14 @@ if args.use_hvg:
 else:
     var_genes = list(merged_adata.var_names)
 
-# split covariates from comma separated strings into lists and check type
-if not args.categorical_covariates is None:
-    if type(args.categorical_covariates) is str:
-        categorical_covariates = [covariate.strip() for covariate in args.categorical_covariates.split(',')]
-    else:
-        raise TypeError("--categorical_covariates must be a comma separated list")
+# split covariates from comma separated strings into lists
+if args.categorical_covariates:
+    categorical_covariates = [covariate.strip() for covariate in args.categorical_covariates.split(',')]
 else:
     categorical_covariates = None
 
-
-if not args.continuous_covariates is None:
-    if type(args.continuous_covariates) is str:
-        continuous_covariates = [covariate.strip() for covariate in args.continuous_covariates.split(',')]
-    else:
-        raise TypeError("--continuous_covariates must be a comma separated list")
+if args.continuous_covariates:
+    continuous_covariates = [covariate.strip() for covariate in args.continuous_covariates.split(',')]
 else:
     continuous_covariates = None
 
