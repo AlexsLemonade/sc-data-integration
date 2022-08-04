@@ -259,3 +259,22 @@ perform_dim_reduction <- function(combined_sce,
   return(combined_sce)
 
 }
+
+
+
+
+
+#' Remove original uncorrected expression matrices from an SCE object
+#'
+#' @param sce_object The SCE object to remove assays from by setting them to NULL
+#' @param assays_to_remove Vector of expression assays that will be set to NULL.
+#' By default, this includes `counts` and `logcounts`
+#'
+#' @return The SCE object with specified assays removed
+remove_uncorrected_expression <- function(sce_object, 
+                                          assays_to_remove = c("counts", "logcounts")) {
+  for (assay_name in assays_to_remove) {
+    assay(sce_object, assay_name) <- NULL
+  }
+  return(sce_object)
+}
