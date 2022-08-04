@@ -96,45 +96,25 @@ rule integrate_harmony:
           --seed {params.seed}
         """
 
-rule integrate_seurat_cca:
+rule integrate_seurat:
     conda: "envs/scpca-renv.yaml"
     input:
         # The input has to be the merged directory so snakemake can find it.
         # We will add the file name with params.
         merged_sce_dir = "{basedir}/merged_sce"
     output:
-        "{basedir}/integrated_sce/{project}_integrated_seurat-cca_sce.rds"
+        "{basedir}/integrated_sce/{project}_integrated_seurat-{method}_sce.rds"
+    wildcard_constraints:
+        method = "cca|rpca"
     params:
-        merged_sce_file = "{project}_merged_sce.rds",
-        reduction_method = "cca"
+        merged_sce_file = "{project}_merged_sce.rds"
     shell:
         """
         Rscript scripts/03a-integrate-sce.R \
           --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
           --output_sce_file "{output}" \
           --method seurat \
-          --seurat_reduction_method "{params.reduction_method}" \
-          --corrected_only
-        """
-
-rule integrate_seurat_rpca:
-    conda: "envs/scpca-renv.yaml"
-    input:
-        # The input has to be the merged directory so snakemake can find it.
-        # We will add the file name with params.
-        merged_sce_dir = "{basedir}/merged_sce"
-    output:
-        "{basedir}/integrated_sce/{project}_integrated_seurat-rpca_sce.rds"
-    params:
-        merged_sce_file = "{project}_merged_sce.rds",
-        reduction_method = "rpca"
-    shell:
-        """
-        Rscript scripts/03a-integrate-sce.R \
-          --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
-          --output_sce_file "{output}" \
-          --method seurat \
-          --seurat_reduction_method "{params.reduction_method}" \
+          --seurat_reduction_method {wildcards.method} \
           --corrected_only
         """
 
