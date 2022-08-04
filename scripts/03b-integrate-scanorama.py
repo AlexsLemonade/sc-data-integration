@@ -30,6 +30,13 @@ parser.add_argument('-b', '--batch_column',
                     default = 'batch',
                     help = ('The name of the column in `anndata.obs` that indicates the batches for each cell, '
                             ' typically this corresponds to the library id.'))
+parser.add_argument('--use_hvg',
+                    dest = 'use_hvg',
+                    action = 'store_true',
+                    default = False,
+                    help = 'Boolean indicating whether or not to use only highly variable genes for data integration.'
+                    'If --use_hvg is used, integration will only consider highly variable genes, and similarly '
+                    'the returned integrated object will only contain the highly variable genes.')
 parser.add_argument('--corrected_only',
                     dest = 'corrected_only',
                     action = 'store_true',
@@ -64,8 +71,19 @@ if not os.path.isdir(integrated_adata_dir):
 # read in merged anndata object
 merged_adata = adata.read_h5ad(args.input_anndata)
 
+if args.use_hvg:
+    try:
+        var_genes = list(merged_adata.uns['variable_genes'])
+    except KeyError:
+        print("Variable genes cannot be found in anndata object."
+              " If using --use_hvg, make sure HVG are stored in adata.uns['variable_genes'].")
+        raise
+else:
+    var_genes = list(merged_adata.var_names)
+
 # integrate anndata with scanorama
 scanorama_integrated_adata = integrate_scanorama(merged_adata,
+                                                 integrate_genes = var_genes,
                                                  batch_column = args.batch_column,
                                                  seed = args.seed)
 
