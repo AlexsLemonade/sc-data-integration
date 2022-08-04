@@ -8,10 +8,12 @@ suppressPackageStartupMessages({
 #' Combine two or more SCE objects
 #'
 #' This function combines one or more SCE objects into a single SCE object, with
-#'   a cell column `batch` indicating the different originating SCEs.
+#'   a cell column indicating the different originating SCEs.
 #'
 #' @param sce_list Named list of SCE objects to combine, where names are library
 #'   biospecimen IDs. No specific assays or dimReduced are expected.
+#' @param batch_column Name of column to create that specifies batches. Default 
+#'   is "batch".
 #' @param preserve_rowdata_columns An array of columns that appear in SCE rowData
 #'    which should not be renamed with the given library ID. For example,
 #'    such an array might be: `c("Gene", "ensembl_ids", "gene_names")`
@@ -21,6 +23,7 @@ suppressPackageStartupMessages({
 #' @examples
 #' combine_sce_objects(sce_list, c("Gene", "ensembl_ids", "gene_names"))
 combine_sce_objects <- function(sce_list = list(),
+                                batch_column = "batch",
                                 preserve_rowdata_columns = NULL) {
 
 
@@ -89,7 +92,7 @@ combine_sce_objects <- function(sce_list = list(),
     names(metadata(sce_list[[i]])) <- paste0(names(metadata(sce_list[[i]])), "-", library_name)
 
     # Add colData column to track this batch
-    sce_list[[i]]$batch <- library_name
+    sce_list[[i]][[batch_column]] <- library_name
   }
 
   # Combine SCE objects with `cbind()` -----------------------------------------
@@ -110,6 +113,16 @@ combine_sce_objects <- function(sce_list = list(),
     rowData(combined_sce)[restore_cols[-1]] <- NULL
   }
 
+  
+  # Retain only colData names that are the `batch_column` or columns added by 
+  #  scuttle::addPerCellQC() during the scpca-downstream-analyses processing
+  mito_names <- grep("^subsets_mito", 
+                     names(colData(combined_sce)), 
+                     value=TRUE) # return the actual value, not the index
+
+  colData(combined_sce) <- colData(combined_sce)[,c(batch_column,
+                                                    # scuttle::addPerCellQC() columns
+                                                    "sum", "detected", mito_names)] 
 
 
   # Return combined SCE object ----------------------------
