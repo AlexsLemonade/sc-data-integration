@@ -108,6 +108,7 @@ rule integrate_seurat:
         method = "cca|rpca"
     params:
         merged_sce_file = "{project}_merged_sce.rds"
+        num_genes = 2000
     shell:
         """
         Rscript scripts/03a-integrate-sce.R \
@@ -115,6 +116,7 @@ rule integrate_seurat:
           --output_sce_file "{output}" \
           --method seurat \
           --seurat_reduction_method {wildcards.method} \
+          --num_genes "{params.num_genes}" \
           --corrected_only
         """
 
