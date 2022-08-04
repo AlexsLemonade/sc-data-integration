@@ -28,13 +28,14 @@
 #   stored in the `variable_genes` column of metadata slot. This argument is ignored if
 #   the provided method is not `fastMNN`.
 # --seurat_reduction_method: Seurat reduction method to use, either `cca` or `rcpa`.
-#   This argument is ignored if the provided method is not `seurat`.
+#   This argument is ignored if the provided method is not `seurat`. There is no 
+#   default, so this argument is required if the provided method is `seurat`.
 # --seurat_num_genes: Number of variables genes Seurat should identify.
-#   This argument is ignored if the provided method is not `seurat`.
+#   This argument is ignored if the provided method is not `seurat`. Default: 2000.
 # --seurat_integration_dims: Number of dimensions Seurat should use during integration.
-#   This argument is ignored if the provided method is not `seurat`.
+#   This argument is ignored if the provided method is not `seurat`. Default:30.
 # --seurat_umap_dims: Number of dimensions Seurat should use during UMAP.
-#   This argument is ignored if the provided method is not `seurat`.
+#   This argument is ignored if the provided method is not `seurat`. Default:30.
 # --corrected_only: Flag to specify that only corrected gene expression values should
 #   be returned in the integrated SCE object. Default usage of this script will
 #   return all data.
