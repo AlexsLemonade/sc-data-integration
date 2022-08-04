@@ -19,11 +19,11 @@ from utils.integrate_scanorama import integrate_scanorama
 
 # define arguments
 parser = argparse.ArgumentParser()
-parser.add_argument('-m', '--input_anndata',
+parser.add_argument('-i', '--input_anndata',
                     dest = 'input_anndata',
                     required = True,
                     help = 'Path to HDF5 file with merged AnnData object to integrate')
-parser.add_argument('-i', '--output_anndata',
+parser.add_argument('-o', '--output_anndata',
                     dest = 'output_anndata',
                     required = True,
                     help = 'Path to HDF5 file to save the integrated AnnData object')
