@@ -21,6 +21,7 @@ suppressPackageStartupMessages({
 prepare_seurat_list <- function(combined_sce, 
                                 batch_column = "batch") {
   
+  # Convert and normalize
   seurat_list <- combined_sce %>%
     # convert to Seurat
     scpcaTools::sce_to_seurat() %>%
@@ -29,7 +30,7 @@ prepare_seurat_list <- function(combined_sce,
     Seurat::SplitObject(split.by = batch_column) %>%
     # normalize each Seurat object in the list
     purrr::map(Seurat::SCTransform)
-  
+
   return(seurat_list)
 }
 

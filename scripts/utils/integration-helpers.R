@@ -8,10 +8,12 @@ suppressPackageStartupMessages({
 #' Combine two or more SCE objects
 #'
 #' This function combines one or more SCE objects into a single SCE object, with
-#'   a cell column `batch` indicating the different originating SCEs.
+#'   a cell column indicating the different originating SCEs.
 #'
 #' @param sce_list Named list of SCE objects to combine, where names are library
 #'   biospecimen IDs. No specific assays or dimReduced are expected.
+#' @param batch_column Name of column to create that specifies batches. Default
+#'   is "batch".
 #' @param preserve_rowdata_columns An array of columns that appear in SCE rowData
 #'    which should not be renamed with the given library ID. For example,
 #'    such an array might be: `c("Gene", "ensembl_ids", "gene_names")`
@@ -21,6 +23,7 @@ suppressPackageStartupMessages({
 #' @examples
 #' combine_sce_objects(sce_list, c("Gene", "ensembl_ids", "gene_names"))
 combine_sce_objects <- function(sce_list = list(),
+                                batch_column = "batch",
                                 preserve_rowdata_columns = NULL) {
 
 
@@ -89,7 +92,7 @@ combine_sce_objects <- function(sce_list = list(),
     names(metadata(sce_list[[i]])) <- paste0(names(metadata(sce_list[[i]])), "-", library_name)
 
     # Add colData column to track this batch
-    sce_list[[i]]$batch <- library_name
+    sce_list[[i]][[batch_column]] <- library_name
   }
 
   # Combine SCE objects with `cbind()` -----------------------------------------
@@ -110,6 +113,17 @@ combine_sce_objects <- function(sce_list = list(),
     rowData(combined_sce)[restore_cols[-1]] <- NULL
   }
 
+
+  # Retain only colData names that are the `batch_column` or columns added by
+  #  scuttle::addPerCellQC() during the scpca-downstream-analyses processing
+  mito_names <- names(colData(combined_sce)) %>%
+      stringr::str_subset("^subsets_mito")
+
+  retain_cols <-  c(batch_column,
+                    # scuttle::addPerCellQC() columns
+                    "sum", "detected", mito_names)
+  retain_pos <- which(names(colData(combined_sce)) %in% retain_cols)
+  colData(combined_sce) <- colData(combined_sce)[, retain_pos]
 
 
   # Return combined SCE object ----------------------------
@@ -267,33 +281,33 @@ perform_dim_reduction <- function(combined_sce,
 #' @param combined_sce SCE object that has been merged using combine_sce_objects
 #' @param num_genes Number of highly variable genes to select. Default is set to 5000.
 #' @param subset_hvg Indicates whether or not to subset the merged SCE object by highly variable genes.
-#'   If --subset_hvg is TRUE, the merged SCE object will only contain genes 
+#'   If --subset_hvg is TRUE, the merged SCE object will only contain genes
 #'   identified as highly variable genes.
 #'
 #' @return combined SCE object with variable genes added to metadata
 set_var_genes <- function(combined_sce,
                           num_genes = 5000,
                           subset_hvg = FALSE){
-  
+
   if(!is.logical(subset_hvg)){
     stop("--subset_hvg must be either TRUE or FALSE")
   }
-  
+
   # grab variable genes
-  var_genes <- perform_hvg_selection(combined_sce = combined_sce, 
+  var_genes <- perform_hvg_selection(combined_sce = combined_sce,
                                      num_genes = num_genes)
-  
+
   # add variable genes to metadata
   metadata(combined_sce)$variable_genes <- var_genes
-  
+
   if(subset_hvg){
     # subset to only variable genes
-    combined_sce <- combined_sce[var_genes,] 
+    combined_sce <- combined_sce[var_genes,]
   }
-  
+
   # indicate in metadata if object has been subset by HVG or not
   metadata(combined_sce)$subset_hvg <- subset_hvg
-  
+
   return(combined_sce)
 }
 
@@ -305,9 +319,10 @@ set_var_genes <- function(combined_sce,
 #' By default, this includes `counts` and `logcounts`
 #'
 #' @return The SCE object with specified assays removed
-remove_uncorrected_expression <- function(sce_object, 
+remove_uncorrected_expression <- function(sce_object,
                                           assays_to_remove = c("counts", "logcounts")) {
   for (assay_name in assays_to_remove) {
     assay(sce_object, assay_name) <- NULL
   }
+  return(sce_object)
 }
