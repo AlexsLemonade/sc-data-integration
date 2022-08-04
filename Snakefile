@@ -7,7 +7,7 @@ rule target:
                sce_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca"]),
         expand("results/human_cell_atlas/integrated_anndata/{project}_integrated_{py_method}.h5",
                project = pep.sample_table["project_name"],
-               py_method = ["scanorama"])
+               py_method = ["scanorama", "scvi"])
 
 # Rule used for building conda & renv environment
 rule build_renv:
@@ -137,6 +137,25 @@ rule integrate_scanorama:
     shell:
         """
         python scripts/03b-integrate-scanorama.py \
+          --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
+          --output_anndata "{output}" \
+          --seed {params.seed} \
+          --use_hvg \
+          --corrected_only
+        """
+
+rule integrate_scvi:
+    conda: "envs/scvi.yaml"
+    input:
+        merged_anndata_dir = "{basedir}/merged_anndata"
+    output:
+        "{basedir}/integrated_anndata/{project}_integrated_scvi.h5"
+    params:
+        merged_anndata_file = "{project}_anndata.h5",
+        seed = 2022
+    shell:
+        """
+        python scripts/03c-integrate-scvi.py \
           --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
           --output_anndata "{output}" \
           --seed {params.seed} \

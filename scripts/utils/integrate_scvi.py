@@ -1,9 +1,7 @@
 #!/usr/bin/env python3
 
 import sys
-import random
 import scvi
-import scipy
 
 def integrate_scvi(merged_adata,
                    integrate_genes,
@@ -57,7 +55,7 @@ def integrate_scvi(merged_adata,
 
     # subset merged object to only contain genes used for integration
     try:
-        merged_adata = merged_adata[merged_adata.obs_names, var_genes]
+        merged_adata = merged_adata[merged_adata.obs_names, integrate_genes]
     except KeyError:
         print("Genes provided in `integrate_genes` are not present as rows in the AnnData object.",
               file = sys.stderr)
@@ -95,10 +93,10 @@ def integrate_scvi(merged_adata,
                          " and/or continuous_covariate_columns are not present in adata.obs:",
                          ", ".join(missing_cols))
 
-    # convert raw counts to csr matrix
-    merged_adata.X = scipy.sparse.csr_matrix(merged_adata.X)
     # make sure that adata is present as a copy and not just a view
     merged_adata = merged_adata.copy()
+    # convert raw counts to csr matrix
+    merged_adata.X = merged_adata.X.tocsr()
 
     # create an scvi model object
     # raw counts are required as input
