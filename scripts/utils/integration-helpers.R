@@ -116,9 +116,8 @@ combine_sce_objects <- function(sce_list = list(),
   
   # Retain only colData names that are the `batch_column` or columns added by 
   #  scuttle::addPerCellQC() during the scpca-downstream-analyses processing
-  mito_names <- grep("^subsets_mito", 
-                     names(colData(combined_sce)), 
-                     value=TRUE) # return the actual value, not the index
+  mito_names <- names(colData(combined_sce) %>%
+      stringr::subset("^subsets_mito")
 
   colData(combined_sce) <- colData(combined_sce)[,c(batch_column,
                                                     # scuttle::addPerCellQC() columns
