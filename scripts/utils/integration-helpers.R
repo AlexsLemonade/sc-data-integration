@@ -119,9 +119,11 @@ combine_sce_objects <- function(sce_list = list(),
   mito_names <- names(colData(combined_sce) %>%
       stringr::subset("^subsets_mito")
 
-  colData(combined_sce) <- colData(combined_sce)[,c(batch_column,
-                                                    # scuttle::addPerCellQC() columns
-                                                    "sum", "detected", mito_names)] 
+  retain_cols <-  c(batch_column,
+                    # scuttle::addPerCellQC() columns
+                    "sum", "detected", mito_names)
+  retain_pos <- which(names(colData(combined_sce)) %in% retain_cols)
+  colData(combined_sce) <- colData(combined_sce)[, retain_pos] 
 
 
   # Return combined SCE object ----------------------------
