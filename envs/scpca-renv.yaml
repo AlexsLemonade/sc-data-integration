@@ -8,6 +8,4 @@ dependencies:
   - pandoc
   - pkg-config
   - openssl
-  - r-base=4.2.0
-  - r-jsonlite
-  - r-purrr
+  - r-base=4.2.1
