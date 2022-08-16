@@ -73,14 +73,14 @@ integrate_fastMNN <- function(combined_sce,
 
   # Only add this information if all genes were used, meaning dimensions are compatible
   if (is.null(gene_list)){
-    assay(combined_sce, "fastMNN_corrected")  <- assay(integrated_sce, "reconstructed")
+    assay(combined_sce, "fastmnn_corrected")  <- assay(integrated_sce, "reconstructed")
   }
 
   # Add in the PCs, regardless of the gene list
-  reducedDim(combined_sce, "fastMNN_PCA") <- reducedDim(integrated_sce, "corrected")
+  reducedDim(combined_sce, "fastmnn_PCA") <- reducedDim(integrated_sce, "corrected")
   
   # Perform UMAP with the new PCs -----------------
-  combined_sce <- perform_dim_reduction(combined_sce, prefix = "fastMNN")
+  combined_sce <- perform_dim_reduction(combined_sce, prefix = "fastmnn")
   
   # Return SCE object with fastMNN information ---------------
   return(combined_sce)
