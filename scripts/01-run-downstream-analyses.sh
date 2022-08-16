@@ -82,18 +82,20 @@ Rscript --vanilla ${script_dir}/utils/preprocess-sce.R \
 
 # check for Snakefile in downstream repo
 if [[ ! -f $downstream_repo/Snakefile ]]; then
-  echo "The path provided for `--downstream_repo` is missing a Snakefile.
+  echo "The path provided for '--downstream_repo' is missing a Snakefile.
         Double check you have provided the correct path."
   exit 1
 fi
 
 # run snakefile from scpca-downstream-analyses
+cd $downstream_repo
 snakemake --cores $cores \
-  -s $downstream_repo/Snakefile \
-  --configfile $downstream_repo/config.yaml \
+  --use-conda \
   --config results_dir=$results_dir \
   project_metadata=$downstream_metadata_file \
   mito_file=$mito_file
+cd $call_dir
+
 
 # sync output from snakefile to aws
 if [[ -n $s3_bucket ]]; then
