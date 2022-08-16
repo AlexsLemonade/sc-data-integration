@@ -56,18 +56,18 @@ perform_dim_reduction(combined_sce,
 
 # Test harmony:
 integrate_harmony(combined_sce, "batch", from_pca=FALSE)
-integrated_object <- integrate_harmony(combined_sce, "batch")
+integrated_sce<- integrate_harmony(combined_sce, "batch")
 
 
 # Test fastMNN:
-integrated_object <-integrate_fastMNN(combined_sce)
+integrated_sce <-integrate_fastMNN(combined_sce)
 
 
 # plot UMAP pre and post integration 
 pre_integration <- scater::plotReducedDim(combined_sce, 
                                           dimred = "UMAP", 
                                           colour_by = "batch")
-post_integration <- scater::plotReducedDim(integrated_object, 
+post_integration <- scater::plotReducedDim(integrated_sce, 
                                            dimred = "harmony_UMAP", 
                                            colour_by = "batch")
 
