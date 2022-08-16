@@ -99,7 +99,6 @@ fi
 
 snakemake --cores $cores \
   --use-conda \
-  --forceall \
   --config results_dir=$results_dir \
   project_metadata=$downstream_metadata_file \
   mito_file=$mito_file
