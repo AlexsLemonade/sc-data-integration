@@ -1,3 +1,21 @@
+# Script used to convert integrated AnnData objects to SCE objects
+#
+# An integrated AnnData object as a H5 file is read in as an SCE object.
+# The method of integration should either be `scanorama` or `scVI` with corrected
+# gene expression data and embeddings stored in the AnnData object. 
+# UMAP is calculated from the corrected embeddings (SVD for scanorama and latent 
+# embeddings for scVI) and the SCE object is saved as an RDS file.
+#
+# Option descriptions:
+#
+# --input_anndata: Path to H5 file that contains the integrated AnnData object
+# --output_sce_file: Path to RDS file where the integrated SCE object will be saved.
+# --method: Method that was used for integration, either `scanorama` or `scVI` (case-insensitive).
+# --seed: Random seed to set prior to UMAP
+# --corrected_only: Indicate whether the integrated AnnData object contains only 
+#   corrected gene expression data, and is missing uncorrected expression (no `X` matrix). 
+#   To indicate the object only contains corrected data, use `--corrected_only`.
+
 # load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
 renv::load(project_root)
