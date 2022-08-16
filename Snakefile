@@ -4,7 +4,7 @@ rule target:
     input:
         expand("results/human_cell_atlas/integrated_sce/{project}_integrated_{sce_method}_sce.rds",
                project = pep.sample_table["project_name"],
-               sce_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca"]),
+               sce_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scVI"]),
         expand("results/human_cell_atlas/integrated_anndata/{project}_integrated_{py_method}.h5",
                project = pep.sample_table["project_name"],
                py_method = ["scanorama", "scvi"])
@@ -161,4 +161,25 @@ rule integrate_scvi:
           --seed {params.seed} \
           --use_hvg \
           --corrected_only
+        """
+
+rule post_process_anndata:
+    conda: "envs/scvi.yaml"
+    input:
+        integrated_anndata_dir = "{basedir}/integrated_anndata"
+    output:
+        "{basedir}/integrated_sce/{project}_integrated_{method}_sce.rds"
+    wildcard_constraints:
+        method = "scanorama|scVI"
+    params:
+        integrated_anndata_file = "{project}_integrated_{method}.h5",
+        seed = 2022
+    shell:
+        """
+        Rscript scripts/04-post-process-anndata.R \
+            --input_anndata "{input.integrated_anndata_dir}/{params.integrated_anndata_file}" \
+            --output_sce_file "{output}" \
+            --method {wildcards.method} \
+            --seed {params.seed} \
+            --corrected_only
         """
