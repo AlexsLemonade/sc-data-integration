@@ -12,8 +12,8 @@ suppressPackageStartupMessages({
 #' @param integration_method The name of the method that was used for integration 
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
 #'
-#' @return Tibble with three columns with one row per cell. Columns are `ilisi_score`, 
-#'   `library`, and `integration_method`
+#' @return Tibble with four columns with one row per cell. Columns are `ilisi_score`, 
+#'   `cell_barcode`, `library` and `integration_method`
 calculate_ilisi <- function(integrated_sce,
                             batch_column = "batch", 
                             integration_method = NULL) {
@@ -50,15 +50,16 @@ calculate_ilisi <- function(integrated_sce,
                                     batch_df, 
                                     # which variables in `batch_df` to compute lisi for
                                     batch_column) %>% 
-    tibble::as_tibble()
-
-  # Finalize the tibble to return
-  lisi_result <- lisi_result %>%
+    tibble::as_tibble() %>%
     # Rename the result column to `ilisi_score`
     dplyr::rename(ilisi_score = batch) %>%
-    # Add in the library ID and integration method
-    dplyr::mutate(library = batch_df[,batch_column],
-                  integration_method = integration_method)
+    # Add in the cell, library ID, and integration method
+    dplyr::mutate(cell = colnames(integrated_sce),
+                  integration_method = integration_method) %>%
+    # split cell into cell_barcode and library
+    tidyr::separate(cell, 
+                    into = c("cell_barcode", "library"), 
+                    sep = "-")
 
   
   # Return the tibble
