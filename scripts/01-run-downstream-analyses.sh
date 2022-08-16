@@ -87,8 +87,16 @@ if [[ ! -f $downstream_repo/Snakefile ]]; then
   exit 1
 fi
 
-# run snakefile from scpca-downstream-analyses
+# run downstream analysis workflow from scpca-downstream-analyses
 cd $downstream_repo
+
+# check if Apple Silicon, and build environments if required
+if [[ "$(uname)" == 'Darwin' && "$(uname -m)" == 'arm64' ]]; then
+  CONDA_SUBDIR=osx-64 snakemake --cores $cores \
+  --use-conda --conda-create-envs-only \
+  build_renv
+fi
+
 snakemake --cores $cores \
   --use-conda \
   --config results_dir=$results_dir \
