@@ -4,6 +4,8 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
 })
 
+source("integration-helpers.R") # script with `check_integration_method()`
+
 #' Function to calculate iLISI scores from an integrated SCE object
 #'
 #' @param integrated_sce The integrated SCE object
@@ -19,19 +21,7 @@ calculate_ilisi <- function(integrated_sce,
                             integration_method = NULL) {
   
   # Check integration method
-  all_integration_methods <- c("fastMNN", "harmony", "rpca", "cca", "scvi", "scanorama")
-  if (is.null(integration_method)) {
-    stop("An `integration_method` must be provided.")
-  } else {
-    integration_method <- tolower(integration_method)
-    if (!(integration_method %in% tolower(all_integration_methods))) {
-      stop(
-        paste("The `integration_method` must be one of: ",
-              paste(all_integration_methods, collapse = ", ")
-        )
-      )
-    }
-  }
+  integration_method <- check_integration_method(integration_method)
   
   # Create data frame with batch information to provide to `compute_lisi()`
   batch_df <- data.frame(batch = colData(integrated_sce)[,batch_column])
