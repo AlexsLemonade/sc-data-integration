@@ -5,6 +5,7 @@ source(file.path(util_dir, "integration-helpers.R"))
 source(file.path(util_dir, "integrate-harmony.R"))
 source(file.path(util_dir, "integrate-fastMNN.R"))
 source(file.path(util_dir, "integrate-seurat.R"))
+source(file.path(util_dir, "calculate-iLISI.R"))
 
 library(magrittr) # pipe
 library(scpcaTools) # for transformation of sce -> seurat
@@ -96,3 +97,8 @@ rpca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "
 
 # Integrate data using canonical correlation analysis
 cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "cca")
+
+
+# Test score calculation
+integrated_sce <-integrate_fastMNN(combined_sce)
+lisi <- calculate_ilisi(integrated_sce, "batch", "fastMNN")
