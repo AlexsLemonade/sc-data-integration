@@ -190,7 +190,7 @@ create_grouped_sce_list <- function(sce_info_dataframe,
     library_name <- sce_info_dataframe$library_id[library_idx]
     
     # check that library has cell type information
-    if(library_name %in% celltype_info_df$library_biomaterial_id){
+    if(library_name %in% unique(celltype_info_df$library_biomaterial_id)){
       
       # filter celltype info to only have info for specified library 
       filtered_celltype_info <- celltype_info_df %>%
