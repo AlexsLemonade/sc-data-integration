@@ -29,12 +29,14 @@ rule merge_sces:
         directory("{basedir}/merged_sce")
     params:
         grouping_var = "project_name",
-        num_hvg = 5000
+        num_hvg = 5000,
+        celltype_file = "sample-info/hca-celltype-info.tsv"
     shell:
         """
         Rscript scripts/02-prepare-merged-sce.R \
           --library_file "{input.processed_tsv}" \
           --sce_dir "{input.sce_dir}" \
+          --celltype_info "{params.celltype_file}" \
           --grouping_var {params.grouping_var} \
           --merged_sce_dir "{output}" \
           --num_hvg {params.num_hvg} \
