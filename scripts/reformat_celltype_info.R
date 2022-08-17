@@ -125,18 +125,19 @@ ms_lineage_df <- project_metadata_df %>%
 # FetalLiverHaematopoiesis -----------------------------------------------------
 
 # submitter IDs here are slightly different "F6_kidney_CD45+", "F3_kidney_CD45+"
+submitter_ids <- c("F6_kidney_CD45+", "F3_kidney_CD45+")
 
 fetal_liver_df <- project_metadata_df %>%
   dplyr::filter(project_name == "FetalLiverHaematopoiesis") %>%
   dplyr::pull(celltype_filepaths) %>%
   readr::read_csv() %>%
   # extract submitter id from cell barcode 
-  dplyr::mutate(submitter_id = stringr::word(`cell barcode`,1, 3, sep = "_"), 
-                library_biomaterial_id = ifelse(submitter_id == "F6_kidney_CD45+", 
-                                                "F06-KID-3p-CD45pos",
-                                                "F03-KID-3p-CD45pos"),
+  dplyr::mutate(submitter_id = stringr::word(`cell barcode`,1, 3, sep = "_"),
                 barcode = stringr::word(`cell barcode`, -1, sep = "_")) %>%
-  dplyr::filter(library_biomaterial_id %in% processed_libraries_df$library_biomaterial_id) %>%
+  dplyr::filter(submitter_id %in% submitter_ids) %>%
+  dplyr::mutate(library_biomaterial_id = ifelse(submitter_id == "F6_kidney_CD45+", 
+                                                "F06-KID-3p-CD45pos",
+                                                "F03-KID-3p-CD45pos")) %>%
   dplyr::select(library_biomaterial_id,
                 celltype =  `cell labels`,
                 barcode) %>%
