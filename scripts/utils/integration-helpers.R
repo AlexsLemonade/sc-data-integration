@@ -326,3 +326,28 @@ remove_uncorrected_expression <- function(sce_object,
   }
   return(sce_object)
 }
+
+
+#' Checks that a given integration method is acceptable
+#'
+#' @param integration_method The provided integration method to check
+#'
+#' @return An all-lowercase version of the given provided_method
+check_integration_method <- function(integration_method) {
+  
+  all_integration_methods <- c("fastMNN", "harmony", "rpca", "cca", "scvi", "scanorama")
+  if (is.null(integration_method)) {
+    stop("An `integration_method` must be provided.")
+  } else {
+    integration_method <- tolower(integration_method)
+    if (!(integration_method %in% tolower(all_integration_methods))) {
+      stop(
+        paste("The `integration_method` must be one of: ",
+              paste(all_integration_methods, collapse = ", ")
+        )
+      )
+    }
+  }
+  return(integration_method)
+}
+

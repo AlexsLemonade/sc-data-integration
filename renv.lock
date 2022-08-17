@@ -1909,6 +1909,23 @@
       "Hash": "a0292a1cd346ecb09c6e7307470e87aa",
       "Requirements": []
     },
+    "lisi": {
+      "Package": "lisi",
+      "Version": "1.0",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "immunogenomics",
+      "RemoteRepo": "lisi",
+      "RemoteRef": "master",
+      "RemoteSha": "a917556310d8d2c66833dcc35aa3d0f4d1b6e0f4",
+      "Hash": "dfa658397f8f8728fa60de3641247992",
+      "Requirements": [
+        "RANN",
+        "Rcpp",
+        "RcppArmadillo"
+      ]
+    },
     "listenv": {
       "Package": "listenv",
       "Version": "0.8.0",
@@ -2574,14 +2591,14 @@
       "Package": "scpcaTools",
       "Version": "0.1.8",
       "Source": "GitHub",
-      "Remotes": "AlexsLemonade/scpcaData",
       "RemoteType": "github",
+      "Remotes": "AlexsLemonade/scpcaData",
       "RemoteHost": "api.github.com",
       "RemoteRepo": "scpcaTools",
       "RemoteUsername": "AlexsLemonade",
       "RemoteRef": "HEAD",
       "RemoteSha": "a822885e536e31a5dedeb4bacfa52f5aa16ed647",
-      "Hash": "f159c999586ae1de424b052ee047c9f2",
+      "Hash": "9a2152da57d055a4169094dda083d3d2",
       "Requirements": [
         "BiocGenerics",
         "DropletUtils",
