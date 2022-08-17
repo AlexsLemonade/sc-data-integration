@@ -26,6 +26,12 @@ project_metadata_df <- project_metadata_df %>%
 processed_libraries_df <- readr::read_tsv(processed_libraries_file) %>%
   dplyr::select(library_biomaterial_id, sample_biomaterial_id)
 
+# Each project has individually formatted files that contain cell type information
+# Each section below filters the project metadata to the specified project and grabs the 
+# file path to the cell type information for that file followed by the necessary reformatting
+# Each cell type file is reformatted to contain a column for 
+# library_biomaterial_id, sample_biomaterial_id, barcode, celltype, and project_name
+
 # 1M immune cells --------------------------------------------------------------
 
 # read in cell type information 
@@ -33,6 +39,7 @@ immune_cells_df <- project_metadata_df %>%
   dplyr::filter(project_name == "1M_Immune_Cells") %>%
   dplyr::pull(celltype_filepaths) %>%
   readr::read_csv() %>%
+  # this file only contains library Ids so filter based on that
   dplyr::filter(cell_suspension.biomaterial_core.biomaterial_id %in% processed_libraries_df$library_biomaterial_id) %>%
   dplyr::select(library_biomaterial_id = cell_suspension.biomaterial_core.biomaterial_id,
                 celltype =  annotated_cell_identity.text,
@@ -47,6 +54,7 @@ tcell_df <- project_metadata_df %>%
   dplyr::filter(project_name == "HumanTissueTcellActivation") %>%
   dplyr::pull(celltype_filepaths) %>%
   readr::read_csv() %>% 
+  # this file only contains sample ids so filter based on that
   dplyr::filter(specimen_from_organism.biomaterial_core.biomaterial_id %in% processed_libraries_df$sample_biomaterial_id) %>%
   dplyr::select(sample_biomaterial_id = specimen_from_organism.biomaterial_core.biomaterial_id,
                 celltype =  annotated_cell_identity.text,
@@ -66,8 +74,10 @@ substantia_nigra_df <- project_metadata_df %>%
   dplyr::filter(project_name == "HumanBrainSubstantiaNigra") %>%
   dplyr::pull(celltype_filepaths) %>%
   readr::read_tsv() %>%
+  # this file only contains the submitter specific ids that are not found on HCA
   dplyr::filter(Library %in% submitter_ids) %>%
   dplyr::mutate(Library = ifelse(Library == "C1B", "SRX7129196", "SRX7129192"),
+                # reformat barcode column originally provided
                 barcode = stringr::word(`Sample_Names(Library_Barcode)`, -1, sep = "_")) %>%
   dplyr::select(library_biomaterial_id = Library,
                 celltype = Level_1_cell_type,
@@ -76,6 +86,8 @@ substantia_nigra_df <- project_metadata_df %>%
   dplyr::left_join(processed_libraries_df)
 
 # Combine into one tibble ------------------------------------------------------
+
+# combine all individually reformatted celltype tibbles into one tibble before saving file
 
 all_celltype_df <- dplyr::bind_rows(list(
   immune_cells_df,
