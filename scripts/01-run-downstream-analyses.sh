@@ -81,7 +81,7 @@ Rscript --vanilla ${script_dir}/utils/preprocess-sce.R \
   $repeat_filtering_flag
 
 # check for Snakefile in downstream repo
-if [[ ! -f $downstream_repo/Snakefile ]]; then
+if [[ ! -f ${downstream_repo}/Snakefile ]]; then
   echo "The path provided for '--downstream_repo' is missing a Snakefile.
         Double check you have provided the correct path."
   exit 1
@@ -102,6 +102,8 @@ snakemake --cores $cores \
   --config results_dir=$results_dir \
   project_metadata=$downstream_metadata_file \
   mito_file=$mito_file
+
+# Navigate back to project directory
 cd $call_dir
 
 
