@@ -54,7 +54,7 @@ calculate_ilisi <- function(integrated_sce,
                                     # define the batches
                                     batch_df, 
                                     # which variables in `batch_df` to compute lisi for
-                                    batch_column) %>% 
+                                    batch) %>% 
     tibble::as_tibble() %>%
     # Rename the result column to `ilisi_score`
     dplyr::rename(ilisi_score = batch) %>%
