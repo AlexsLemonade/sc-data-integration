@@ -8,7 +8,7 @@
 #
 # Option descriptions:
 #
-# --input_anndata: Path to H5 file that contains the integrated AnnData object
+# --input_anndata_file: Path to H5 file that contains the integrated AnnData object
 # --output_sce_file: Path to RDS file where the integrated SCE object will be saved.
 # --method: Method that was used for integration, either `scanorama` or `scVI` (case-insensitive).
 # --seed: Random seed to set prior to UMAP
@@ -30,7 +30,7 @@ suppressPackageStartupMessages({
 # Set up optparse options
 option_list <- list(
   make_option(
-    opt_str = c("--input_anndata"),
+    opt_str = c("--input_anndata_file"),
     type = "character",
     default = NULL,
     help = "Path to H5 file that contains the integrated AnnData object"
@@ -91,17 +91,17 @@ if (is.null(opt$method)) {
 }
 
 # Check that provided input file exists and is an RDS file
-if(is.null(opt$input_anndata)) {
-  stop("You must provide the path to the H5 file with merged SCEs to --input_anndata")
+if(is.null(opt$input_anndata_file)) {
+  stop("You must provide the path to the H5 file with merged SCEs to --input_anndata_file")
 } else {
-  if(!file.exists(opt$input_anndata)) {
-    stop("Provided --input_anndata file does not exist.")
+  if(!file.exists(opt$input_anndata_file)) {
+    stop("Provided --input_anndata_file file does not exist.")
   }
 }
 
 # Check that both input and output files have correct extensions
-if(!(stringr::str_ends(opt$input_anndata, ".hdf5|.h5"))){
-  stop("`--input_anndata` must end in either '.hdf5' or '.h5'")
+if(!(stringr::str_ends(opt$input_anndata_file, ".hdf5|.h5"))){
+  stop("`--input_anndata_file` must end in either '.hdf5' or '.h5'")
 }
 if(!(stringr::str_ends(opt$output_sce_file, ".rds"))){
   stop("`--output_sce_file` must end in '.rds'")
@@ -116,7 +116,7 @@ if(!dir.exists(integrated_sce_dir)){
 # Anndata to SCE post-processing -----------------------------------------------
 
 # read in AnnData object as H5
-integrated_sce <- zellkonverter::readH5AD(opt$input_anndata, 
+integrated_sce <- zellkonverter::readH5AD(opt$input_anndata_file, 
                                           # if corrected only is set, skips reading `X` matrix
                                           skip_assays = opt$corrected_only)
 
@@ -135,7 +135,7 @@ check_pseudo_pca <- function(integrated_sce,
   }
 }
 
-# function to run UMAP with respective PCA name 
+# function to run UMAP with respective pseudo PCA name 
 add_umap <- function(integrated_sce,
                      pseudo_pca_name,
                      umap_name){
