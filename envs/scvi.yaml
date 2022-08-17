@@ -4,5 +4,6 @@ channels:
   - bioconda
   - defaults
 dependencies:
+  - anndata=0.8.0
   - scvi-tools=0.17.1
   - gitpython
