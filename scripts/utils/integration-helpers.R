@@ -120,6 +120,7 @@ combine_sce_objects <- function(sce_list = list(),
       stringr::str_subset("^subsets_mito")
 
   retain_cols <-  c(batch_column,
+                    "celltype",
                     # scuttle::addPerCellQC() columns
                     "sum", "detected", mito_names)
   retain_pos <- which(names(colData(combined_sce)) %in% retain_cols)
@@ -324,5 +325,41 @@ remove_uncorrected_expression <- function(sce_object,
   for (assay_name in assays_to_remove) {
     assay(sce_object, assay_name) <- NULL
   }
+  return(sce_object)
+}
+
+
+#' Add column with cell type annotations to colData of SCE object
+#'
+#' @param sce_object The SCE object to add cell type annotations
+#' @param celltype_info_df Tibble containing celltype specific information for provided SCE.
+#'   Columns labeled `barcode` and `celltype` must be present.
+#'
+#' @return Modified SCE object with cell type annotations added as a column in the colData
+#'
+add_celltype_info <- function(sce_object,
+                              celltype_info_df){
+  
+  # check that provided celltype info df contains specified columns 
+  if(!all(c("barcode", "celltype") %in% colnames(celltype_info_df))){
+    stop("`celltype_info_df` must contain the specified columns, `barcode` and `celltype`.")
+  }
+  
+  # check that the barcode column contains overlap with the barcodes in the SCE object
+  # right now check that at least some of the barcodes overlap
+  if(!any(colnames(sce_object) %in% celltype_info_df$barcode)){
+    stop("barcodes column of celltype_info_df provided does not contain barcodes found 
+         in the provided SCE object.")
+  }
+  
+  # create new coldata df containing added celltype column
+  coldata_df <- as.data.frame(colData(sce_object)) %>%
+    tibble::rownames_to_column("barcode") %>%
+    dplyr::left_join(celltype_info_df, by = c("barcode")) %>%
+    tibble::column_to_rownames("barcode")
+  
+  # add coldata back to sce object
+  colData(sce_object) <- DataFrame(coldata_df)
+
   return(sce_object)
 }
