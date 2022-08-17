@@ -1493,6 +1493,20 @@
       "Hash": "15e9634c0fcd294799e9b2e929ed1b86",
       "Requirements": []
     },
+    "geometry": {
+      "Package": "geometry",
+      "Version": "0.4.6.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "ad478db366f6cbb6c463e3527584d754",
+      "Requirements": [
+        "Rcpp",
+        "RcppProgress",
+        "linprog",
+        "lpSolve",
+        "magic"
+      ]
+    },
     "getopt": {
       "Package": "getopt",
       "Version": "1.20.3",
@@ -1909,6 +1923,16 @@
       "Hash": "a0292a1cd346ecb09c6e7307470e87aa",
       "Requirements": []
     },
+    "linprog": {
+      "Package": "linprog",
+      "Version": "0.9-4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "66e9d4ebd71ddcd6f86a2a9a34f5cdc5",
+      "Requirements": [
+        "lpSolve"
+      ]
+    },
     "lisi": {
       "Package": "lisi",
       "Version": "1.0",
@@ -1952,6 +1976,24 @@
       "Hash": "9a60537b3a4740853bd8d36a2bcf1946",
       "Requirements": [
         "lattice"
+      ]
+    },
+    "lpSolve": {
+      "Package": "lpSolve",
+      "Version": "5.6.15",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "90c3bc497e7d5ec9dbb863621be15abb",
+      "Requirements": []
+    },
+    "magic": {
+      "Package": "magic",
+      "Version": "1.6-0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "d3e70e3dfb54a19327ded37407ab7f34",
+      "Requirements": [
+        "abind"
       ]
     },
     "magrittr": {
@@ -2121,6 +2163,16 @@
       "Repository": "CRAN",
       "Hash": "11359a5bb73622ab3f4136bf57108b64",
       "Requirements": []
+    },
+    "pdfCluster": {
+      "Package": "pdfCluster",
+      "Version": "1.0-3",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "cc4b077b3626f117564c0e90ec4c7f9a",
+      "Requirements": [
+        "geometry"
+      ]
     },
     "pillar": {
       "Package": "pillar",
