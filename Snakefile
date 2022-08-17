@@ -177,7 +177,7 @@ rule post_process_anndata:
     shell:
         """
         Rscript scripts/04-post-process-anndata.R \
-            --input_anndata "{input.integrated_anndata_dir}/{params.integrated_anndata_file}" \
+            --input_anndata_file "{input.integrated_anndata_dir}/{params.integrated_anndata_file}" \
             --output_sce_file "{output}" \
             --method {wildcards.method} \
             --seed {params.seed} \
