@@ -85,6 +85,78 @@ substantia_nigra_df <- project_metadata_df %>%
   dplyr::mutate(project = "HumanBrainSubstantiaNigra") %>%
   dplyr::left_join(processed_libraries_df)
 
+# Oligodendrocyte_MS -----------------------------------------------------------
+
+submitter_ids <- c("CO28", "CO14")
+
+oligo_df <- project_metadata_df %>%
+  dplyr::filter(project_name == "Oligodendrocyte_MS") %>%
+  dplyr::pull(celltype_filepaths) %>%
+  readr::read_tsv() %>% 
+  # this file only contains the submitter specific ids that are not found on HCA
+  dplyr::filter(Sample %in% submitter_ids) %>%
+  dplyr::mutate(Sample = ifelse(Sample == "CO28", "Control_CO28", "Control_CO14"),
+                # extract barcode and remove extra x at the end 
+                barcode = stringr::str_remove(stringr::word(Detected, -1, sep = ":"), "x")) %>%
+  dplyr::select(sample_biomaterial_id = Sample,
+                celltype =  Celltypes,
+                barcode) %>%
+  dplyr::mutate(project = "Oligodendrocyte_MS") %>%
+  dplyr::left_join(processed_libraries_df)
+
+# MultipleSclerosisLineageDiversity --------------------------------------------
+
+submitter_ids <- c("C2", "C9")
+
+ms_lineage_df <- project_metadata_df %>%
+  dplyr::filter(project_name == "MultipleSclerosisLineageDiversity") %>%
+  dplyr::pull(celltype_filepaths) %>%
+  readr::read_tsv() %>% 
+  dplyr::filter(sample %in% submitter_ids) %>%
+  dplyr::mutate(sample = ifelse(sample == "C2", "SRX5897026", "SRX5897034"),
+                # extract barcode and remove extra x at the end 
+                barcode = stringr::word(cell, 1 , sep = "-"))%>%
+  dplyr::select(library_biomaterial_id = sample,
+                celltype =  cell_type,
+                barcode) %>%
+  dplyr::mutate(project = "MultipleSclerosisLineageDiversity") %>%
+  dplyr::left_join(processed_libraries_df)
+
+# FetalLiverHaematopoiesis -----------------------------------------------------
+
+# submitter IDs here are slightly different "F6_kidney_CD45+", "F3_kidney_CD45+"
+
+fetal_liver_df <- project_metadata_df %>%
+  dplyr::filter(project_name == "FetalLiverHaematopoiesis") %>%
+  dplyr::pull(celltype_filepaths) %>%
+  readr::read_csv() %>%
+  # extract submitter id from cell barcode 
+  dplyr::mutate(submitter_id = stringr::word(`cell barcode`,1, 3, sep = "_"), 
+                library_biomaterial_id = ifelse(submitter_id == "F6_kidney_CD45+", 
+                                                "F06-KID-3p-CD45pos",
+                                                "F03-KID-3p-CD45pos"),
+                barcode = stringr::word(`cell barcode`, -1, sep = "_")) %>%
+  dplyr::filter(library_biomaterial_id %in% processed_libraries_df$library_biomaterial_id) %>%
+  dplyr::select(library_biomaterial_id,
+                celltype =  `cell labels`,
+                barcode) %>%
+  dplyr::mutate(project = "FetalLiverHaematopoiesis") %>%
+  dplyr::left_join(processed_libraries_df)
+
+# KidneySingleCellAtlas --------------------------------------------------------
+
+kidney_df <- project_metadata_df %>%
+  dplyr::filter(project_name == "KidneySingleCellAtlas") %>%
+  dplyr::pull(celltype_filepaths) %>%
+  readr::read_csv() %>%
+  # this file only contains library Ids so filter based on that
+  dplyr::filter(cell_suspension.biomaterial_core.biomaterial_id %in% processed_libraries_df$library_biomaterial_id) %>%
+  dplyr::select(library_biomaterial_id = cell_suspension.biomaterial_core.biomaterial_id,
+                celltype =  annotated_cell_identity.text,
+                barcode) %>%
+  dplyr::mutate(project = "KidneySingleCellAtlas") %>%
+  dplyr::left_join(processed_libraries_df)
+
 # Combine into one tibble ------------------------------------------------------
 
 # combine all individually reformatted celltype tibbles into one tibble before saving file
@@ -92,6 +164,10 @@ substantia_nigra_df <- project_metadata_df %>%
 all_celltype_df <- dplyr::bind_rows(list(
   immune_cells_df,
   tcell_df,
-  substantia_nigra_df))
+  substantia_nigra_df,
+  oligo_df,
+  ms_lineage_df,
+  fetal_liver_df,
+  kidney_df))
 
 readr::write_tsv(all_celltype_df, combined_celltype_file)
