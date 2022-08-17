@@ -15,6 +15,7 @@ fi
 
 
 
-
+# install packages required for renv
+Rscript --no-init-file -e 'install.packages(c("jsonlite","purrr"), repos = "https://cloud.r-project.org")'
 # restore packages
 Rscript -e 'renv::restore()'
