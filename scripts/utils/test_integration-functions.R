@@ -104,4 +104,3 @@ cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "c
 # Test score calculation
 integrated_sce <- readRDS("results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_harmony_sce.rds")
 lisi <- calculate_ilisi(integrated_sce, "batch", "harmony")
-ari <- calculate_batch_ari(integrated_sce, seed = 2022, integration_method = "harmony")
