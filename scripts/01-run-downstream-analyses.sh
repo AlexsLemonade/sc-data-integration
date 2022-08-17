@@ -73,7 +73,7 @@ else
 fi
 
 # run Rscript to generate metadata file
-Rscript --vanilla ${script_dir}/utils/preprocess-sce.R \
+Rscript --no-site-file ${script_dir}/utils/preprocess-sce.R \
   --library_file $processed_library_df \
   --unfiltered_sce_dir $unfiltered_sce_dir \
   --filtered_sce_dir $filtered_sce_dir \
