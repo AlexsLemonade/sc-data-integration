@@ -76,7 +76,8 @@ substantia_nigra_df <- project_metadata_df %>%
   readr::read_tsv() %>%
   # this file only contains the submitter specific ids that are not found on HCA
   dplyr::filter(Library %in% submitter_ids) %>%
-  dplyr::mutate(Library = ifelse(Library == "C1B", "SRX7129196", "SRX7129192"),
+  dplyr::mutate(Library = dplyr::case_when(Library == "C1B" ~ "SRX7129196",
+                                           Library == "C3" ~ "SRX7129192"),
                 # reformat barcode column originally provided
                 barcode = stringr::word(`Sample_Names(Library_Barcode)`, -1, sep = "_")) %>%
   dplyr::select(library_biomaterial_id = Library,
@@ -95,7 +96,8 @@ oligo_df <- project_metadata_df %>%
   readr::read_tsv() %>% 
   # this file only contains the submitter specific ids that are not found on HCA
   dplyr::filter(Sample %in% submitter_ids) %>%
-  dplyr::mutate(Sample = ifelse(Sample == "CO28", "Control_CO28", "Control_CO14"),
+  dplyr::mutate(Sample = dplyr::case_when(Sample == "CO28" ~ "Control_CO28", 
+                                          Sample == "CO14" ~ "Control_CO14"),
                 # extract barcode and remove extra x at the end 
                 barcode = stringr::str_remove(stringr::word(Detected, -1, sep = ":"), "x")) %>%
   dplyr::select(sample_biomaterial_id = Sample,
@@ -113,7 +115,8 @@ ms_lineage_df <- project_metadata_df %>%
   dplyr::pull(celltype_filepaths) %>%
   readr::read_tsv() %>% 
   dplyr::filter(sample %in% submitter_ids) %>%
-  dplyr::mutate(sample = ifelse(sample == "C2", "SRX5897026", "SRX5897034"),
+  dplyr::mutate(sample = dplyr::case_when(sample == "C2" ~ "SRX5897026", 
+                                          sample == "C9" ~ "SRX5897034"),
                 # extract barcode and remove extra x at the end 
                 barcode = stringr::word(cell, 1 , sep = "-"))%>%
   dplyr::select(library_biomaterial_id = sample,
@@ -135,9 +138,8 @@ fetal_liver_df <- project_metadata_df %>%
   dplyr::mutate(submitter_id = stringr::word(`cell barcode`,1, 3, sep = "_"),
                 barcode = stringr::word(`cell barcode`, -1, sep = "_")) %>%
   dplyr::filter(submitter_id %in% submitter_ids) %>%
-  dplyr::mutate(library_biomaterial_id = ifelse(submitter_id == "F6_kidney_CD45+", 
-                                                "F06-KID-3p-CD45pos",
-                                                "F03-KID-3p-CD45pos")) %>%
+  dplyr::mutate(library_biomaterial_id = dplyr::case_when(submitter_id == "F6_kidney_CD45+" ~ "F06-KID-3p-CD45pos",
+                                                          submitter_id == "F3_kidney_CD45+" ~ "F03-KID-3p-CD45pos")) %>%
   dplyr::select(library_biomaterial_id,
                 celltype =  `cell labels`,
                 barcode) %>%
