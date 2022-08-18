@@ -18,9 +18,9 @@ source(
 #'   is "batch".
 #' @param integration_method The name of the method that was used for integration 
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
-#' @param num_pcs Number of PCs to consider during kBET calculation. Default: 20 (TODO!)
+#' @param num_pcs Number of PCs to consider during kBET calculation. Default: 20 
 #' @param k0_fraction_range Range of fractions of the sample size to set k0 (neighborhood 
-#'  size) to when running `kBET`. Values are based on the following paper:
+#'  size) to when running `kBET`. Default values are based on the following paper:
 #'    https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
 #      "Following the example in the kBET paper, we chose the k input value equal to 
 #       5%, 10%, 15%, 20%, and 25% of the sample size"
