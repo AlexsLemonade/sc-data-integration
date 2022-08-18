@@ -51,7 +51,8 @@ calculate_kbet <- function(integrated_sce,
   pcs <- reducedDim(integrated_sce, reduced_dim_name)
 
   
-    k0_range <- ceiling(nrow(pcs) * k0_fraction_range)
+  # Run kBET across given range of k0  
+  k0_range <- ceiling(nrow(pcs) * k0_fraction_range)
   kbet_rejection_rates <- c()
   for (k0 in k0_range) {
     kbet_result <- kBET(pcs,
