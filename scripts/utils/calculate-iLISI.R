@@ -36,15 +36,7 @@ calculate_ilisi <- function(integrated_sce,
   
   
   # Extract the PCs (or similar) to provide to `compute_lisi()`
-  
-  # If we are using either scanorama or scvi, there will be a different name:
-  if (integration_method == "scanorama") {
-    reduced_dim_name <- "scanorama_SVD"
-  } else if (integration_method == "scvi") {
-    reduced_dim_name <- "scvi_latent"
-  } else {
-    reduced_dim_name <- paste0(integration_method, "_PCA")
-  }
+  reduced_dim_name <- get_reduced_dim_name(integration_method)
   pcs <- reducedDim(integrated_sce, reduced_dim_name)
   
   # `lisi_result` is a tibble with per-cell scores, the score roughly means:
@@ -54,7 +46,7 @@ calculate_ilisi <- function(integrated_sce,
                                     # define the batches
                                     batch_df, 
                                     # which variables in `batch_df` to compute lisi for
-                                    batch) %>% 
+                                    "batch") %>% 
     tibble::as_tibble() %>%
     # Rename the result column to `ilisi_score`
     dplyr::rename(ilisi_score = batch) %>%
