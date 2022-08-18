@@ -24,7 +24,7 @@ rule merge_sces:
     conda: "envs/scpca-renv.yaml"
     input:
         processed_tsv = "sample-info/hca-processed-libraries.tsv",
-        sce_dir = "{basedir}/scpca-downstream-analyses"
+        sce_dir = "{basedir}/scpca-downstream-analyses",
         celltype_file = "sample-info/hca-celltype-info.tsv"
     output:
         directory("{basedir}/merged_sce")
