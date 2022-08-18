@@ -363,3 +363,50 @@ add_celltype_info <- function(sce_object,
 
   return(sce_object)
 }
+
+
+#' Checks that a given integration method is acceptable
+#'
+#' @param integration_method The provided integration method to check
+#'
+#' @return An all-lowercase version of the given provided_method
+check_integration_method <- function(integration_method) {
+  
+  all_integration_methods <- c("fastMNN", "harmony", "rpca", "cca", "scvi", "scanorama")
+  if (is.null(integration_method)) {
+    stop("An `integration_method` must be provided.")
+  } else {
+    integration_method <- tolower(integration_method)
+    if (!(integration_method %in% tolower(all_integration_methods))) {
+      stop(
+        paste("The `integration_method` must be one of: ",
+              paste(all_integration_methods, collapse = ", ")
+        )
+      )
+    }
+  }
+  return(integration_method)
+}
+
+
+
+#' Determines the appropriate name in an SCE object's reduced dimensions slot 
+#'  for extracting PCs or analogous reductions returned by other integration methods
+#'  
+#' @param integration_method The integration method
+#'
+#' @return The name for the reduced dimension to use
+get_reduced_dim_name <- function(integration_method) {
+  
+  if (integration_method == "scanorama") {
+    reduced_dim_name <- "scanorama_SVD"
+  } else if (integration_method == "scvi") {
+    reduced_dim_name <- "scvi_latent"
+  } else {
+    reduced_dim_name <- paste0(integration_method, "_PCA")
+  }
+  
+  return(reduced_dim_name)
+}
+
+

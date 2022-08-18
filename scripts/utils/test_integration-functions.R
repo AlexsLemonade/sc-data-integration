@@ -5,6 +5,9 @@ source(file.path(util_dir, "integration-helpers.R"))
 source(file.path(util_dir, "integrate-harmony.R"))
 source(file.path(util_dir, "integrate-fastMNN.R"))
 source(file.path(util_dir, "integrate-seurat.R"))
+source(file.path(util_dir, "calculate-iLISI.R"))
+source(file.path(util_dir, "calculate-batch-ARI.R"))
+
 
 library(magrittr) # pipe
 library(scpcaTools) # for transformation of sce -> seurat
@@ -56,18 +59,18 @@ perform_dim_reduction(combined_sce,
 
 # Test harmony:
 integrate_harmony(combined_sce, "batch", from_pca=FALSE)
-integrated_object <- integrate_harmony(combined_sce, "batch")
+integrated_sce<- integrate_harmony(combined_sce, "batch")
 
 
 # Test fastMNN:
-integrated_object <-integrate_fastMNN(combined_sce)
+integrated_sce <-integrate_fastMNN(combined_sce)
 
 
 # plot UMAP pre and post integration 
 pre_integration <- scater::plotReducedDim(combined_sce, 
                                           dimred = "UMAP", 
                                           colour_by = "batch")
-post_integration <- scater::plotReducedDim(integrated_object, 
+post_integration <- scater::plotReducedDim(integrated_sce, 
                                            dimred = "harmony_UMAP", 
                                            colour_by = "batch")
 
@@ -96,3 +99,9 @@ rpca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "
 
 # Integrate data using canonical correlation analysis
 cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "cca")
+
+
+# Test score calculation
+integrated_sce <- readRDS("results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_harmony_sce.rds")
+lisi <- calculate_ilisi(integrated_sce, "batch", "harmony")
+batch_ari <- calculate_batch_ari(integrated_sce, integration_method = "harmony")
