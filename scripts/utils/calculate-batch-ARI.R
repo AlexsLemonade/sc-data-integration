@@ -37,7 +37,8 @@ calculate_batch_ari <- function(integrated_sce,
   nreps <- 20              # number of times to repeat sub-sampling procedure
 
   # pull out relevant information for calculations
-  all_integrated_pcs <- reducedDim(integrated_sce, paste0(integration_method, "_PCA"))
+  reduced_dim_name <- get_reduced_dim_name(integration_method)
+  all_integrated_pcs <- reducedDim(integrated_sce, reduced_dim_name)
   num_cells <- nrow(all_integrated_pcs)
 
 

@@ -351,3 +351,25 @@ check_integration_method <- function(integration_method) {
   return(integration_method)
 }
 
+
+
+#' Determines the appropriate name in an SCE object's reduced dimensions slot 
+#'  for extracting PCs or analogous reductions returned by other integration methods
+#'  
+#' @param integration_method The integration method
+#'
+#' @return The name for the reduced dimension to use
+get_reduced_dim_name <- function(integration_method) {
+  
+  if (integration_method == "scanorama") {
+    reduced_dim_name <- "scanorama_SVD"
+  } else if (integration_method == "scvi") {
+    reduced_dim_name <- "scvi_latent"
+  } else {
+    reduced_dim_name <- paste0(integration_method, "_PCA")
+  }
+  
+  return(reduced_dim_name)
+}
+
+
