@@ -25,18 +25,18 @@ rule merge_sces:
     input:
         processed_tsv = "sample-info/hca-processed-libraries.tsv",
         sce_dir = "{basedir}/scpca-downstream-analyses"
+        celltype_file = "sample-info/hca-celltype-info.tsv"
     output:
         directory("{basedir}/merged_sce")
     params:
         grouping_var = "project_name",
         num_hvg = 5000,
-        celltype_file = "sample-info/hca-celltype-info.tsv"
     shell:
         """
         Rscript scripts/02-prepare-merged-sce.R \
           --library_file "{input.processed_tsv}" \
           --sce_dir "{input.sce_dir}" \
-          --celltype_info "{params.celltype_file}" \
+          --celltype_info "{input.celltype_file}" \
           --grouping_var {params.grouping_var} \
           --merged_sce_dir "{output}" \
           --num_hvg {params.num_hvg} \
