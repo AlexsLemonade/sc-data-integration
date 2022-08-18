@@ -4,10 +4,7 @@ rule target:
     input:
         expand("results/human_cell_atlas/integrated_sce/{project}_integrated_{sce_method}_sce.rds",
                project = pep.sample_table["project_name"],
-               sce_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scVI"]),
-        expand("results/human_cell_atlas/integrated_anndata/{project}_integrated_{py_method}.h5",
-               project = pep.sample_table["project_name"],
-               py_method = ["scanorama", "scvi"])
+               sce_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scvi"])
 
 # Rule used for building conda & renv environment
 rule build_renv:
@@ -130,7 +127,8 @@ rule integrate_scanorama:
     input:
         merged_anndata_dir = "{basedir}/merged_anndata"
     output:
-        "{basedir}/integrated_anndata/{project}_integrated_scanorama.h5"
+        integrated_anndata = temp("{basedir}/integrated_anndata/{project}_integrated_scanorama.h5"),
+        integrated_sce = "{basedir}/integrated_sce/{project}_integrated_scanorama_sce.rds"
     params:
         merged_anndata_file = "{project}_anndata.h5",
         seed = 2022
@@ -138,10 +136,17 @@ rule integrate_scanorama:
         """
         python scripts/03b-integrate-scanorama.py \
           --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
-          --output_anndata "{output}" \
+          --output_anndata "{output.integrated_anndata}" \
           --seed {params.seed} \
           --use_hvg \
           --corrected_only
+
+        Rscript scripts/04-post-process-anndata.R \
+            --input_anndata_file "{output.integrated_anndata}" \
+            --output_sce_file "{output.integrated_sce}" \
+            --method "scanorama" \
+            --seed {params.seed} \
+            --corrected_only
         """
 
 rule integrate_scvi:
@@ -149,7 +154,8 @@ rule integrate_scvi:
     input:
         merged_anndata_dir = "{basedir}/merged_anndata"
     output:
-        "{basedir}/integrated_anndata/{project}_integrated_scvi.h5"
+        integrated_anndata = temp("{basedir}/integrated_anndata/{project}_integrated_scvi.h5"),
+        integrated_sce = "{basedir}/integrated_sce/{project}_integrated_scvi_sce.rds"
     params:
         merged_anndata_file = "{project}_anndata.h5",
         seed = 2022
@@ -157,29 +163,15 @@ rule integrate_scvi:
         """
         python scripts/03c-integrate-scvi.py \
           --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
-          --output_anndata "{output}" \
+          --output_anndata "{output.integrated_anndata}" \
           --seed {params.seed} \
           --use_hvg \
           --corrected_only
-        """
 
-rule post_process_anndata:
-    conda: "envs/scvi.yaml"
-    input:
-        integrated_anndata_dir = "{basedir}/integrated_anndata"
-    output:
-        "{basedir}/integrated_sce/{project}_integrated_{method}_sce.rds"
-    wildcard_constraints:
-        method = "scanorama|scVI"
-    params:
-        integrated_anndata_file = "{project}_integrated_{method}.h5",
-        seed = 2022
-    shell:
-        """
         Rscript scripts/04-post-process-anndata.R \
-            --input_anndata_file "{input.integrated_anndata_dir}/{params.integrated_anndata_file}" \
-            --output_sce_file "{output}" \
-            --method {wildcards.method} \
+            --input_anndata_file "{output.integrated_anndata}" \
+            --output_sce_file "{output.integrated_sce}" \
+            --method "scvi" \
             --seed {params.seed} \
             --corrected_only
         """
