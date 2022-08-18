@@ -45,7 +45,12 @@ immune_cells_df <- project_metadata_df %>%
                 celltype =  annotated_cell_identity.text,
                 barcode) %>%
   dplyr::mutate(project = "1M_Immune_Cells") %>%
-  dplyr::left_join(processed_libraries_df)
+  dplyr::left_join(processed_libraries_df, by = c("library_biomaterial_id")) %>%
+  dplyr::select(library_biomaterial_id,
+                sample_biomaterial_id,
+                project,
+                barcode,
+                celltype)
 
 # HumanTissueTcellActivation ---------------------------------------------------
 
@@ -60,7 +65,12 @@ tcell_df <- project_metadata_df %>%
                 celltype =  annotated_cell_identity.text,
                 barcode) %>%
   dplyr::mutate(project = "HumanTissueTCellActivation") %>%
-  dplyr::left_join(processed_libraries_df)
+  dplyr::left_join(processed_libraries_df, by = c("sample_biomaterial_id")) %>%
+  dplyr::select(library_biomaterial_id,
+                sample_biomaterial_id,
+                project,
+                barcode,
+                celltype)
 
 # SubstantiaNigra --------------------------------------------------------------
 
@@ -84,7 +94,12 @@ substantia_nigra_df <- project_metadata_df %>%
                 celltype = Level_1_cell_type,
                 barcode) %>%
   dplyr::mutate(project = "HumanBrainSubstantiaNigra") %>%
-  dplyr::left_join(processed_libraries_df)
+  dplyr::left_join(processed_libraries_df, by = c("library_biomaterial_id")) %>%
+  dplyr::select(library_biomaterial_id,
+                sample_biomaterial_id,
+                project,
+                barcode,
+                celltype)
 
 # Oligodendrocyte_MS -----------------------------------------------------------
 
@@ -104,7 +119,12 @@ oligo_df <- project_metadata_df %>%
                 celltype =  Celltypes,
                 barcode) %>%
   dplyr::mutate(project = "Oligodendrocyte_MS") %>%
-  dplyr::left_join(processed_libraries_df)
+  dplyr::left_join(processed_libraries_df, by = c("sample_biomaterial_id")) %>%
+  dplyr::select(library_biomaterial_id,
+                sample_biomaterial_id,
+                project,
+                barcode,
+                celltype)
 
 # MultipleSclerosisLineageDiversity --------------------------------------------
 
@@ -123,7 +143,12 @@ ms_lineage_df <- project_metadata_df %>%
                 celltype =  cell_type,
                 barcode) %>%
   dplyr::mutate(project = "MultipleSclerosisLineageDiversity") %>%
-  dplyr::left_join(processed_libraries_df)
+  dplyr::left_join(processed_libraries_df, by = c("library_biomaterial_id")) %>%
+  dplyr::select(library_biomaterial_id,
+                sample_biomaterial_id,
+                project,
+                barcode,
+                celltype)
 
 # FetalLiverHaematopoiesis -----------------------------------------------------
 
@@ -144,7 +169,12 @@ fetal_liver_df <- project_metadata_df %>%
                 celltype =  `cell labels`,
                 barcode) %>%
   dplyr::mutate(project = "FetalLiverHaematopoiesis") %>%
-  dplyr::left_join(processed_libraries_df)
+  dplyr::left_join(processed_libraries_df, by = c("library_biomaterial_id")) %>%
+  dplyr::select(library_biomaterial_id,
+                sample_biomaterial_id,
+                project,
+                barcode,
+                celltype)
 
 # KidneySingleCellAtlas --------------------------------------------------------
 
@@ -158,7 +188,12 @@ kidney_df <- project_metadata_df %>%
                 celltype =  annotated_cell_identity.text,
                 barcode) %>%
   dplyr::mutate(project = "KidneySingleCellAtlas") %>%
-  dplyr::left_join(processed_libraries_df)
+  dplyr::left_join(processed_libraries_df, by = c("library_biomaterial_id")) %>%
+  dplyr::select(library_biomaterial_id,
+                sample_biomaterial_id,
+                project,
+                barcode,
+                celltype)
 
 # Combine into one tibble ------------------------------------------------------
 
