@@ -14,6 +14,7 @@ suppressPackageStartupMessages({
 #' @param integrated_sce The integrated SCE object
 #' @param num_pcs The number of PCs to use during k-means clustering. Default: 20
 #' @param seed Seed for initializing random sampling and k-means clustering
+#' @param k_range Range of k values to use for k-means clustering. Default: `seq(5, 25, 5)`
 #' @param integration_method The name of the method that was used for integration
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
 #'
@@ -23,6 +24,7 @@ suppressPackageStartupMessages({
 calculate_batch_ari <- function(integrated_sce,
                                 num_pcs = 20,
                                 seed = NULL,
+                                k_range = seq(5, 25, 5),
                                 integration_method = NULL) {
 
   # Check integration method
@@ -33,7 +35,6 @@ calculate_batch_ari <- function(integrated_sce,
 
   # Set up parameters
   frac_cells <- 0.8        # fraction of cells to downsample to
-  k_range <- seq(5, 25, 5) # range of k for k-means clustering
   nreps <- 20              # number of times to repeat sub-sampling procedure
 
   # pull out relevant information for calculations
