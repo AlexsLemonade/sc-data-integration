@@ -1,3 +1,12 @@
+# This script is used to reformat cell type information from each individual project
+# obtained from the Human Cell Atlas into a single TSV file containing the 
+# library_biomaterial_id, sample_biomaterial_id, project, barcode, and cell type
+# The cell type files that are used as input are stored on S3 and can be obtained 
+# by running the `00-obtain-sce.R` script. This will create a local copy of these 
+# files in `data/human_cell_atlas/cell_type`
+
+# The returned TSV file will be found in `sample-info/hca-celltype-info.tsv`
+
 library(magrittr)
 
 # load the R project
