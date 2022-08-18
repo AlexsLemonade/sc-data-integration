@@ -164,13 +164,14 @@ kidney_df <- project_metadata_df %>%
 
 # combine all individually reformatted celltype tibbles into one tibble before saving file
 
-all_celltype_df <- dplyr::bind_rows(list(
+all_celltype_df <- dplyr::bind_rows(
   immune_cells_df,
   tcell_df,
   substantia_nigra_df,
   oligo_df,
   ms_lineage_df,
   fetal_liver_df,
-  kidney_df))
+  kidney_df 
+)
 
 readr::write_tsv(all_celltype_df, combined_celltype_file)
