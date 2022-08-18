@@ -166,7 +166,7 @@ fetal_liver_df <- project_metadata_df %>%
   dplyr::mutate(library_biomaterial_id = dplyr::case_when(submitter_id == "F6_kidney_CD45+" ~ "F06-KID-3p-CD45pos",
                                                           submitter_id == "F3_kidney_CD45+" ~ "F03-KID-3p-CD45pos")) %>%
   dplyr::select(library_biomaterial_id,
-                celltype =  `cell labels`,
+                celltype = `cell labels`,
                 barcode) %>%
   dplyr::mutate(project = "FetalLiverHaematopoiesis") %>%
   dplyr::left_join(processed_libraries_df, by = c("library_biomaterial_id")) %>%
