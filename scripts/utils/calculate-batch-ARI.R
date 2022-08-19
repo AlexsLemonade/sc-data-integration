@@ -40,39 +40,23 @@ calculate_batch_ari <- function(integrated_sce,
   # pull out relevant information for calculations
   reduced_dim_name <- get_reduced_dim_name(integration_method)
   all_integrated_pcs <- reducedDim(integrated_sce, reduced_dim_name)
-  num_cells <- nrow(all_integrated_pcs)
-
 
   # perform calculations
   all_ari <- c()
   for (i in 1:nreps) {
 
-    # Get downsampling (without replacement) indices
-    downsampled_indices <- sample(1:num_cells,
-                                  frac_cells*num_cells,
-                                  replace = FALSE)
-
-    # Extract PCs for downsample, considering only the top `num_pcs`
-    downsampled_integrated_pcs <- all_integrated_pcs[downsampled_indices,1:num_pcs]
-    
-    # Obtain batch labels as integer values
-    downsampled_batch_labels <- stringr::str_replace_all(
-      rownames(downsampled_integrated_pcs),
-      "^[ACGT]+-",
-      ""
-    ) %>%
-      as.factor() %>%
-      as.numeric()
+    # Downsample PCs
+    downsampled <- downsample_pcs_for_metrics(all_integrated_pcs, frac_cells, num_pcs)
 
     for (k in k_range) {
 
       # Perform k-means clustering
-      clustering_result <- kmeans(x = downsampled_integrated_pcs, centers=k)
+      clustering_result <- kmeans(x = downsampled$pcs, centers=k)
       downsampled_integrated_clusters <- unname(clustering_result$cluster)
 
       # Calculate batch ARI
       all_ari <- c(all_ari,
-                   pdfCluster::adj.rand.index(downsampled_integrated_clusters, downsampled_batch_labels)
+                   pdfCluster::adj.rand.index(downsampled_integrated_clusters, downsampled$batch_labels)
       )
     }
   }
