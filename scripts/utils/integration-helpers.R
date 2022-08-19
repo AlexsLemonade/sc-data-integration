@@ -373,3 +373,43 @@ get_reduced_dim_name <- function(integration_method) {
 }
 
 
+
+#' Downsample PCs for use in integration metric calculations 
+#'  
+#' @param integrated_pcs The full set of integrated pcsThe integration method
+#' @param frac_cells The fraction of cells to downsample to
+#' @param num_pcs The number of PCs to downsample to
+#' @param integrated_pcs The full set of integrated pcsThe integration method
+#'
+#' @return List with two items: `pcs`, the downsampled PCs; `batch_labels`, the 
+#'  corresponding batch labels as integers for the downsampled PCs
+downsample_pcs_for_metrics <- function(integrated_pcs, frac_cells, num_pcs) {
+  
+  num_cells <- nrow(integrated_pcs)
+  
+  # Determines rows to sample
+  downsampled_indices <- sample(1:num_cells,
+                                frac_cells*num_cells,
+                                replace = FALSE) 
+  
+  # Extract PCs for downsample, considering only the top `num_pcs`
+  downsampled_integrated_pcs <- integrated_pcs[downsampled_indices,1:num_pcs]
+  
+  # Obtain batch labels as integer values
+  downsampled_batch_labels <- stringr::str_replace_all(
+    rownames(downsampled_integrated_pcs),
+    "^[ACGT]+-",
+    ""
+  ) %>%
+    as.factor() %>%
+    as.numeric()
+  
+  return (
+    list(
+      pcs = downsampled_integrated_pcs,
+      batch_labels = downsampled_batch_labels
+    )
+  )
+  
+}
+  
