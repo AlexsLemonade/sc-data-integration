@@ -54,22 +54,21 @@ calculate_batch_ari <- function(integrated_sce,
 
     # Extract PCs for downsample, considering only the top `num_pcs`
     downsampled_integrated_pcs <- all_integrated_pcs[downsampled_indices,1:num_pcs]
+    
+    # Obtain batch labels as integer values
+    downsampled_batch_labels <- stringr::str_replace_all(
+      rownames(downsampled_integrated_pcs),
+      "^[ACGT]+-",
+      ""
+    ) %>%
+      as.factor() %>%
+      as.numeric()
 
     for (k in k_range) {
 
       # Perform k-means clustering
       clustering_result <- kmeans(x = downsampled_integrated_pcs, centers=k)
       downsampled_integrated_clusters <- unname(clustering_result$cluster)
-
-      # Obtain batch labels as integer values
-      downsampled_batch_labels <- stringr::str_replace_all(
-        rownames(downsampled_integrated_pcs),
-        "^[ACGT]+-",
-        ""
-      ) %>%
-        as.factor() %>%
-        as.numeric()
-
 
       # Calculate batch ARI
       all_ari <- c(all_ari,
