@@ -8,7 +8,7 @@ params:
   celltype_column: "celltype"
   date: !r Sys.Date()
 
-title: "`r glue::glue('Core analysis report for {params$library}')`"
+title: "`r glue::glue('Integration evaluation for {params$group_name} with {params$integration_method}')`"
 author: "CCDL"
 date: "`r params$date`"
 output: 
@@ -17,17 +17,20 @@ output:
     toc_depth: 2
     toc_float: true
     number_sections: true
-    code_folding: hide
 ---
 
+## Set Up
+
 ```{r}
-library(SingleCellExperiment)
-library(ggplot2)
+suppressPackageStartupMessages({
+ library(SingleCellExperiment)
+library(ggplot2) 
+})
 theme_set(theme_bw())
 ```
 
 
-```{r}
+```{r setup}
 # load the R project
 project_root <- here::here()
 renv::load(project_root)
@@ -35,6 +38,12 @@ renv::load(project_root)
 # source the helper functions to grab the integration method check 
 source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
 
+# source plotting functions
+source(file.path(project_root, "scripts", "utils", "plotting-functions.R"))
+```
+
+
+```{r file-checks}
 # check integration method and reassign
 integration_method <- check_integration_method(params$integration_method)
 
@@ -53,7 +62,7 @@ integrated_sce <- readr::read_rds(params$integrated_sce)
 ```
 
 
-```{r}
+```{r sce-checks}
 # read in sce objects 
 merged_sce <- readr::read_rds(params$merged_sce)
 integrated_sce <- readr::read_rds(params$integrated_sce)
@@ -83,33 +92,28 @@ if(!integrated_umap_name %in% reducedDimNames(integrated_sce)){
 }
 ```
 
-```{r fig.width=8, fig.height=8}
-pre_integration_umap <- scater::plotReducedDim(merged_sce, 
-                                               dimred = "UMAP",
-                                               colour_by = params$batch_column) +
-  theme(text = element_text(size = 16)) +
-  ggtitle(paste(params$group_name, "Pre-Integration"))
+## UMAPs
 
-post_integration_umap <- scater::plotReducedDim(integrated_sce,
-                                                dimred = integrated_umap_name,
-                                                colour_by = params$batch_column) +
-  theme(text = element_text(size = 16)) +
-  ggtitle(paste(params$group_name, "Post-Integration with", integration_method))
-
-cowplot::plot_grid(pre_integration_umap,post_integration_umap, ncol = 1)
+```{r batch-umaps}
+# create umap plots labeling by batch column
+plot_integration_umap(merged_sce,
+                      integrated_sce,
+                      integration_method,
+                      params$group_name,
+                      cell_label_column = params$batch_column)
 ```
 
-```{r}
-pre_integration_umap <- scater::plotReducedDim(merged_sce, 
-                                               dimred = "UMAP",
-                                               colour_by = params$celltype_column) +
-  ggtitle(paste(params$group_name, "Pre-Integration"))
-
-post_integration_umap <- scater::plotReducedDim(integrated_sce,
-                                                dimred = integrated_umap_name,
-                                                colour_by = params$celltype_column) +
-  ggtitle(paste(params$group_name, "Post-Integration with", integration_method))
-
-cowplot::plot_grid(pre_integration_umap,post_integration_umap, ncol = 1)
+```{r celltype-umaps}
+# create umap plots labeling by celltype column
+plot_integration_umap(merged_sce,
+                      integrated_sce,
+                      integration_method,
+                      params$group_name,
+                      cell_label_column = params$celltype_column)
 ```
 
+## Session Info
+
+```{r session_info}
+sessionInfo()
+```
