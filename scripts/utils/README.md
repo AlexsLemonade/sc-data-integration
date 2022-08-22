@@ -1,3 +1,11 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/thlorenz/doctoc)*
+
+- [Utilities for single-cell data integration](#utilities-for-single-cell-data-integration)
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
+
 # Utilities for single-cell data integration
 
 This directory holds functions and scripts imported by scripts in `../scripts/` that are used for data integration and processing of single-cell libraries and datasets.

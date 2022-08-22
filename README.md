@@ -95,6 +95,8 @@ Each row in this file corresponds to a project and contains the following column
 | `tissue_group`    | Tissue group the project belongs to (e.g. blood, brain, or kidney) |
 | `files_directory` | files directory on S3                                              |
 | `metadata_filename`| name of metadata file obtained from the HCA                       |
+| `celltype_filename` | file name corresponding to file containing cell type information as found on HCA                                              |
+| `celltype_filetype`| format of cell type file availble on HCA                       |
 
 2. `hca-library-metadata.tsv` This file contains information about each library from every project that is being used as a test dataset from the HCA.
 Each row in this file corresponds to a library and contains the following columns:
@@ -118,6 +120,19 @@ Each row in this file corresponds to a library and contains the following column
 
 3. `hca-processed-libraries.tsv`: This file contains the list of libraries from each project that are being used for testing data integration.
 This file is used as input to the script, `scripts/00-obtain-sce.R`, used for converting loom to `SingleCellExperiment` objects and saving those objects to S3.
+
+4. `hca-celltype-info.tsv`: This file contains all available cell type information for projects listed in `hca-project-metadata.tsv`.
+This file was created using the `scripts/00a-reformat-celltype-info.R` which takes as input the cell type information available for each project from the Human Cell Atlas Data Portal.
+The cell type information for each project, in its original format, can be found at `s3://sc-data-integration/human_cell_atlas_data/celltype`.
+Each row corresponds to a single cell and contain the following information:
+
+| column_id         | contents                                                           |
+|-------------------|--------------------------------------------------------------------|
+| `sample_biomaterial_id`    | Unique ID associated with the individual sample           |
+| `library_biomaterial_id`   | Unique ID associated with the individual library that was sequenced |
+| `project` | The shorthand project name assigned by the HCA                        |
+| `barcode` | The unique cell barcode                       |
+| `celltype` | The assigned cell type for a given barcode                        |
 
 ## Shared data files
 
