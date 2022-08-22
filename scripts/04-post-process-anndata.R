@@ -120,6 +120,11 @@ integrated_sce <- zellkonverter::readH5AD(opt$input_anndata_file,
                                           # if corrected only is set, skips reading `X` matrix
                                           skip_assays = opt$corrected_only)
 
+# replace . added in anndata names with - found in other sce objects
+names(metadata(integrated_sce)) <- stringr::str_replace_all(names(metadata(integrated_sce)), "\\.", "-")
+names(colData(integrated_sce)) <- stringr::str_replace_all(names(colData(integrated_sce)), "\\.", "-")
+names(rowData(integrated_sce)) <- stringr::str_replace_all(names(rowData(integrated_sce)), "\\.", "-")
+
 # check for corrected data 
 corrected_assay_name <- paste(integration_method, "corrected", sep = "_")
 if(!corrected_assay_name %in% assayNames(integrated_sce)){
