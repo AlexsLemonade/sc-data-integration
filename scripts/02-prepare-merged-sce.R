@@ -61,7 +61,7 @@ option_list <- list(
     type = "character",
     default = file.path(project_root, "sample-info", "hca-celltype-info.tsv"),
     help = "Path to file containing cell type information for each SCE object. 
-      Must contain columns for library_biomaterial_id, celltype, and barcode."
+      Must contain column named `library_biomaterial_id`, `celltype`, and `barcode`."
   ),
   make_option(
     opt_str = c("--subset_hvg"),
@@ -202,12 +202,12 @@ create_grouped_sce_list <- function(sce_info_dataframe,
                                celltype_info_df = filtered_celltype_info) 
       
       # add flag indicating that cell type information is available 
-      metadata(sce)$celltype_info_available <- "Yes"
+      metadata(sce)$celltype_info_available <- TRUE
       
     } else {
       # note that no cell type information is available
       colData(sce)$celltype <- NA
-      metadata(sce)$celltype_info_available <- "No"
+      metadata(sce)$celltype_info_available <- FALSE
     }
     
     # create a list for each group named by the library IDs
