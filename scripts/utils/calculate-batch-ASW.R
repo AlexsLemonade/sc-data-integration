@@ -18,9 +18,11 @@ suppressPackageStartupMessages({
 #' @param integration_method The name of the method that was used for integration
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
 #'
-#' @return Tibble with three columns: `rep`, representing the given downsampling replicate;
-#'   `k`, the given k for k-means; `batch_ari`, the calculated batch ARI for the given
-#'   combination of `rep` and `k`
+#' @return Tibble with five columns: `rep`, representing the given downsampling replicate;
+#'   `k`, the given k for k-means; `batch_asw`, the calculated silhouette width for the given
+#'   combination of `rep` and `k`. `asw_cluster`, the assigned cluster for the cell during
+#'   silhouette calculation; `asw_other`, the other assigned for the cell during silhouette 
+#'   calculation
 calculate_batch_asw <- function(integrated_sce,
                                 num_pcs = 20,
                                 seed = NULL,
