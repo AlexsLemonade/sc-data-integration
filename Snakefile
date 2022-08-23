@@ -27,7 +27,7 @@ rule merge_sces:
         directory("{basedir}/merged_sce")
     params:
         grouping_var = "project_name",
-        num_hvg = 5000,
+        num_hvg = 5000
     shell:
         """
         Rscript scripts/02-prepare-merged-sce.R \
