@@ -1,9 +1,9 @@
-project_name	source_id	tissue_group	files_directory	metadata_filename
-HumanBrainSubstantiaNigra	5afd43d9-bfbf-43d7-b904-3ad94e7e87d9	brain	s3://sc-data-integration/human_cell_atlas_data/loom	HumanBrainSubstantiaNigra_2022-05-14_06.36.tsv
-Oligodendrocyte_MS	deb0ddec-b8c0-40e2-a2c2-695b171628e5	brain	s3://sc-data-integration/human_cell_atlas_data/loom	Oligodendrocyte_MS_2022-05-14_08.26.tsv
-1M_Immune_Cells	dfc88eb3-ac32-4bf6-804d-9c57368e524c	blood	s3://sc-data-integration/human_cell_atlas_data/loom	1M_Immune_Cells_2022-05-13_08.12.tsv
-AdultHemOrgans	6be53a51-c58b-46c5-b454-8d9a9f6bb48a	blood	s3://sc-data-integration/human_cell_atlas_data/loom	AdultHemOrgans_2022-05-13_13.30.tsv
-HumanTissueTcellActivation	423338be-9378-462f-b83b-4b3019732c93	blood	s3://sc-data-integration/human_cell_atlas_data/loom	HumanTissueTcellActivation_2022-05-13_02.38.tsv
-MultipleSclerosisLineageDiversity	9de724a5-5254-45ba-abb5-0494d43af861	brain	s3://sc-data-integration/human_cell_atlas_data/loom	MultipleSclerosisLineageDiversity_2022-05-14_07.59.tsv
-FetalLiverHaematopoiesis	7ce06c67-dfce-43c2-94a0-7c9c2f6add40	kidney	s3://sc-data-integration/human_cell_atlas_data/loom	FetalLiverHaematopoiesis_2022-05-21_00.26.tsv
-KidneySingleCellAtlas	717281fa-eeff-41cc-8b73-8d68e7d9d889	kidney	s3://sc-data-integration/human_cell_atlas_data/loom	KidneySingleCellAtlas_2022-05-13_11.30.tsv
+project_name	source_id	tissue_group	files_directory	metadata_filename	celltype_filename	celltype_filetype
+HumanBrainSubstantiaNigra	5afd43d9-bfbf-43d7-b904-3ad94e7e87d9	brain	s3://sc-data-integration/human_cell_atlas_data/loom	HumanBrainSubstantiaNigra_2022-05-14_06.36.tsv	cortex_only_41467_2020_17876_MOESM5_ESM.tsv	tsv
+Oligodendrocyte_MS	deb0ddec-b8c0-40e2-a2c2-695b171628e5	brain	s3://sc-data-integration/human_cell_atlas_data/loom	Oligodendrocyte_MS_2022-05-14_08.26.tsv	GSE118257_MSCtr_snRNA_FinalAnnotationTable.tsv	tsv
+1M_Immune_Cells	dfc88eb3-ac32-4bf6-804d-9c57368e524c	blood	s3://sc-data-integration/human_cell_atlas_data/loom	1M_Immune_Cells_2022-05-13_08.12.tsv	CensusImmune-BoneMarrow-10x_cell_type_2020-03-12.csv	csv
+AdultHemOrgans	6be53a51-c58b-46c5-b454-8d9a9f6bb48a	blood	s3://sc-data-integration/human_cell_atlas_data/loom	AdultHemOrgans_2022-05-13_13.30.tsv	20210204_S_SUBS4_4x_annotated_donors_UMI_counts_HCA.h5ad	hdf5
+HumanTissueTcellActivation	423338be-9378-462f-b83b-4b3019732c93	blood	s3://sc-data-integration/human_cell_atlas_data/loom	HumanTissueTcellActivation_2022-05-13_02.38.tsv	TCellActivation-bone-marrow-10x_cell_type_2020-03-11.csv	csv
+MultipleSclerosisLineageDiversity	9de724a5-5254-45ba-abb5-0494d43af861	brain	s3://sc-data-integration/human_cell_atlas_data/loom	MultipleSclerosisLineageDiversity_2022-05-14_07.59.tsv	cell_metadata_EMS83370-supplement-2.tsv	tsv
+FetalLiverHaematopoiesis	7ce06c67-dfce-43c2-94a0-7c9c2f6add40	kidney	s3://sc-data-integration/human_cell_atlas_data/loom	FetalLiverHaematopoiesis_2022-05-21_00.26.tsv	supp_table_S6.csv	csv
+KidneySingleCellAtlas	717281fa-eeff-41cc-8b73-8d68e7d9d889	kidney	s3://sc-data-integration/human_cell_atlas_data/loom	KidneySingleCellAtlas_2022-05-13_11.30.tsv	SpatioTemporalKidney-Fetal-10x_cell_type_2020-03-11.csv	csv

@@ -21,7 +21,8 @@ rule merge_sces:
     conda: "envs/scpca-renv.yaml"
     input:
         processed_tsv = "sample-info/hca-processed-libraries.tsv",
-        sce_dir = "{basedir}/scpca-downstream-analyses"
+        sce_dir = "{basedir}/scpca-downstream-analyses",
+        celltype_file = "sample-info/hca-celltype-info.tsv"
     output:
         directory("{basedir}/merged_sce")
     params:
@@ -32,6 +33,7 @@ rule merge_sces:
         Rscript scripts/02-prepare-merged-sce.R \
           --library_file "{input.processed_tsv}" \
           --sce_dir "{input.sce_dir}" \
+          --celltype_info "{input.celltype_file}" \
           --grouping_var {params.grouping_var} \
           --merged_sce_dir "{output}" \
           --num_hvg {params.num_hvg} \
