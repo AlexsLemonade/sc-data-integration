@@ -3,11 +3,11 @@
 This directory holds functions and scripts imported by scripts in `../scripts/` that are used for data integration and processing of single-cell libraries and datasets.
 
 
-- The script `preprocess-sce.R` is used to filter SCE objects using [`scpcaTools::filter_counts`](https://github.com/AlexsLemonade/scpcaTools/blob/main/R/filter_counts.R) and generate a metadata file for use by the [`scpca-downstream-analyses`](https://github.com/AlexsLemonade/scpca-downstream-analyses/) pipeline. 
+- The script `preprocess-sce.R` is used to filter SCE objects using [`scpcaTools::filter_counts`](https://github.com/AlexsLemonade/scpcaTools/blob/main/R/filter_counts.R) and generate a metadata file for use by the [`scpca-downstream-analyses`](https://github.com/AlexsLemonade/scpca-downstream-analyses/) pipeline.
 The bash script [`scripts/01-run-downstream-analyses.sh`](../01-run-downstream-analyses.sh) calls this R script in order to process SCE objects through `scpca-downstream-analyses` which performs filtering, normalization, and clustering.
 - The script `convert-sce-to-anndata.R` converts SCE objects stored as RDS files to [`anndata`](https://anndata.readthedocs.io/en/latest/) objects stored as HDF5 files for input to the integration method [`Scanorama`](https://github.com/brianhie/scanorama) within the Python package [`scanpy`](https://github.com/scverse/scanpy).
-    - All SCE files included in `sample-info/hca-processed-libraries.tsv` and present in the specified SCE directory (`--sce_dir`) will be converted and stored as HDF5 files in the provided output directory (`--anndata_output_dir`). 
-    - Using this script with the default arguments requires SCE objects to be stored in `results/human_cell_atlas/scpca-downstream-analyses`, the output from running `scripts/01-run-downstream-analyses.sh`. 
+    - All SCE files included in `sample-info/hca-processed-libraries.tsv` and present in the specified SCE directory (`--sce_dir`) will be converted and stored as HDF5 files in the provided output directory (`--anndata_output_dir`).
+    - Using this script with the default arguments requires SCE objects to be stored in `results/human_cell_atlas/scpca-downstream-analyses`, the output from running `scripts/01-run-downstream-analyses.sh`.
 
 
 - There are several scripts that contain functions to perform integration with various methods:
@@ -20,12 +20,12 @@ The bash script [`scripts/01-run-downstream-analyses.sh`](../01-run-downstream-a
     - `perform_dim_reduction()` calculates PCA (if specified) and UMAP embeddings from a combined SCE object.
     - `combine_sce_objects()` merges one or more SCE objects that should be integrated.
 
-- The script `test_integration-functions.R` is used internally to lightly test functionality of new features. 
-Note that this script does _not_ facilitate true unit testing/regression testing. 
+- The script `test_integration-functions.R` is used internally to lightly test functionality of new features.
+Note that this script does _not_ facilitate true unit testing/regression testing.
 - The script `test-integrate-scanorama.py` can be used to test functionality of the `integrate_scanorama` function
-    - This script is designed to run inside a python environment contianing `scanorama` and it's dependencies. 
-    The `envs` folder in the root directory contains the `scanorama.yaml` file to build the environment necessary to use `scanorama`. 
-    To create the environment, use the following commands: 
+    - This script is designed to run inside a python environment contianing `scanorama` and it's dependencies.
+    The `envs` folder in the root directory contains the `scanorama.yaml` file to build the environment necessary to use `scanorama`.
+    To create the environment, use the following commands:
     ```
     cd sc-data-integration/envs
     conda env create -f scanorama.yaml
