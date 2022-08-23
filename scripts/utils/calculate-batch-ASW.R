@@ -42,9 +42,11 @@ calculate_batch_asw <- function(integrated_sce,
 
   # perform calculations
   all_batch_asw <- tibble::tibble(
-    rep       = as.numeric(),
-    cell_name = as.character(),
-    batch_asw = as.numeric()
+    rep         = as.numeric(),
+    cell_name   = as.character(),
+    batch_asw   = as.numeric(),
+    asw_cluster = as.numeric(),
+    asw_other   = as.numeric()
   )
   for (i in 1:nreps) {
 
@@ -55,8 +57,11 @@ calculate_batch_asw <- function(integrated_sce,
     batch_asw <- bluster::approxSilhouette(downsampled$pcs, downsampled$batch_labels) %>%
       tibble::as_tibble(rownames = "cell_name") %>%
       dplyr::mutate(rep = i) %>%
-      dplyr::select(rep, cell_name, 
-                    batch_asw = width)
+      dplyr::select(rep, 
+                    cell_name, 
+                    batch_asw = width, 
+                    asw_cluster = cluster, 
+                    asw_other = other)
     
     all_batch_asw <- dplyr::bind_rows(all_batch_asw, batch_asw)
   }
