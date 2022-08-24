@@ -23,13 +23,10 @@ source(
 #'  regression as significant. Default: 0.05
 
 #'
-#' @return Tibble with five columns: `k0_fraction`, the fraction of total sample sized used to
-#'  assign the neighborhood size used by `kBET`; `rep`, the given subsample for that `k0`;
-#'  `integration_method`,the given integration method; `kbet_stat_type`, either 
-#'  "observed_rejection_rate" or "expected_rejection rate"; `kbet_stat`, the given rejection
-#'  rate value seen in `kbet_stat_type` for the given subsample/k0 combination
-#'  
-
+#' @return Tibble with three columns: `integration_method`,the given integration method; 
+#' `batch_variance`, the total contribution of the batch effect to the variance; 
+#' `pc_regression_scaled`, proxy for batch effect
+#' 
 calculate_pca_regression <- function(integrated_sce, 
                                      batch_column = "batch", 
                                      num_pcs = 50,
