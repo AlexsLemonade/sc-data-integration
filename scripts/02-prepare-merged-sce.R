@@ -15,7 +15,7 @@
 # --grouping_var: Column name present in the library metadata file to use for
 #   grouping SCE objects and merging.
 # --celltype_info: Path to file containing cell type information for each SCE object. 
-#   Must contain columns for library_biomaterial_id, celltype, and barcode.
+#   Must contain columns named `library_biomaterial_id`, `celltype`, and `barcode`.
 # --subset_hvg: Indicates whether or not to subset the merged SCE object by highly variable genes.
 #   If --subset_hvg is used, the merged SCE object will only contain genes
 #   identified as highly variable genes.
@@ -61,7 +61,7 @@ option_list <- list(
     type = "character",
     default = file.path(project_root, "sample-info", "hca-celltype-info.tsv"),
     help = "Path to file containing cell type information for each SCE object. 
-      Must contain columns for library_biomaterial_id, celltype, and barcode."
+      Must contain columns named `library_biomaterial_id`, `celltype`, and `barcode`."
   ),
   make_option(
     opt_str = c("--subset_hvg"),
@@ -202,12 +202,12 @@ create_grouped_sce_list <- function(sce_info_dataframe,
                                celltype_info_df = filtered_celltype_info) 
       
       # add flag indicating that cell type information is available 
-      metadata(sce)$celltype_info_available <- "Yes"
+      metadata(sce)$celltype_info_available <- TRUE
       
     } else {
       # note that no cell type information is available
       colData(sce)$celltype <- NA
-      metadata(sce)$celltype_info_available <- "No"
+      metadata(sce)$celltype_info_available <- FALSE
     }
     
     # create a list for each group named by the library IDs
