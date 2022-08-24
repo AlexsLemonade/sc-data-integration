@@ -1807,6 +1807,25 @@
       "Hash": "d07e729b27b372429d42d24d503613a0",
       "Requirements": []
     },
+    "kBET": {
+      "Package": "kBET",
+      "Version": "0.99.6",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "theislab",
+      "RemoteRepo": "kBET",
+      "RemoteRef": "master",
+      "RemoteSha": "f35171dfb04c7951b8a09ac778faf7424c4b6bc0",
+      "Hash": "16ef9fc601aeb8f918f10694f31335bb",
+      "Requirements": [
+        "FNN",
+        "MASS",
+        "RColorBrewer",
+        "cluster",
+        "ggplot2"
+      ]
+    },
     "kableExtra": {
       "Package": "kableExtra",
       "Version": "1.3.4",
