@@ -123,7 +123,7 @@ This file is used as input to the script, `scripts/00-obtain-sce.R`, used for co
 
 4. `hca-celltype-info.tsv`: This file contains all available cell type information for projects listed in `hca-project-metadata.tsv`.
 This file was created using the `scripts/00a-reformat-celltype-info.R` which takes as input the cell type information available for each project from the Human Cell Atlas Data Portal.
-The cell type information for each project, in its original format, can be found at `s3://sc-data-integration/human_cell_atlas_data/celltype`.
+The cell type information for each project, in its original format, can be stored in `s3://sc-data-integration/human_cell_atlas_data/celltype`.
 Each row corresponds to a single cell and contain the following information:
 
 | column_id         | contents                                                           |
@@ -132,7 +132,7 @@ Each row corresponds to a single cell and contain the following information:
 | `library_biomaterial_id`   | Unique ID associated with the individual library that was sequenced |
 | `project` | The shorthand project name assigned by the HCA                        |
 | `barcode` | The unique cell barcode                       |
-| `celltype` | The assigned cell type for a given barcode                        |
+| `celltype` | The assigned cell type for a given barcode, obtained from cell type data stored in `s3://sc-data-integration/human_cell_atlas_data/celltype`                        |
 
 ## Shared data files
 
