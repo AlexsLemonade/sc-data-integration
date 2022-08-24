@@ -109,4 +109,5 @@ lisi <- calculate_ilisi(integrated_sce, "batch", "harmony")
 batch_ari <- calculate_batch_ari(integrated_sce, integration_method = "harmony")
 batch_asw <- calculate_batch_asw(integrated_sce, integration_method = "harmony")
 kbet <- calculate_kbet(integrated_sce, "batch", "harmony", seed = 2022,
-                       k0_fraction_range = 0.1) # full run takes about 3 minutes; go faster for tests with only n=1 k0_fraction_range
+                       # A full kBET run takes about 3 minutes; go faster for tests with only a small n=1 k0_fraction_range
+                       k0_fraction_range = 0.01) 
