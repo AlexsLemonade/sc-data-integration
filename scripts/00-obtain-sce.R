@@ -21,6 +21,7 @@
 # --sce_output_dir: Path to the folder where all SCE objects should be saved locally 
 # --s3_loom_bucket: Bucket on S3 where loom data can be found 
 # --s3_sce_bucket: Bucket on S3 where SCE objects are stored
+# --s3-celltype_bucket: Bucket on s3 where project specific cell type information is stored
 # --copy_s3: indicates whether or not to copy existing SCE file from S3 first. 
 #   To copy files use `--copy_s3`
 # --overwrite: Indicates whether or not to redo loom to SCE conversion and 
@@ -62,6 +63,12 @@ option_list <- list(
     help = "path to folder where all output sce objects should be stored"
   ),
   make_option(
+    opt_str = c("--celltype_output_dir"),
+    type = "character",
+    default = file.path(project_root, "data", "human_cell_atlas", "cell_type"),
+    help = "path to folder where all cell type data should be stored"
+  ),
+  make_option(
     opt_str = c("--s3_loom_bucket"),
     type = "character",
     default = "s3://sc-data-integration/human_cell_atlas_data/loom",
@@ -72,6 +79,12 @@ option_list <- list(
     type = "character",
     default = "s3://sc-data-integration/human_cell_atlas_data/sce",
     help = "Bucket on s3 where SCE objects are stored"
+  ),
+  make_option(
+    opt_str = c("--s3_celltype_bucket"),
+    type = "character",
+    default = "s3://sc-data-integration/human_cell_atlas_data/cell_type",
+    help = "Bucket on s3 where project specific cell type information is stored"
   ),
   optparse::make_option(
     c("-c", "--copy_s3"),
@@ -132,18 +145,30 @@ process_metadata_df <- all_metadata_df %>%
                                            project_name,
                                            paste0(library_biomaterial_id, "_sce.rds")),
                 # get path to output folder needed for creating directories 
-                output_folder = file.path(opt$sce_output_dir,
+                sce_output_folder = file.path(opt$sce_output_dir,
                                           tissue_group,
                                           project_name),
+                # path to cell type folder needed for creating directories
+                celltype_output_folder = file.path(opt$celltype_output_dir,
+                                                   tissue_group,
+                                                   project_name),
                 # then make complete path to sce file
                 local_sce_path = file.path(opt$sce_output_dir,
                                            local_sce_file))
 
 # create output folders for each tissue group/project for sce results 
-sce_output_folders <- unique(process_metadata_df$output_folder)
+sce_output_folders <- unique(process_metadata_df$sce_output_folder)
 for (folder in 1:length(sce_output_folders)){
   if(!dir.exists(sce_output_folders[folder])){
     dir.create(sce_output_folders[folder], recursive = TRUE)
+  }
+}
+
+# create output folders for each tissue group/project for celltype data 
+celltype_output_folders <- unique(process_metadata_df$celltype_output_folder)
+for (folder in 1:length(celltype_output_folders)){
+  if(!dir.exists(celltype_output_folders[folder])){
+    dir.create(celltype_output_folders[folder], recursive = TRUE)
   }
 }
 
@@ -191,9 +216,16 @@ loom_to_sce <- function(loom_file,
 if(!is.null(opt$copy_s3)){
   # grab all library ID's that should have SCE's copied over
   libraries_include <- paste("--include '", "*", library_id,"'", "*", sep = '', collapse = ' ')
-  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_output_dir, 
+  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_output_dir,
                      '--exclude "*"', libraries_include, '--recursive', sep = " ")
-  system(sync_call, ignore.stdout = TRUE) 
+  system(sync_call, ignore.stdout = TRUE)
+  # 
+  # grab all cell type files
+  project_names <- unique(process_metadata_df$project_name)
+  projects_include <- paste("--include '", "*", project_names, "'", "*", sep = '', collapse = ' ')
+  sync_call <- paste('aws s3 cp', opt$s3_celltype_bucket, opt$celltype_output_dir,
+                     '--exclude "*"', projects_include, '--recursive', sep = " ")
+  system(sync_call, ignore.stdout = TRUE)
 }
 
 # grab loom and convert to SCE --------------------------------------------------

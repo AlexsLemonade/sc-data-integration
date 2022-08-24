@@ -120,6 +120,7 @@ combine_sce_objects <- function(sce_list = list(),
       stringr::str_subset("^subsets_mito")
 
   retain_cols <-  c(batch_column,
+                    "celltype",
                     # scuttle::addPerCellQC() columns
                     "sum", "detected", mito_names)
   retain_pos <- which(names(colData(combined_sce)) %in% retain_cols)
@@ -328,6 +329,42 @@ remove_uncorrected_expression <- function(sce_object,
 }
 
 
+#' Add column with cell type annotations to colData of SCE object
+#'
+#' @param sce_object The SCE object to add cell type annotations
+#' @param celltype_info_df Tibble containing celltype specific information for provided SCE.
+#'   Columns labeled `barcode` and `celltype` must be present.
+#'
+#' @return Modified SCE object with cell type annotations added as a column in the colData
+#'
+add_celltype_info <- function(sce_object,
+                              celltype_info_df){
+  
+  # check that provided celltype info df contains specified columns 
+  if(!all(c("barcode", "celltype") %in% colnames(celltype_info_df))){
+    stop("`celltype_info_df` must contain the specified columns, `barcode` and `celltype`.")
+  }
+  
+  # check that the barcode column contains overlap with the barcodes in the SCE object
+  # right now check that at least some of the barcodes overlap
+  if(!any(colnames(sce_object) %in% celltype_info_df$barcode)){
+    stop("barcodes column of celltype_info_df provided does not contain barcodes found 
+         in the provided SCE object.")
+  }
+  
+  # create new coldata df containing added celltype column
+  coldata_df <- as.data.frame(colData(sce_object)) %>%
+    tibble::rownames_to_column("barcode") %>%
+    dplyr::left_join(celltype_info_df, by = c("barcode")) %>%
+    tibble::column_to_rownames("barcode")
+  
+  # add coldata back to sce object
+  colData(sce_object) <- DataFrame(coldata_df)
+
+  return(sce_object)
+}
+
+
 #' Checks that a given integration method is acceptable
 #'
 #' @param integration_method The provided integration method to check
@@ -373,3 +410,43 @@ get_reduced_dim_name <- function(integration_method) {
 }
 
 
+
+#' Downsample PCs for use in integration metric calculations 
+#'  
+#' @param integrated_pcs The full set of integrated pcsThe integration method
+#' @param frac_cells The fraction of cells to downsample to
+#' @param num_pcs The number of PCs to downsample to
+#' @param integrated_pcs The full set of integrated pcsThe integration method
+#'
+#' @return List with two items: `pcs`, the downsampled PCs; `batch_labels`, the 
+#'  corresponding batch labels as integers for the downsampled PCs
+downsample_pcs_for_metrics <- function(integrated_pcs, frac_cells, num_pcs) {
+  
+  num_cells <- nrow(integrated_pcs)
+  
+  # Determines rows to sample
+  downsampled_indices <- sample(1:num_cells,
+                                frac_cells*num_cells,
+                                replace = FALSE) 
+  
+  # Extract PCs for downsample, considering only the top `num_pcs`
+  downsampled_integrated_pcs <- integrated_pcs[downsampled_indices,1:num_pcs]
+  
+  # Obtain batch labels as integer values
+  downsampled_batch_labels <- stringr::str_replace_all(
+    rownames(downsampled_integrated_pcs),
+    "^[ACGT]+-",
+    ""
+  ) %>%
+    as.factor() %>%
+    as.numeric()
+  
+  return (
+    list(
+      pcs = downsampled_integrated_pcs,
+      batch_labels = downsampled_batch_labels
+    )
+  )
+  
+}
+  
