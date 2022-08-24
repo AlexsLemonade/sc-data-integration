@@ -1,16 +1,36 @@
 
+#' Create a single UMAP plot colored by a provided column in the sce object
+#'
+#' @param sce SCE to grab UMAP embeddings from for plotting
+#' @param cell_label_column Name of column to use for coloring cells in the UMAP
+#' @param umap_name Name or UMAP embeddings (e.g. "UMAP" or "fastmnn_UMAP")
+#' @param plot_colors Vector of colors to use for labeling cells. Must be 
+#'   equivalent to the number of categories present in the cell_label_column.
+#' @param plot_title Title to use for the plot
+#'
+#' @return ggplot2 object containing UMAP
+#'
 plot_umap_panel <- function(sce,
                             cell_label_column,
                             umap_name,
                             plot_colors,
                             plot_title = NULL){
   
+  # check that plot_colors is equal to the number of categories present in the cell label column 
+  color_categories <- unique(colData(sce)[,cell_label_column])
+  if(length(plot_colors) != length(color_categories)){
+    stop("Number of colors provided must be equal to the number of categories used to classify cells in 
+         the specified cell_label_column.")
+  }
+  
+  # create umap and label with provided cell label column 
   umap <- scater::plotReducedDim(sce, 
                                  dimred = umap_name,
                                  colour_by = cell_label_column,
                                  point_size = 0.1,
                                  point_alpha = 0.4) +
     scale_color_manual(values = plot_colors) +
+    # relabel legend and resize dots
     guides(color = guide_legend(title = cell_label_column,
                                 override.aes = list(size = 1)))+
     ggtitle(plot_title)
