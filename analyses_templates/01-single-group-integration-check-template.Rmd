@@ -55,10 +55,6 @@ if(!file.exists(params$merged_sce)){
 if(!file.exists(params$integrated_sce)){
   stop("Integrated SCE file provided does not exist")
 }
-
-# read in sce objects 
-merged_sce <- readr::read_rds(params$merged_sce)
-integrated_sce <- readr::read_rds(params$integrated_sce)
 ```
 
 
