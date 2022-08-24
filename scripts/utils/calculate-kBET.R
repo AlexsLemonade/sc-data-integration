@@ -26,11 +26,12 @@ source(
 #       5%, 10%, 15%, 20%, and 25% of the sample size"
 #' @param seed Random seed to set for kBET calculations
 #'
-#' @return Tibble with four columns: `k0_fraction`, the fraction of total sample sized used to
+#' @return Tibble with five columns: `k0_fraction`, the fraction of total sample sized used to
 #'  assign the neighborhood size used by `kBET`; `rep`, the given subsample for that `k0`;
-#'  `kbet_rejection_rate`, the `kBET` rejection rate for that subsample;
-#'  `integration_method`,the given integration method
-#'
+#'  `integration_method`,the given integration method; `kbet_stat_type`, either 
+#'  "observed_rejection_rate" or "expected_rejection rate"; `kbet_stat`, the given rejection
+#'  rate value seen in `kbet_stat_type` for the given subsample/k0 combination
+#'  
 calculate_kbet <- function(integrated_sce,
                            batch_column = "batch",
                            integration_method = NULL,
