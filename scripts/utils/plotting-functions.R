@@ -24,6 +24,39 @@ plot_integration_umap <- function(merged_sce,
     stop("Provided cell_label_column should be present in both the colData of the merged SCE and integrated SCE.")
   }
   
+  # if using celltype, we only want to label the top 5 
+  if(cell_label_column == "celltype"){
+    # only need to relabel if > 5 celltypes
+    num_celltypes <- length(unique(colData(merged_sce)[,cell_label_column]))
+    if(num_celltypes > 5){
+      
+      merged_coldata_df <- colData(merged_sce) %>%
+        as.data.frame()
+    
+      # select top 5 cell types based on frequency 
+      selected_celltypes <- merged_coldata_df[,cell_label_column] %>%
+        table() %>%
+        as.data.frame() %>%
+        dplyr::arrange(desc(Freq)) %>% 
+        dplyr::top_n(5) %>%
+        dplyr::pull(".") %>%
+        as.character()
+      
+      # if not in top 5 cell types set to "other" for both merged and integrated SCE
+      merged_coldata_df <- merged_coldata_df %>%
+        dplyr::mutate(celltype = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"))
+      
+      colData(merged_sce) <- DataFrame(merged_coldata_df)
+      
+      integrated_coldata_df <- colData(integrated_sce) %>%
+        as.data.frame() %>%
+        dplyr::mutate(celltype = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"))
+      
+      colData(integrated_sce) <- DataFrame(integrated_coldata_df)
+    
+    }
+  }
+  
   num_colors <- length(unique(merged_sce[[cell_label_column]]))
   colors <- rainbow(num_colors)
   
