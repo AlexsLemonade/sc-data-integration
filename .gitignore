@@ -23,3 +23,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# rendered html files 
+analysis_templates/*.html
+
+
