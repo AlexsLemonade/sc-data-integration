@@ -18,6 +18,8 @@
 # --sce_output_dir: Path to the folder where all SCE objects should be saved locally 
 # --s3_h5_bucket: Bucket on S3 where hdf5 data can be found 
 # --s3_sce_bucket: Bucket on S3 where SCE objects are stored
+# --h5_group_column: Column name in colData of the AnnData/SCE object that will be used to split 
+#'   SCE objects. Default is "Batch"
 # --copy_s3: indicates whether or not to copy existing SCE file from S3 first. 
 #   To copy files use `--copy_s3`
 # --overwrite: Indicates whether or not to redo hdf5 to SCE conversion and 
@@ -30,6 +32,7 @@ renv::load(project_root)
 # import libraries
 library(magrittr)
 library(optparse)
+library(SingleCellExperiment)
 
 # Set up optparse options
 option_list <- list(
@@ -62,6 +65,13 @@ option_list <- list(
     type = "character",
     default = "s3://sc-data-integration/scib_simulated_data/sce",
     help = "Bucket on s3 where SCE objects are stored"
+  ),
+  make_option(
+    opt_str = c("--h5_group_column"),
+    type = "character",
+    default = "Batch",
+    help = "Column name in colData of the AnnData/SCE object that will be used to split 
+     SCE objects. Default is 'Batch'"
   ),
   optparse::make_option(
     c("-c", "--copy_s3"),
@@ -101,30 +111,66 @@ if(!dir.exists(opt$sce_output_dir)){
 library_metadata_df <- readr::read_tsv(opt$library_file)
 library_id <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
-h5_files <- library_metadata_df %>%
-  dplyr::pull(hdf5_filename)
 
 # get a metadata with just libraries to be processed
 # add file info for sce filepaths
-process_metadata_df <- library_metadata_df %>%
-  # use filename as unique identifier to select library file
-  dplyr::filter(hdf5_filename %in% h5_files) %>%
+library_metadata_df <- library_metadata_df %>%
   # first make filename for sce file
   dplyr::mutate(local_sce_file = paste0(library_biomaterial_id, "_sce.rds"),
                 local_sce_path = file.path(opt$sce_output_dir, local_sce_file))
 
 
-# Function for converting hdf5 files -------------------------------------------
+# Functions for converting hdf5 files -------------------------------------------
+
+
+#' Subset SCE list, normalize 
+#'
+#' @param name Name corresponding to object to be subset and normalized from sce_list
+#' @param sce_list List of named SCE objects
+#' @param sce_file_list List of SCE file paths to use for saving the individual SCE objects
+#'   found in the SCE list. The name of the SCE object used in the list must be a part of the 
+#'   filename, (e.g. if the library id or part of the library id is in the name of the list, 
+#'   the filename can be "library_id_sce.rds")
+#'
+#' @return Individual SingleCellExperiment object containing logcounts assay
+#'
+normalize_and_export_sce <- function(name,
+                                     sce_list,
+                                     sce_file_list){
+  
+  # extract specific sce from list
+  sce <- sce_list[[name]]
+  
+  
+  # find index of filelist that corresponds to name of sce (name of sce file will have library ID)
+  sce_file_idx <- grep(name, sce_file_list)
+  
+  # normalize data
+  qclust <- scran::quickCluster(sce)
+  sce <- scran::computeSumFactors(sce, clusters = qclust)
+  sce <- scater::logNormCounts(sce)
+  
+  # make sure group column is labeled with "celltype" lable 
+  sce$celltype <- sce$Group
+  
+  # save as RDS object with SCE 
+  readr::write_rds(sce, sce_file_list[sce_file_idx])
+  
+  return(sce)
+  
+}
 
 #' Reads in hdf5 files, converts to SCE objects, normalizes and saves as RDS file
 #'
 #' @param h5_file Path to hdf5 file containing AnnData object
-#' @param sce_file Path containing `.rds` extension to save SCE object
-#'
-#' @return SingleCellExperiment object
+#' @param sce_file_list List of paths containing `.rds` extension to save individual SCE objects
+#' @param h5_group_column Column name in colData of the AnnData/SCE object that will be used to split 
+#'   SCE objects
+#' 
+#' @return list of SingleCellExperiment objects
 #'
 hdf5_to_sce <- function(h5_file,
-                        sce_file){
+                        sce_file_list){
   
   
   # read in H5 file as SCE
@@ -132,19 +178,22 @@ hdf5_to_sce <- function(h5_file,
   sce <- zellkonverter::readH5AD(h5_file,
                                  X_name = "counts")
   
-  # normalize data
-  qclust <- scran::quickCluster(sce)
-  sce <- scran::computeSumFactors(sce, clusters = qclust)
-  sce <- scater::logNormCounts(sce)
+  # check that group column is present in colData of SCE 
+  if (!h5_group_column %in% colnames(colData(sce))){
+    stop("Can't split SCE objects in HDF5 file by specified group. `h5_group_column` not found
+         in columns of colData.")
+  }
   
-  # make sure colData has batch and celltype column present to be compatible with downstream workflow
-  sce$batch <- sce$Batch
-  sce$celltype <- sce$Group
+  # split sce object by batch
+  sce_list <- split(sce, sce[[h5_group_column]])
   
-  # save as RDS object with SCE 
-  readr::write_rds(sce, sce_file)
+  # normalize and export sces, applying the function across the name of SCEs
+  purrr::map(names(sce_list),
+             ~ normalize_and_export_sce(name = .x,
+                                        sce_list,
+                                        sce_file_list))
   
-  return(sce)
+  return(sce_list)
 }
 
 # Grab existing SCE from S3 ----------------------------------------------------
@@ -162,7 +211,7 @@ if(!is.null(opt$copy_s3)){
 # grab hdf5 and convert to SCE -------------------------------------------------
 
 # get list of all expected sce paths 
-local_sce_paths <- process_metadata_df %>%
+local_sce_paths <- library_metadata_df %>%
   dplyr::pull(local_sce_path)
 
 # create a list of sce files that need to be created 
@@ -183,7 +232,7 @@ if(length(missing_sce_files) != 0){
   
   # list of all hdf5 files that correspond to missing sce files
   # obtain the path relative to the hdf5 directory
-  hdf5_missing_sce <- process_metadata_df %>%
+  hdf5_missing_sce <- library_metadata_df %>%
     dplyr::filter(local_sce_path %in% missing_sce_files) %>%
     dplyr::mutate(missing_filepath = file.path(hdf5_filename)) %>%
     dplyr::pull(missing_filepath)
@@ -206,13 +255,19 @@ if(length(missing_sce_files) != 0){
     system(sync_call, ignore.stdout = TRUE)
   }
   
+  # group metadata by hdf5 filename to get list of individual sce files that should be produced for each H5 file
+  grouped_metadata_df <- library_metadata_df %>%
+    dplyr::filter(hdf5_filename %in% hdf5_missing_sce) %>%
+    dplyr::group_by(hdf5_filename) %>%
+    dplyr::summarise(sce_files = list(local_sce_path))
+  
   # convert to sce objects and write files 
-  sce_list <- purrr::map2(full_missing_hdf5_path,
-                          missing_sce_files, 
-                          hdf5_to_sce)
+  sce_list <- purrr::map2(file.path(opt$h5_dir, grouped_metadata_df$hdf5_filename),
+                          grouped_metadata_df$sce_files, 
+                          hdf5_to_sce(h5_group_column = opt$h5_group_column))
   
   # sync sce output to S3 
-  all_sce_files <- unique(process_metadata_df$local_sce_file)
+  all_sce_files <- unique(library_metadata_df$local_sce_file)
   aws_includes <- paste("--include '", all_sce_files, "'", sep = '', collapse = ' ')
   sync_call <- paste('aws s3 sync', opt$sce_output_dir, opt$s3_sce_bucket, 
                      '--exclude "*"', aws_includes, sep = " ")
