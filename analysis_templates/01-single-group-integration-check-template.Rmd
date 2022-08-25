@@ -24,7 +24,7 @@ output:
 ```{r}
 suppressPackageStartupMessages({
  library(SingleCellExperiment)
-library(ggplot2) 
+ library(ggplot2) 
 })
 theme_set(theme_bw())
 ```

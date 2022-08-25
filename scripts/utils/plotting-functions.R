@@ -91,7 +91,7 @@ plot_integration_umap <- function(merged_sce,
       merged_coldata_df <- merged_coldata_df %>%
         # first label everything outside of selected celltypes as other then if NA convert back to NA 
         dplyr::mutate(new_celltype = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"),
-                      celltype = dplyr::if_else(!is.na(celltype), new_celltype, "NA")) %>%
+                      celltype = dplyr::if_else(!is.na(celltype), new_celltype, NA_character_)) %>%
         dplyr::select(-new_celltype)
       
       colData(merged_sce) <- DataFrame(merged_coldata_df)
@@ -99,7 +99,7 @@ plot_integration_umap <- function(merged_sce,
       integrated_coldata_df <- colData(integrated_sce) %>%
         as.data.frame() %>%
         dplyr::mutate(new_celltype = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"),
-                      celltype = dplyr::if_else(!is.na(celltype), new_celltype, "NA"))
+                      celltype = dplyr::if_else(!is.na(celltype), new_celltype, NA_character_))
       
       colData(integrated_sce) <- DataFrame(integrated_coldata_df)
     
