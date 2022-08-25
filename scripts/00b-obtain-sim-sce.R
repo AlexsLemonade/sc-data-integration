@@ -170,7 +170,8 @@ normalize_and_export_sce <- function(name,
 #' @return list of SingleCellExperiment objects
 #'
 hdf5_to_sce <- function(h5_file,
-                        sce_file_list){
+                        sce_file_list,
+                        h5_group_column){
   
   
   # read in H5 file as SCE
@@ -264,7 +265,9 @@ if(length(missing_sce_files) != 0){
   # convert to sce objects and write files 
   sce_list <- purrr::map2(file.path(opt$h5_dir, grouped_metadata_df$hdf5_filename),
                           grouped_metadata_df$sce_files, 
-                          hdf5_to_sce(h5_group_column = opt$h5_group_column))
+                          ~ hdf5_to_sce(h5_file = .x, 
+                                        sce_file_list = .y, 
+                                        h5_group_column = opt$h5_group_column))
   
   # sync sce output to S3 
   all_sce_files <- unique(library_metadata_df$local_sce_file)
