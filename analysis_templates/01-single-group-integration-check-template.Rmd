@@ -1,0 +1,115 @@
+---
+params:
+  group_name: "1M_Immune_Cells"
+  merged_sce: "../results/human_cell_atlas/merged_sce/1M_Immune_Cells_merged_sce.rds"
+  integrated_sce: "../results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_fastmnn_sce.rds"
+  integration_method: "fastmnn"
+  batch_column: "batch"
+  celltype_column: "celltype"
+  date: !r Sys.Date()
+
+title: "`r glue::glue('Integration evaluation for {params$group_name} with {params$integration_method}')`"
+author: "CCDL"
+date: "`r params$date`"
+output: 
+  html_document:
+    toc: true
+    toc_depth: 2
+    toc_float: true
+    number_sections: true
+---
+
+## Set Up
+
+```{r}
+suppressPackageStartupMessages({
+ library(SingleCellExperiment)
+ library(ggplot2) 
+})
+theme_set(theme_bw())
+```
+
+
+```{r setup}
+# load the R project
+project_root <- here::here()
+renv::load(project_root)
+
+# source the helper functions to grab the integration method check 
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+
+# source plotting functions
+source(file.path(project_root, "scripts", "utils", "plotting-functions.R"))
+```
+
+
+```{r file-checks}
+# check integration method and reassign
+integration_method <- check_integration_method(params$integration_method)
+
+# check for input files  
+if(!file.exists(params$merged_sce)){
+  stop("Merged SCE file provided does not exist")
+}
+
+if(!file.exists(params$integrated_sce)){
+  stop("Integrated SCE file provided does not exist")
+}
+```
+
+
+```{r sce-checks}
+# read in sce objects 
+merged_sce <- readr::read_rds(params$merged_sce)
+integrated_sce <- readr::read_rds(params$integrated_sce)
+
+# check that batch column is found in colData of both merged and integrated sce
+coldata_names <- intersect(colnames(colData(merged_sce)), colnames(colData(integrated_sce)))
+if(!params$batch_column %in% coldata_names){
+  stop("Provided batch_column should be present in both the colData of the merged SCE and integrated SCE.")
+}
+
+if(!params$celltype_column %in% coldata_names){
+  stop("Provided celltype_column should be present in both the colData of the merged SCE and integrated SCE.")
+}
+
+# grab dim reduction name to use for plotting 
+integrated_umap_name <- paste0(integration_method, "_UMAP")
+
+# check that UMAP is present in both SCE objects 
+if(!"UMAP" %in% reducedDimNames(merged_sce)){
+  stop("Missing UMAP embeddings from merged SCE object")
+}
+
+if(!integrated_umap_name %in% reducedDimNames(integrated_sce)){
+  stop(glue::glue("Missing UMAP embeddings from integrated SCE object. 
+       Make sure that UMAP embeddings are present and labeled with {integrated_umap_name}.")
+  )
+}
+```
+
+## UMAPs
+
+```{r batch-umaps}
+# create umap plots labeling by batch column
+plot_integration_umap(merged_sce,
+                      integrated_sce,
+                      integration_method,
+                      params$group_name,
+                      cell_label_column = params$batch_column)
+```
+
+```{r celltype-umaps}
+# create umap plots labeling by celltype column
+plot_integration_umap(merged_sce,
+                      integrated_sce,
+                      integration_method,
+                      params$group_name,
+                      cell_label_column = params$celltype_column)
+```
+
+## Session Info
+
+```{r session_info}
+sessionInfo()
+```
