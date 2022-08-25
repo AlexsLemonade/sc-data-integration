@@ -24,6 +24,6 @@ __pycache__/
 *$py.class
 
 # rendered html files 
-*/analysis_templates/*.html
+analysis_templates/*.html
 
 
