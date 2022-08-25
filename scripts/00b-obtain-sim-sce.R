@@ -128,7 +128,9 @@ hdf5_to_sce <- function(h5_file,
   
   
   # read in H5 file as SCE
-  sce <- zellkonverter::readH5AD(h5_file)
+  # save X assay as counts
+  sce <- zellkonverter::readH5AD(h5_file,
+                                 X_name = "counts")
   
   # normalize data
   qclust <- scran::quickCluster(sce)
