@@ -1,0 +1,3 @@
+library_biomaterial_id	sample_biomaterial_id	hdf5_filename	project_name
+sim1	sim1	sim1_1_norm.h5ad	scIB
+sim2	sim2	sim2_norm.h5ad	scIB
