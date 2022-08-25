@@ -71,7 +71,7 @@ plot_integration_umap <- function(merged_sce,
   
   # if using celltype, we only want to label the top `max_celltypes`
   if(cell_label_column == "celltype"){
-    # only need to relabel if > `max_celltypes` celltypes
+    # only need to relabel if > `max_celltypes` exist
     num_celltypes <- length(unique(colData(merged_sce)[,cell_label_column]))
     if(num_celltypes > max_celltypes){
       
@@ -87,15 +87,19 @@ plot_integration_umap <- function(merged_sce,
         dplyr::pull(".") %>%
         as.character()
       
-      # if not in top 5 cell types set to "other" for both merged and integrated SCE
+      # if not in top cell types set to "other" for both merged and integrated SCE
       merged_coldata_df <- merged_coldata_df %>%
-        dplyr::mutate(celltype = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"))
+        # first label everything outside of selected celltypes as other then if NA convert back to NA 
+        dplyr::mutate(new_celltype = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"),
+                      celltype = dplyr::if_else(!is.na(celltype), new_celltype, "NA")) %>%
+        dplyr::select(-new_celltype)
       
       colData(merged_sce) <- DataFrame(merged_coldata_df)
       
       integrated_coldata_df <- colData(integrated_sce) %>%
         as.data.frame() %>%
-        dplyr::mutate(celltype = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"))
+        dplyr::mutate(new_celltype = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"),
+                      celltype = dplyr::if_else(!is.na(celltype), new_celltype, "NA"))
       
       colData(integrated_sce) <- DataFrame(integrated_coldata_df)
     
