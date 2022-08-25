@@ -141,7 +141,8 @@ calculate_pca_regression <- function(integrated_sce,
     rep = 1:nreps,
     integration_method = integration_method,
     pc_batch_variance = batch_variances,
-    pc_regression_scaled = pc_reg_scales
+    pc_regression_scaled = pc_reg_scales,
+    .name_repair = 'unique'
   )
   
   return(results)
