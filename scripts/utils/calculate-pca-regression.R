@@ -41,9 +41,6 @@ calculate_pca_regression <- function(integrated_sce,
   reduced_dim_name <- get_reduced_dim_name(integration_method)
   pcs <- reducedDim(integrated_sce, reduced_dim_name)
 
-  # Subset to given num_pcs PCs
-  pca.data <- pcs[,1:num_pcs]
-
 
   perform_regression <- function(df) {
     # Adapted from https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L168-L181
@@ -63,7 +60,7 @@ calculate_pca_regression <- function(integrated_sce,
   # For each PC, regress against `batch` and obtain R^2 and associated P-value ----------
 
   # Prepare data for modeling
-  pc_tibble <- tibble::as_tibble(pca.data, rownames = "cellname") %>%
+  pc_tibble <- tibble::as_tibble(pcs, rownames = "cellname") %>%
     # Pull out batch column to regress against
     tidyr::separate(cellname, into = c("barcode", "batch"), sep = "-") %>%
     dplyr::select(-barcode) %>%
@@ -96,20 +93,24 @@ calculate_pca_regression <- function(integrated_sce,
 
   # Calculate \sum variance and the percentage explained by PCs
   sum_of_variance <- sum(pcs_variance)
-  explained_variance <- (pcs_variance / sum_of_variance)/100
+  explained_variance <- (pcs_variance / sum_of_variance)
 
   # This is the approximation of: "the total contribution of the batch effect to the variance in the data" (pg 50, Methods section)
-  batch_variance <- sum(pc_regression_results$r.squared*explained_variance)/100
+  batch_variance <- sum(pc_regression_results$r.squared*explained_variance)
 
 
   # Calculate the "sum of explained variance of all PCs with significant <R^2 from the batch regression>
   #  scaled by the variance explained by the top `num_pcs` PCs as a proxy for the batch effect" (pg 50, Methods section)
-
+  
   # First, determine which corrected P-values are significant
   corrected_pvalues_sig <- unname(p.adjust(pc_regression_results$p.value, method = 'BH')) < significance_threshold
 
-  # This the "proxy for the batch effect, scaled 0-1 where 0 = mo effect and 1 = strong effect
-  pc_reg_scale <- sum(explained_variance[corrected_pvalues_sig])/sum(explained_variance)
+  # keep only top `num_pcs`
+  corrected_pvalues_sig <- corrected_pvalues_sig[1:num_pcs]
+  
+  # This the "proxy for the batch effect, scaled 0-1 where 0 = no effect and 1 = strong effect
+  # Perform across top `num_pcs` only
+  pc_reg_scale <- sum(explained_variance[corrected_pvalues_sig])/sum(explained_variance[1:num_pcs])
 
 
 
