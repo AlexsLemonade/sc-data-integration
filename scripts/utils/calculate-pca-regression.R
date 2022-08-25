@@ -99,7 +99,7 @@ calculate_pca_regression <- function(integrated_sce,
   explained_variance <- (pcs_variance / sum_of_variance)/100
 
   # This is the approximation of: "the total contribution of the batch effect to the variance in the data" (pg 50, Methods section)
-  batch_variance <- sum(pc_regression_results$r.squared*explained_variance)
+  batch_variance <- sum(pc_regression_results$r.squared*explained_variance)/100
 
 
   # Calculate the "sum of explained variance of all PCs with significant <R^2 from the batch regression>
