@@ -69,21 +69,21 @@ plot_integration_umap <- function(merged_sce,
     stop("Provided cell_label_column should be present in both the colData of the merged SCE and integrated SCE.")
   }
   
-  # if using celltype, we only want to label the top 5 
+  # if using celltype, we only want to label the top `max_celltypes`
   if(cell_label_column == "celltype"){
-    # only need to relabel if > 5 celltypes
+    # only need to relabel if > `max_celltypes` celltypes
     num_celltypes <- length(unique(colData(merged_sce)[,cell_label_column]))
     if(num_celltypes > max_celltypes){
       
       merged_coldata_df <- colData(merged_sce) %>%
         as.data.frame()
     
-      # select top 5 cell types based on frequency 
+      # select top `max_celltypes` cell types based on frequency 
       selected_celltypes <- merged_coldata_df[,cell_label_column] %>%
         table() %>%
         as.data.frame() %>%
         dplyr::arrange(desc(Freq)) %>% 
-        dplyr::top_n(5) %>%
+        dplyr::top_n(max_celltypes) %>%
         dplyr::pull(".") %>%
         as.character()
       
@@ -119,7 +119,7 @@ plot_integration_umap <- function(merged_sce,
                                                               "Post-Integration with", 
                                                               integration_method))
   
-  combined_umap <- cowplot::plot_grid(pre_integration_umap,post_integration_umap, ncol = 1)
+  combined_umap <- cowplot::plot_grid(pre_integration_umap, post_integration_umap, ncol = 1)
   
   return(combined_umap)
 }
