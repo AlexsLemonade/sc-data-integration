@@ -14,8 +14,11 @@
 #   `library_biomaterial_id` column
 # --grouping_var: Column name present in the library metadata file to use for
 #   grouping SCE objects and merging.
+# --add_celltype: Boolean indicating whether or not celltype data should be added to the 
+#   individual SCE object prior to merging. 
 # --celltype_info: Path to file containing cell type information for each SCE object. 
 #   Must contain columns named `library_biomaterial_id`, `celltype`, and `barcode`.
+#   Only required if --add_celltype is used.
 # --subset_hvg: Indicates whether or not to subset the merged SCE object by highly variable genes.
 #   If --subset_hvg is used, the merged SCE object will only contain genes
 #   identified as highly variable genes.
@@ -55,6 +58,13 @@ option_list <- list(
     default = "project_name",
     help = "Column name present in the library metadata file to use for grouping SCE objects
     and merging."
+  ),
+  make_option(
+    opt_str = c("--add_celltype"),
+    action = "store_true",
+    default = FALSE,
+    help = "Boolean indicating whether or not celltype data should be added to the 
+     individual SCE object prior to merging."
   ),
   make_option(
     opt_str = c("--celltype_info"),
@@ -117,12 +127,14 @@ library_metadata_df <- readr::read_tsv(opt$library_file)
 library_ids <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
 
-# check that cell type file has been provided 
-if(!file.exists(opt$celltype_info)){
-  stop("--celltype_info file provided does not exist.")
+# check that cell type file exists if using add_celltype option 
+if(opt$add_celltype){
+  if(!file.exists(opt$celltype_info)){
+    stop("--celltype_info file provided does not exist.")
+  }
+  
+  celltype_info_df <- readr::read_tsv(opt$celltype_info)
 }
-
-celltype_info_df <- readr::read_tsv(opt$celltype_info)
 
 # check that grouping variable is present
 if(!opt$grouping_var %in% colnames(library_metadata_df)){
@@ -180,7 +192,7 @@ grouped_sce_file_df <- split(sce_file_df, sce_file_df[,opt$grouping_var])
 # create a list of SCE lists that is named by the grouping variable with
 # each individual inner SCE list named by the library IDs
 create_grouped_sce_list <- function(sce_info_dataframe,
-                                    celltype_info_df){
+                                    celltype_info_df = NULL){
 
   library_sce_list = list()
   for (library_idx in 1:length(sce_info_dataframe$library_id)){
@@ -189,21 +201,23 @@ create_grouped_sce_list <- function(sce_info_dataframe,
     sce <- readr::read_rds(sce_info_dataframe$sce_files[library_idx])
     library_name <- sce_info_dataframe$library_id[library_idx]
     
-    # check that library has cell type information
-    if(library_name %in% unique(celltype_info_df$library_biomaterial_id)){
-      
-      # filter celltype info to only have info for specified library 
-      filtered_celltype_info <- celltype_info_df %>%
-        dplyr::filter(library_biomaterial_id == library_name) %>%
-        dplyr::select(barcode, celltype)
-      
-      # add celltype info 
-      sce <- add_celltype_info(sce_object = sce, 
-                               celltype_info_df = filtered_celltype_info) 
-      
-      # add flag indicating that cell type information is available 
-      metadata(sce)$celltype_info_available <- TRUE
-      
+    # if celltype info is provided add to sce object 
+    if(!is.null(celltype_info_df)){
+      # check that library has cell type information
+      if(library_name %in% unique(celltype_info_df$library_biomaterial_id)){
+        
+        # filter celltype info to only have info for specified library 
+        filtered_celltype_info <- celltype_info_df %>%
+          dplyr::filter(library_biomaterial_id == library_name) %>%
+          dplyr::select(barcode, celltype)
+        
+        # add celltype info 
+        sce <- add_celltype_info(sce_object = sce, 
+                                 celltype_info_df = filtered_celltype_info) 
+        
+        # add flag indicating that cell type information is available 
+        metadata(sce)$celltype_info_available <- TRUE 
+      }
     } else {
       # note that no cell type information is available
       colData(sce)$celltype <- NA
@@ -219,8 +233,14 @@ create_grouped_sce_list <- function(sce_info_dataframe,
 
 }
 
-grouped_sce_list <- grouped_sce_file_df %>%
-  purrr::map(create_grouped_sce_list, celltype_info_df)
+# create grouped sce list with/without celltype addition
+if(opt$add_celltype){
+  grouped_sce_list <- grouped_sce_file_df %>%
+    purrr::map(create_grouped_sce_list, celltype_info_df) 
+} else {
+  grouped_sce_list <- grouped_sce_file_df %>%
+    purrr::map(create_grouped_sce_list)
+}
 
 
 # create a list of merged SCE objects by group
