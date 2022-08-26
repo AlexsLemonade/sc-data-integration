@@ -144,17 +144,20 @@ normalize_and_export_sce <- function(name,
   
   # find index of filelist that corresponds to name of sce (name of sce file will have library ID)
   sce_file_idx <- grep(name, sce_file_list)
-  
-  # normalize data
-  qclust <- scran::quickCluster(sce)
-  sce <- scran::computeSumFactors(sce, clusters = qclust)
-  sce <- scater::logNormCounts(sce)
-  
-  # make sure group column is labeled with "celltype" lable 
-  sce$celltype <- sce$Group
-  
-  # save as RDS object with SCE 
-  readr::write_rds(sce, sce_file_list[sce_file_idx])
+
+  # make sure library exists in sce file list before performing normalization
+  if(length(sce_file_idx) != 0){
+    # normalize data
+    qclust <- scran::quickCluster(sce)
+    sce <- scran::computeSumFactors(sce, clusters = qclust)
+    sce <- scater::logNormCounts(sce)
+    
+    # make sure group column is labeled with "celltype" lable 
+    sce$celltype <- sce$Group
+    
+    # save as RDS object with SCE 
+    readr::write_rds(sce, sce_file_list[sce_file_idx]) 
+  }
   
   return(sce)
   
@@ -236,7 +239,8 @@ if(length(missing_sce_files) != 0){
   hdf5_missing_sce <- library_metadata_df %>%
     dplyr::filter(local_sce_path %in% missing_sce_files) %>%
     dplyr::mutate(missing_filepath = file.path(hdf5_filename)) %>%
-    dplyr::pull(missing_filepath)
+    dplyr::pull(missing_filepath) %>%
+    unique()
   
   # construct full paths for searching if hdf5 file exists 
   full_missing_hdf5_path <- file.path(opt$h5_dir,
