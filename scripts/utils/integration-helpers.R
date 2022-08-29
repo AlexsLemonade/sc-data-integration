@@ -290,7 +290,8 @@ perform_dim_reduction <- function(combined_sce,
 #' @return combined SCE object with variable genes added to metadata
 set_var_genes <- function(combined_sce,
                           num_genes = 5000,
-                          subset_hvg = FALSE){
+                          subset_hvg = FALSE,
+                          batch_column = "batch"){
 
   if(!is.logical(subset_hvg)){
     stop("--subset_hvg must be either TRUE or FALSE")
