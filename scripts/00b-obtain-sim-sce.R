@@ -180,17 +180,31 @@ hdf5_to_sce <- function(h5_file,
   
   # read in H5 file as SCE
   # save X assay as counts
-  sce <- zellkonverter::readH5AD(h5_file,
-                                 X_name = "counts")
+  combined_sce <- zellkonverter::readH5AD(h5_file,
+                                          X_name = "counts")
   
   # check that group column is present in colData of SCE 
-  if (!h5_group_column %in% colnames(colData(sce))){
+  if (!h5_group_column %in% colnames(colData(combined_sce))){
     stop("Can't split SCE objects in HDF5 file by specified group. `h5_group_column` not found
          in columns of colData.")
   }
   
-  # split sce object by batch
-  sce_list <- split(sce, sce[[h5_group_column]])
+  # split sce object by grouping column 
+  # grab unique groups present in colData
+  unique_groups <- unique(as.character(combined_sce[[h5_group_column]]))
+  
+  # small subfunction to subset larger sce by group name
+  subset_sce <- function(combined_sce,
+                         group_name){
+    cells_to_keep <- which(combined_sce[[h5_group_column]] == group_name)
+    sce <- combined_sce[, cells_to_keep]
+    return(sce)
+  }
+  
+  # create named list of individual sces from combined sce, splitting by group name
+  sce_list <- unique_groups %>%
+    purrr::map(~ subset_sce(combined_sce, group_name = .x))
+  names(sce_list) <- unique_groups
   
   # normalize and export sces, applying the function across the name of SCEs
   purrr::map(names(sce_list),
