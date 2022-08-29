@@ -1,0 +1,12 @@
+processed_tsv: "sample-info/hca-processed-libraries.tsv"
+sce_dir: "results/human_cell_atlas/scpca-downstream-analyses"
+results_dir: "results/human_cell_atlas"
+add_celltype: true
+celltype_file: "sample-info/hca-celltype-info.tsv"
+pepfile: "sample-info/hca-project-pep.yaml"
+
+seed: 2022
+
+num_hvg: 5000
+
+grouping_var: "project_name"

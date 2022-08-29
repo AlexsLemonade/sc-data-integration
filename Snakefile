@@ -1,8 +1,9 @@
-pepfile: "sample-info/hca-project-pep.yaml"
+pepfile: config['pepfile']
+configfile: "config.yaml"
 
 rule target:
     input:
-        expand("results/human_cell_atlas/integrated_sce/{project}_integrated_{sce_method}_sce.rds",
+        expand(os.path.join(config['results_dir'], "integrated_sce/{project}_integrated_{sce_method}_sce.rds"),
                project = pep.sample_table["project_name"],
                sce_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scvi"])
 
@@ -20,40 +21,35 @@ rule build_renv:
 rule merge_sces:
     conda: "envs/scpca-renv.yaml"
     input:
-        processed_tsv = "sample-info/hca-processed-libraries.tsv",
-        sce_dir = "{basedir}/scpca-downstream-analyses",
-        celltype_file = "sample-info/hca-celltype-info.tsv"
+        processed_tsv = config["processed_tsv"],
+        sce_dir = config["sce_dir"]
     output:
-        directory("{basedir}/merged_sce")
-    params:
-        grouping_var = "project_name",
-        num_hvg = 5000
+        directory(os.path.join(config["results_dir"], "merged_sce"))
     shell:
         """
         Rscript scripts/02-prepare-merged-sce.R \
           --library_file "{input.processed_tsv}" \
           --sce_dir "{input.sce_dir}" \
-          --celltype_info "{input.celltype_file}" \
-          --grouping_var {params.grouping_var} \
+          --add_celltype {config[add_celltype]} \
+          --celltype_info "{config[celltype_file]}" \
+          --grouping_var {config[grouping_var]} \
           --merged_sce_dir "{output}" \
-          --num_hvg {params.num_hvg} \
+          --num_hvg {config[num_hvg]} \
           --subset_hvg
         """
 
 rule convert_sce_anndata:
     input:
-        processed_tsv = "sample-info/hca-processed-libraries.tsv",
+        processed_tsv = config["processed_tsv"],
         merged_sce_dir = "{basedir}/merged_sce"
     output:
         directory("{basedir}/merged_anndata")
-    params:
-        grouping_var = "project_name"
     shell:
         """
         Rscript scripts/02a-convert-sce-to-anndata.R \
           --library_file "{input.processed_tsv}" \
           --merged_sce_dir "{input.merged_sce_dir}" \
-          --grouping_var {params.grouping_var} \
+          --grouping_var {config[grouping_var]} \
           --anndata_output_dir "{output}"
         """
 
@@ -68,14 +64,13 @@ rule integrate_fastmnn:
         "{basedir}/integrated_sce/{project}_integrated_fastmnn_sce.rds"
     params:
         merged_sce_file = "{project}_merged_sce.rds",
-        seed = 2022
     shell:
         """
         Rscript scripts/03a-integrate-sce.R \
           --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
           --output_sce_file "{output}" \
           --method fastMNN \
-          --seed {params.seed} \
+          --seed {config[seed]} \
           --corrected_only
         """
 
@@ -89,14 +84,13 @@ rule integrate_harmony:
         "{basedir}/integrated_sce/{project}_integrated_harmony_sce.rds"
     params:
         merged_sce_file = "{project}_merged_sce.rds",
-        seed = 2022
     shell:
         """
         Rscript scripts/03a-integrate-sce.R \
           --input_sce_file "{input.merged_sce_dir}/{params.merged_sce_file}" \
           --output_sce_file "{output}" \
           --method harmony \
-          --seed {params.seed} \
+          --seed {config[seed]} \
           --corrected_only
         """
 
@@ -133,13 +127,12 @@ rule integrate_scanorama:
         integrated_sce = "{basedir}/integrated_sce/{project}_integrated_scanorama_sce.rds"
     params:
         merged_anndata_file = "{project}_anndata.h5",
-        seed = 2022
     shell:
         """
         python scripts/03b-integrate-scanorama.py \
           --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
           --output_anndata "{output.integrated_anndata}" \
-          --seed {params.seed} \
+          --seed {config[seed]} \
           --use_hvg \
           --corrected_only
 
@@ -147,7 +140,7 @@ rule integrate_scanorama:
             --input_anndata_file "{output.integrated_anndata}" \
             --output_sce_file "{output.integrated_sce}" \
             --method "scanorama" \
-            --seed {params.seed} \
+            --seed {config[seed]} \
             --corrected_only
         """
 
@@ -160,13 +153,12 @@ rule integrate_scvi:
         integrated_sce = "{basedir}/integrated_sce/{project}_integrated_scvi_sce.rds"
     params:
         merged_anndata_file = "{project}_anndata.h5",
-        seed = 2022
     shell:
         """
         python scripts/03c-integrate-scvi.py \
           --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
           --output_anndata "{output.integrated_anndata}" \
-          --seed {params.seed} \
+          --seed {config[seed]} \
           --use_hvg \
           --corrected_only
 
@@ -174,6 +166,6 @@ rule integrate_scvi:
             --input_anndata_file "{output.integrated_anndata}" \
             --output_sce_file "{output.integrated_sce}" \
             --method "scvi" \
-            --seed {params.seed} \
+            --seed {config[seed]} \
             --corrected_only
         """
