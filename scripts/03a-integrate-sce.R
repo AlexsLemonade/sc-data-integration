@@ -301,7 +301,7 @@ if (integration_method == "seurat") {
 
   # Restore the original `counts` assay into integrated_sce_obj because
   #  `as.SingleCellExperiment` only keeps the `logcounts` assay
-  counts(integrated_sce_obj) <- counts(merged_sce_obj)
+  counts(integrated_sce_obj) <- counts(merged_sce_obj)[rownames(integrated_sce_obj),]
   
 
 }
