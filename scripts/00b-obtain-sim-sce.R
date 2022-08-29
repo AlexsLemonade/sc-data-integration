@@ -153,7 +153,8 @@ normalize_and_export_sce <- function(name,
     sce <- scater::logNormCounts(sce)
     
     # make sure group column is labeled with "celltype" lable 
-    sce$celltype <- sce$Group
+    sce$batch <- as.character(sce$Batch)
+    sce$celltype <- as.character(sce$Group)
     
     # save as RDS object with SCE 
     readr::write_rds(sce, sce_file_list[sce_file_idx]) 
