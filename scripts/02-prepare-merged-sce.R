@@ -19,6 +19,8 @@
 # --celltype_info: Path to file containing cell type information for each SCE object. 
 #   Must contain columns named `library_biomaterial_id`, `celltype`, and `barcode`.
 #   Only required if --add_celltype is used.
+# --batch_column: The name of the column in colData that indicates the batches for each cell,
+#   typically this corresponds to the library id. Default is "batch".
 # --subset_hvg: Indicates whether or not to subset the merged SCE object by highly variable genes.
 #   If --subset_hvg is used, the merged SCE object will only contain genes
 #   identified as highly variable genes.
@@ -72,6 +74,13 @@ option_list <- list(
     default = file.path(project_root, "sample-info", "hca-celltype-info.tsv"),
     help = "Path to file containing cell type information for each SCE object. 
       Must contain columns named `library_biomaterial_id`, `celltype`, and `barcode`."
+  ),
+  make_option(
+    opt_str = c("--batch_column"),
+    type = "character",
+    default = "batch",
+    help = "The name of the column in colData that indicates the batches for each cell,
+      typically this corresponds to the library id. Default is 'batch'."
   ),
   make_option(
     opt_str = c("--subset_hvg"),
@@ -255,7 +264,8 @@ merged_sce_list <- grouped_sce_list %>%
 merged_sce_list <- merged_sce_list %>%
   purrr::map(~ set_var_genes(.x,
                              num_genes = opt$num_genes,
-                             subset_hvg = opt$subset_hvg))
+                             subset_hvg = opt$subset_hvg,
+                             batch_column = opt$batch_column))
 
 # add PCA and UMAP
 # if --pca_use_all_genes is used, use all genes, otherwise only HVG are used
