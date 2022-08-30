@@ -41,7 +41,7 @@ option_list <- list(
   make_option(
     opt_str = c("-l", "--library_file"),
     type = "character",
-    default = file.path(project_root, "sample-info", "control-processed-libraries.tsv"),
+    default = file.path(project_root, "sample-info", "scib-simulated-processed-libraries.tsv"),
     help = "path to metadata file listing all libraries that are to be converted"
   ),
   make_option(
