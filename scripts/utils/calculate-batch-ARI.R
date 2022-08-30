@@ -20,9 +20,9 @@ suppressPackageStartupMessages({
 #' @param unintegrated Indicates whether the provided data is intregated (`FALSE`; default) or
 #'   integrated (`TRUE`).
 #'   
-#' @return Tibble with three columns: `rep`, representing the given downsampling replicate;
+#' @return Tibble with four columns: `rep`, representing the given downsampling replicate;
 #'   `k`, the given k for k-means; `batch_ari`, the calculated batch ARI for the given
-#'   combination of `rep` and `k`
+#'   combination of `rep` and `k`; `integration_method`, the given integration method
 calculate_batch_ari <- function(integrated_sce,
                                 num_pcs = 20,
                                 seed = NULL,
