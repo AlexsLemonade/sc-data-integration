@@ -17,7 +17,9 @@ suppressPackageStartupMessages({
 #' @param seed Seed for initializing random sampling
 #' @param integration_method The name of the method that was used for integration
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
-#'
+#' @param unintegrated Indicates whether the provided data is intregated (`FALSE`; default) or
+#'   integrated (`TRUE`).
+#'   
 #' @return Tibble with five columns: `rep`, representing the given downsampling replicate;
 #'   `k`, the given k for k-means; `batch_asw`, the calculated silhouette width for the given
 #'   combination of `rep` and `k`. `asw_cluster`, the assigned cluster for the cell during
@@ -26,21 +28,33 @@ suppressPackageStartupMessages({
 calculate_batch_asw <- function(integrated_sce,
                                 num_pcs = 20,
                                 seed = NULL,
-                                integration_method = NULL) {
-
-  # Check integration method
-  integration_method <- check_integration_method(integration_method)
+                                integration_method = NULL, 
+                                unintegrated = FALSE) {
 
   # Set the seed for subsampling 
   set.seed(seed)
 
+  # Settings depending on whether data is integrated or not
+  if (unintegrated){
+    # In the end, we'll return NA in the data frame for integration method
+    integration_method <- NA
+    
+    # use simply "PCA" for reduced dimensions
+    reduced_dim_name <- "PCA"
+  } else {
+    # Check integration method
+    integration_method <- check_integration_method(integration_method)
+    
+    # Get name for reduced dimensions
+    reduced_dim_name <- get_reduced_dim_name(integration_method)
+  }
+  
+  # Pull out the PCs or analogous reduction
+  all_pcs <- reducedDim(integrated_sce, reduced_dim_name)
+  
   # Set up parameters
   frac_cells <- 0.8        # fraction of cells to downsample to
   nreps <- 20              # number of times to repeat sub-sampling procedure
-
-  # pull out relevant information for calculations
-  reduced_dim_name <- get_reduced_dim_name(integration_method)
-  all_integrated_pcs <- reducedDim(integrated_sce, reduced_dim_name)
 
   # perform calculations
   all_batch_asw <- tibble::tibble(
@@ -53,7 +67,7 @@ calculate_batch_asw <- function(integrated_sce,
   for (i in 1:nreps) {
 
     # Downsample PCs
-    downsampled <- downsample_pcs_for_metrics(all_integrated_pcs, frac_cells, num_pcs)
+    downsampled <- downsample_pcs_for_metrics(all_pcs, frac_cells, num_pcs)
 
     # Calculate batch ASW and add into final tibble
     batch_asw <- bluster::approxSilhouette(downsampled$pcs, downsampled$batch_labels) %>%
@@ -68,6 +82,8 @@ calculate_batch_asw <- function(integrated_sce,
     all_batch_asw <- dplyr::bind_rows(all_batch_asw, batch_asw)
   }
     
+  # Add integration method into tibble
+  all_batch_asw <- dplyr::mutate(all_batch_asw, integration_method = integration_method)
 
   # Return tibble with batch ASW results which can further be summarized downstream
   return(all_batch_asw)
