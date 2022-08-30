@@ -46,13 +46,13 @@ option_list <- list(
     opt_str = c("--h5_dir"),
     type = "character",
     default = file.path(project_root, "data", "scib_simulated", "hdf5"),
-    help = "path to folder where all loom files should be stored"
+    help = "path to folder where all hdf5 files should be stored"
   ),
   make_option(
     opt_str = c("--s3_h5_bucket"),
     type = "character",
     default = "s3://sc-data-integration/scib_simulated_data/hdf5",
-    help = "Bucket on s3 where loom data is stored"
+    help = "Bucket on s3 where hdf5 data is stored"
   ),
   make_option(
     opt_str = c("--sce_output_dir"),
@@ -98,7 +98,7 @@ if(!file.exists(opt$library_file)){
 
 # create directories if they don't exist 
 if(!dir.exists(opt$h5_dir)){
-  dir.create(opt$loom_dir, recursive = TRUE)
+  dir.create(opt$h5_dir, recursive = TRUE)
 }
 
 if(!dir.exists(opt$sce_output_dir)){
@@ -152,7 +152,7 @@ normalize_and_export_sce <- function(name,
     sce <- scran::computeSumFactors(sce, clusters = qclust)
     sce <- scater::logNormCounts(sce)
     
-    # make sure group column is labeled with "celltype" lable 
+    # make sure group column is labeled with "celltype" label
     sce$batch <- as.character(sce$Batch)
     sce$celltype <- as.character(sce$Group)
     
