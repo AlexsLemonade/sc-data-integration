@@ -20,7 +20,9 @@ source(
 #' @param significance_threshold Threshold for considering a corrected P-value from PC~batch
 #'  regression as significant. Default: 0.05
 #' @param integration_method The name of the method that was used for integration
-#'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
+#'  to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
+#' @param unintegrated Indicates whether the provided data is intregated (`FALSE`; default) or
+#'   integrated (`TRUE`).
 #' @param seed Seed for initializing random sampling
 #'
 #' @return Tibble with four columns: `rep`, the given downsamplingreplicate; 
@@ -33,19 +35,32 @@ calculate_pca_regression <- function(integrated_sce,
                                      num_pcs = 50,
                                      significance_threshold = 0.05,
                                      integration_method = NULL, 
+                                     unintegrated = FALSE,
                                      seed = NULL) {
 
   # Set seed if provided
   set.seed(seed)
 
-
-  # Check integration method
-  integration_method <- check_integration_method(integration_method)
-
-  # Get PCs or analagous reduced dimensions
-  reduced_dim_name <- get_reduced_dim_name(integration_method)
+  # Settings depending on whether data is integrated or not
+  if (unintegrated){
+    # In the end, we'll return NA in the data frame for integration method
+    integration_method <- NA
+    
+    # use simply "PCA" for reduced dimensions
+    reduced_dim_name <- "PCA"
+    
+  } else {
+    
+    # Check integration method
+    integration_method <- check_integration_method(integration_method)
+    
+    # Get name for reduced dimensions
+    reduced_dim_name <- get_reduced_dim_name(integration_method)
+  }
+  
+  # Pull out the PCs or analogous reduction
   pcs <- reducedDim(integrated_sce, reduced_dim_name)
-
+  
 
   perform_regression <- function(df) {
     # Adapted from https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L168-L181
@@ -142,7 +157,7 @@ calculate_pca_regression <- function(integrated_sce,
     integration_method = integration_method,
     pc_batch_variance = batch_variances,
     pc_regression_scaled = pc_reg_scales,
-    .name_repair = 'unique'
+    .name_repair = 'minimal'
   )
   
   return(results)
