@@ -1,6 +1,6 @@
 pep_version: 2.1.0
 # see http://pep.databio.org/en/latest/specification/
-sample_table: "control-project-metadata.tsv"
+sample_table: "scib-simulated-project-metadata.tsv"
 sample_table_index: "project_name"
 
 # Add sample_name to support older peppy
