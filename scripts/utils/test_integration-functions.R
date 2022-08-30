@@ -120,6 +120,6 @@ calculate_pca_regression(combined_sce, unintegrated=TRUE, seed = 2022)
 calculate_kbet(combined_sce, "batch", unintegrated=TRUE, seed = 2022,
                # A full kBET run takes about 3 minutes; go faster for tests with only a small n=1 k0_fraction_range
                k0_fraction_range = 0.01) 
-alculate_batch_asw(combined_sce, integration_method = "harmony")
-calculate_batch_ari(combined_sce, integration_method = "harmony")
-calculate_ilisi(combined_sce, "batch", "harmony")
+calculate_batch_asw(combined_sce, unintegrated=TRUE)
+calculate_batch_ari(combined_sce, unintegrated=TRUE)
+calculate_ilisi(combined_sce, unintegrated=TRUE)
