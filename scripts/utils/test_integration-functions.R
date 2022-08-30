@@ -106,7 +106,6 @@ cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "c
 
 # Test score calculation
 integrated_sce <- readRDS("results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_harmony_sce.rds")
-lisi <- calculate_ilisi(integrated_sce, "batch", "harmony")
 batch_ari <- calculate_batch_ari(integrated_sce, integration_method = "harmony")
 batch_asw <- calculate_batch_asw(integrated_sce, integration_method = "harmony")
 kbet <- calculate_kbet(integrated_sce, "batch", "harmony", seed = 2022,
@@ -118,3 +117,9 @@ pca_regression <- calculate_pca_regression(integrated_sce, integration_method = 
 # Test score calculation on unintegrated data
 # uses `combined_sce` variable; need to run through line 51 above
 calculate_pca_regression(combined_sce, unintegrated=TRUE, seed = 2022)
+calculate_kbet(combined_sce, "batch", unintegrated=TRUE, seed = 2022,
+               # A full kBET run takes about 3 minutes; go faster for tests with only a small n=1 k0_fraction_range
+               k0_fraction_range = 0.01) 
+alculate_batch_asw(combined_sce, integration_method = "harmony")
+calculate_batch_ari(combined_sce, integration_method = "harmony")
+calculate_ilisi(combined_sce, "batch", "harmony")
