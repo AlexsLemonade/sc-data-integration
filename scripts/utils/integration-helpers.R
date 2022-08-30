@@ -88,8 +88,10 @@ combine_sce_objects <- function(sce_list = list(),
     # Add relevant library ID to colData row names
     colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), "-", library_name)
 
-    # Add relevant library ID to metadata names
-    names(metadata(sce_list[[i]])) <- paste0(names(metadata(sce_list[[i]])), "-", library_name)
+    # Add relevant library ID to metadata names if metadata is present
+    if(length(metadata(sce_list[[i]])) != 0){
+      names(metadata(sce_list[[i]])) <- paste0(names(metadata(sce_list[[i]])), "-", library_name) 
+    }
 
     # Add colData column to track this batch
     sce_list[[i]][[batch_column]] <- library_name
