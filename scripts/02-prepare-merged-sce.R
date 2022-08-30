@@ -201,7 +201,8 @@ grouped_sce_file_df <- split(sce_file_df, sce_file_df[,opt$grouping_var])
 # create a list of SCE lists that is named by the grouping variable with
 # each individual inner SCE list named by the library IDs
 create_grouped_sce_list <- function(sce_info_dataframe,
-                                    celltype_info_df = NULL){
+                                    celltype_info_df = NULL,
+                                    add_celltype){
 
   library_sce_list = list()
   for (library_idx in 1:length(sce_info_dataframe$library_id)){
@@ -210,27 +211,31 @@ create_grouped_sce_list <- function(sce_info_dataframe,
     sce <- readr::read_rds(sce_info_dataframe$sce_files[library_idx])
     library_name <- sce_info_dataframe$library_id[library_idx]
     
-    # if celltype info is provided add to sce object 
-    if(!is.null(celltype_info_df)){
-      # check that library has cell type information
-      if(library_name %in% unique(celltype_info_df$library_biomaterial_id)){
+    if(add_celltype){
+      # if celltype info is provided add to sce object 
+      if(!is.null(celltype_info_df)){
+        # check that library has cell type information
+        if(library_name %in% unique(celltype_info_df$library_biomaterial_id)){
+          
+          # filter celltype info to only have info for specified library 
+          filtered_celltype_info <- celltype_info_df %>%
+            dplyr::filter(library_biomaterial_id == library_name) %>%
+            dplyr::select(barcode, celltype)
+          
+          # add celltype info 
+          sce <- add_celltype_info(sce_object = sce, 
+                                   celltype_info_df = filtered_celltype_info) 
+          
+          # add flag indicating that cell type information is available 
+          metadata(sce)$celltype_info_available <- TRUE 
+        }
         
-        # filter celltype info to only have info for specified library 
-        filtered_celltype_info <- celltype_info_df %>%
-          dplyr::filter(library_biomaterial_id == library_name) %>%
-          dplyr::select(barcode, celltype)
-        
-        # add celltype info 
-        sce <- add_celltype_info(sce_object = sce, 
-                                 celltype_info_df = filtered_celltype_info) 
-        
-        # add flag indicating that cell type information is available 
-        metadata(sce)$celltype_info_available <- TRUE 
-      }
-    } else {
-      # note that no cell type information is available
-      colData(sce)$celltype <- NA
-      metadata(sce)$celltype_info_available <- FALSE
+        # only add celltype column/metadata if add celltype is yes, but no celltype data is available 
+      } else {
+        # note that no cell type information is available
+        colData(sce)$celltype <- NA
+        metadata(sce)$celltype_info_available <- FALSE
+      } 
     }
     
     # create a list for each group named by the library IDs
@@ -245,10 +250,10 @@ create_grouped_sce_list <- function(sce_info_dataframe,
 # create grouped sce list with/without celltype addition
 if(opt$add_celltype){
   grouped_sce_list <- grouped_sce_file_df %>%
-    purrr::map(create_grouped_sce_list, celltype_info_df) 
+    purrr::map(create_grouped_sce_list, celltype_info_df, add_celltype = opt$add_celltype) 
 } else {
   grouped_sce_list <- grouped_sce_file_df %>%
-    purrr::map(create_grouped_sce_list)
+    purrr::map(create_grouped_sce_list, add_celltype = opt$add_celltype)
 }
 
 
