@@ -102,7 +102,10 @@ else:
     categorical_covariates = None
 
 if args.continuous_covariates:
-    continuous_covariates = [covariate.strip() for covariate in args.continuous_covariates.split(',')]
+    if args.continuous_covariates == "None":
+        continuous_covariates = None
+    else:
+        continuous_covariates = [covariate.strip() for covariate in args.continuous_covariates.split(',')]
 else:
     continuous_covariates = None
 

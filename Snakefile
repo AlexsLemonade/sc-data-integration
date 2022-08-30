@@ -158,6 +158,7 @@ rule integrate_scvi:
         python scripts/03c-integrate-scvi.py \
           --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
           --output_anndata "{output.integrated_anndata}" \
+          --continuous_covariates {config[continuous_covariates]} \
           --seed {config[seed]} \
           --use_hvg \
           --corrected_only

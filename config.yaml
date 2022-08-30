@@ -12,3 +12,4 @@ celltype_file: "sample-info/hca-celltype-info.tsv"
 seed: 2022
 num_hvg: 5000
 grouping_var: "project_name"
+continuous_covariates: "subsets_mito_percent"
