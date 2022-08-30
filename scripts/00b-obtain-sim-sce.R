@@ -1,4 +1,6 @@
 # Script used to obtain SCE objects from simulated data found in HDF5 files
+# Simulated data, as used in https://doi.org/10.1038/s41592-021-01336-8, was 
+# obtained from figshare (https://doi.org/10.6084/m9.figshare.12420968).
 
 # This script reads in a metadata file containing the desired libraries to obtain 
 # SCE objects. If the RDS files already exist for the desired libraries on S3, 
@@ -39,20 +41,20 @@ option_list <- list(
   make_option(
     opt_str = c("-l", "--library_file"),
     type = "character",
-    default = file.path(project_root, "sample-info", "control-processed-libraries.tsv"),
+    default = file.path(project_root, "sample-info", "scib-simulated-processed-libraries.tsv"),
     help = "path to metadata file listing all libraries that are to be converted"
   ),
   make_option(
     opt_str = c("--h5_dir"),
     type = "character",
     default = file.path(project_root, "data", "scib_simulated", "hdf5"),
-    help = "path to folder where all loom files should be stored"
+    help = "path to folder where all hdf5 files should be stored"
   ),
   make_option(
     opt_str = c("--s3_h5_bucket"),
     type = "character",
     default = "s3://sc-data-integration/scib_simulated_data/hdf5",
-    help = "Bucket on s3 where loom data is stored"
+    help = "Bucket on s3 where hdf5 data is stored"
   ),
   make_option(
     opt_str = c("--sce_output_dir"),
@@ -98,7 +100,7 @@ if(!file.exists(opt$library_file)){
 
 # create directories if they don't exist 
 if(!dir.exists(opt$h5_dir)){
-  dir.create(opt$loom_dir, recursive = TRUE)
+  dir.create(opt$h5_dir, recursive = TRUE)
 }
 
 if(!dir.exists(opt$sce_output_dir)){
@@ -123,9 +125,9 @@ library_metadata_df <- library_metadata_df %>%
 # Functions for converting hdf5 files -------------------------------------------
 
 
-#' Subset SCE list, normalize 
+#' Extract individual SCE objects from a list of SCEs, normalize, and export to RDS
 #'
-#' @param name Name corresponding to object to be subset and normalized from sce_list
+#' @param name Name of corresponding SCE object to be extracted and normalized from sce_list
 #' @param sce_list List of named SCE objects
 #' @param sce_file_list List of SCE file paths to use for saving the individual SCE objects
 #'   found in the SCE list. The name of the SCE object used in the list must be a part of the 
@@ -152,7 +154,7 @@ normalize_and_export_sce <- function(name,
     sce <- scran::computeSumFactors(sce, clusters = qclust)
     sce <- scater::logNormCounts(sce)
     
-    # make sure group column is labeled with "celltype" lable 
+    # make sure group column is labeled with "celltype" label
     sce$batch <- as.character(sce$Batch)
     sce$celltype <- as.character(sce$Group)
     
@@ -269,7 +271,7 @@ if(length(missing_sce_files) != 0){
     aws_includes <- paste("--include '", "*", aws_local_copy, "'", sep = '', collapse = ' ')
     
     # build one sync call to copy all missing hdf5 files 
-    sync_call <- paste('aws s3 cp', opt$s3_h5_bucket, ".", 
+    sync_call <- paste('aws s3 cp', opt$s3_h5_bucket, opt$h5_dir, 
                        '--exclude "*"', aws_includes, '--recursive', sep = " ")
     
     system(sync_call, ignore.stdout = TRUE)
