@@ -25,10 +25,10 @@ source(
 #'   integrated (`TRUE`).
 #' @param seed Seed for initializing random sampling
 #'
-#' @return Tibble with four columns: `rep`, the given downsamplingreplicate; 
-#' `integration_method`, the given integration method; `batch_variance`, the 
-#' total contribution of the batch effect to the variance; `pc_regression_scaled`, 
-#' proxy for batch effect
+#' @return Tibble with four columns: `rep`, the given downsampling replicate; 
+#' `integration_method`, the given integration method (`NA` if unintegrated); 
+#' `batch_variance`, the  total contribution of the batch effect to the variance; 
+#' `pc_regression_scaled`, proxy for batch effect
 #'
 calculate_pca_regression <- function(integrated_sce,
                                      batch_column = "batch",
@@ -48,9 +48,7 @@ calculate_pca_regression <- function(integrated_sce,
     
     # use simply "PCA" for reduced dimensions
     reduced_dim_name <- "PCA"
-    
   } else {
-    
     # Check integration method
     integration_method <- check_integration_method(integration_method)
     
@@ -61,7 +59,6 @@ calculate_pca_regression <- function(integrated_sce,
   # Pull out the PCs or analogous reduction
   pcs <- reducedDim(integrated_sce, reduced_dim_name)
   
-
   perform_regression <- function(df) {
     # Adapted from https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L168-L181
     # Note that we do not return this quantity: https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L177
