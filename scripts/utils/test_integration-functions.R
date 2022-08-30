@@ -113,3 +113,8 @@ kbet <- calculate_kbet(integrated_sce, "batch", "harmony", seed = 2022,
                        # A full kBET run takes about 3 minutes; go faster for tests with only a small n=1 k0_fraction_range
                        k0_fraction_range = 0.01) 
 pca_regression <- calculate_pca_regression(integrated_sce, integration_method = "harmony", seed = 2022)
+
+
+# Test score calculation on unintegrated data
+# uses `combined_sce` variable; need to run through line 51 above
+calculate_pca_regression(combined_sce, unintegrated=TRUE, seed = 2022)
