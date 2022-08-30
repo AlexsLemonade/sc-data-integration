@@ -49,13 +49,12 @@ calculate_batch_ari <- function(integrated_sce,
     reduced_dim_name <- get_reduced_dim_name(integration_method)
   }
   
+  # Pull out the PCs or analogous reduction
+  all_pcs <- reducedDim(integrated_sce, reduced_dim_name)
+  
   # Set up parameters
   frac_cells <- 0.8        # fraction of cells to downsample to
   nreps <- 20              # number of times to repeat sub-sampling procedure
-
-  # pull out relevant information for calculations
-  reduced_dim_name <- get_reduced_dim_name(integration_method)
-  all_pcs <- reducedDim(integrated_sce, reduced_dim_name)
 
   # perform calculations
   all_ari <- c()
