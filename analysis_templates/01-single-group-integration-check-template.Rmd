@@ -6,6 +6,14 @@ params:
   integration_method: "fastmnn"
   batch_column: "batch"
   celltype_column: "celltype"
+  num_pcs: 20
+  ari_k_max: 25
+  ari_k_min: 5
+  ari_k_increment: 5
+  k0_fraction_min: 0.05
+  k0_fraction_max: 0.25
+  k0_fraction_increment: 0.05
+  seed: 2022
   date: !r Sys.Date()
 
 title: "`r glue::glue('Integration evaluation for {params$group_name} with {params$integration_method}')`"
@@ -27,6 +35,8 @@ suppressPackageStartupMessages({
  library(ggplot2) 
 })
 theme_set(theme_bw())
+
+set.seed(params$seed)
 ```
 
 
@@ -35,11 +45,20 @@ theme_set(theme_bw())
 project_root <- here::here()
 renv::load(project_root)
 
+utils_dir <- file.path(project_root, "scripts", "utils")
+
 # source the helper functions to grab the integration method check 
-source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+source(file.path(utils_dir, "integration-helpers.R"))
 
 # source plotting functions
-source(file.path(project_root, "scripts", "utils", "plotting-functions.R"))
+source(file.path(utils_dir, "plotting-functions.R"))
+
+# source functions for calculating integration metrics 
+source(file.path(utils_dir, "calculate-batch-ARI.R"))
+source(file.path(utils_dir, "calculate-batch-ASW.R"))
+source(file.path(utils_dir, "calculate-iLISI.R"))
+source(file.path(utils_dir, "calculate-kBET.R"))
+source(file.path(utils_dir, "calculate-pca-regression.R"))
 ```
 
 
@@ -106,6 +125,151 @@ plot_integration_umap(merged_sce,
                       integration_method,
                       params$group_name,
                       cell_label_column = params$celltype_column)
+```
+
+## Integration metrics 
+
+### iLISI
+
+```{r}
+# calculate ilisi for unintegrated and integrated SCE separately
+ilisi_unintegrated <- calculate_ilisi(merged_sce, 
+                                      unintegrated=TRUE)
+
+ilisi_integrated <- calculate_ilisi(integrated_sce,
+                                    params$batch_column,
+                                    integration_method = integration_method)
+
+# create combined DF 
+ilisi_df <- dplyr::bind_rows(ilisi_unintegrated, ilisi_integrated)
+```
+
+
+```{r}
+head(ilisi_df)
+```
+
+### Batch ARI
+```{r}
+# create k range needed for input to ARI function from params 
+
+# make sure that max is not less than min 
+if(params$ari_k_max < params$ari_k_min){
+  stop("`ari_k_max` must be greater than `ari_k_min`.")
+}
+
+## get krange 
+k_range <- seq(params$ari_k_min,
+              params$ari_k_max,
+              params$ari_k_increment)
+```
+
+
+```{r}
+# calculate batch ARI for unintegrated and integrated SCE separately
+batch_ari_unintegrated <- calculate_batch_ari(merged_sce,
+                                              seed = params$seed,
+                                              k_range = k_range,
+                                              num_pcs = params$num_pcs,
+                                              unintegrated=TRUE)
+
+batch_ari_integrated <- calculate_batch_ari(integrated_sce,
+                                            seed = params$seed,
+                                            k_range = k_range,
+                                            num_pcs = params$num_pcs,
+                                            integration_method = integration_method)
+
+# create combined DF 
+batch_ari_df <- dplyr::bind_rows(batch_ari_unintegrated, batch_ari_integrated)
+```
+
+```{r}
+head(batch_ari_df)
+```
+### Batch ASW
+
+```{r}
+# calculate batch ASW for unintegrated and integrated SCE separately
+batch_asw_unintegrated <- calculate_batch_asw(merged_sce,
+                                              seed = params$seed,
+                                              num_pcs = params$num_pcs,
+                                              unintegrated=TRUE)
+
+batch_asw_integrated <- calculate_batch_asw(integrated_sce,
+                                            seed = params$seed,
+                                            num_pcs = params$num_pcs,
+                                            integration_method = integration_method)
+
+# create combined DF 
+batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated)
+
+```
+
+```{r}
+head(batch_asw_df)
+```
+
+### kBET 
+
+```{r}
+# create k range needed for input to ARI function from params 
+
+# make sure that max is not less than min 
+if(params$k0_fraction_max < params$k0_fraction_min){
+  stop("`k0_fraction_max` must be greater than `k0_fraction_min`.")
+}
+
+## get krange 
+k0_fraction_range <- seq(params$k0_fraction_min,
+                         params$k0_fraction_max,
+                         params$k0_fraction_increment)
+```
+
+
+```{r}
+# calculate kBET for unintegrated and integrated SCE separately
+kbet_unintegrated <- calculate_kbet(merged_sce,
+                                    params$batch_column,
+                                    seed = params$seed,
+                                    num_pcs = params$num_pcs,
+                                    k0_fraction_range = k0_fraction_range,
+                                    unintegrated=TRUE)
+
+kbet_integrated <- calculate_kbet(integrated_sce,
+                                  params$batch_column,
+                                  seed = params$seed,
+                                  num_pcs = params$num_pcs,
+                                  k0_fraction_range = k0_fraction_range,
+                                  integration_method = integration_method)
+
+# create combined DF 
+kbet_df <- dplyr::bind_rows(kbet_unintegrated, kbet_integrated)
+
+```
+
+```{r}
+head(kbet_df)
+```
+
+
+### PCA Regression
+
+```{r}
+# calculate PCA regression for unintegrated and integrated SCE separately
+pca_unintegrated <- calculate_pca_regression(merged_sce,
+                                             seed = params$seed,
+                                             unintegrated=TRUE)
+
+pca_integrated <- calculate_pca_regression(integrated_sce,
+                                           seed = params$seed,
+                                           integration_method = integration_method)
+
+# create combined DF 
+pca_df <- dplyr::bind_rows(pca_unintegrated, pca_integrated)
+```
+
+```{r}
+head(pca_df)
 ```
 
 ## Session Info
