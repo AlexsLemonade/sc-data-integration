@@ -60,36 +60,13 @@ perform_dim_reduction(combined_sce,
 # should fail PCA
 #perform_dim_reduction(combined_sce, var_genes = var_genes, pca_type = "pca")
 
-
-# Test integration:
-harmony_sce <- integrate_harmony(combined_sce, "batch", from_pca=FALSE) # counts logcounts harmony_corrected 
-fastMNN_sce <-integrate_fastMNN(combined_sce) # counts logcounts fastmnn_corrected
-cca_sce <- integrate_seurat(prepare_seurat_list(combined_sce), reduction_method = "cca")  # RNA SCT
-rpca_sce <- integrate_seurat(prepare_seurat_list(combined_sce), reduction_method = "rpca") # RNA SCT
+# Test harmony:
+integrate_harmony(combined_sce, "batch", from_pca=FALSE)
+integrated_sce<- integrate_harmony(combined_sce, "batch")
 
 
-
-
-integrated_sce_obj <- as.SingleCellExperiment(cca_sce, 
-                                              assay = "RNA") #logcounts, which comes from...
-
-
-# Convert reducedDims names back to <lowercase>_<UPPERCASE> because 
-#   `as.SingleCellExperiment` makes them all uppercase
-reducedDimNames(integrated_sce_obj) <- stringr::str_replace_all(
-  reducedDimNames(integrated_sce_obj),
-  toupper(opt$seurat_reduction_method),
-  opt$seurat_reduction_method
-)
-
-# Restore the original `counts` assay into integrated_sce_obj because
-#  `as.SingleCellExperiment` only keeps the `logcounts` assay
-counts(integrated_sce_obj) <- counts(combined_sce)
-
-
-
-
-
+# Test fastMNN:
+integrated_sce <-integrate_fastMNN(combined_sce)
 
 
 # plot UMAP pre and post integration
@@ -114,6 +91,17 @@ anndata_dir <- file.path(here::here(
 ))
 scanorama_integrated_file <- file.path(anndata_dir, "1M_Immune_Cells_integrated_scanorama.h5")
 scanorama_integrated_sce <- zellkonverter::readH5AD(scanorama_integrated_file, skip_assays = TRUE)
+
+# Test Seurat Integration
+
+# Transform sce to seurat
+seurat_list <- prepare_seurat_list(combined_sce)
+
+# Integrate data using reciprocal PCA
+rpca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "rpca")
+
+# Integrate data using canonical correlation analysis
+cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "cca")
 
 
 # Test score calculation
