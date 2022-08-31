@@ -323,8 +323,7 @@ if (integration_method == "seurat") {
 
 # Remove uncorrected expression values, if specified ----------
 if (opt$corrected_only) {
-  # remove "counts", but do NOT remove "logcounts"
-  integrated_sce_obj <- remove_uncorrected_expression(integrated_sce_obj, "counts")
+  integrated_sce_obj <- remove_uncorrected_expression(integrated_sce_obj)
 }
 
 
