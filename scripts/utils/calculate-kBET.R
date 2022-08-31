@@ -24,7 +24,7 @@ source(
 #'    https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
 #      "Following the example in the kBET paper, we chose the k input value equal to
 #       5%, 10%, 15%, 20%, and 25% of the sample size"
-#' @param unintegrated Indicates whether the provided data is intregated (`FALSE`; default) or
+#' @param unintegrated Indicates whether the provided data is integrated (`FALSE`; default) or
 #'   integrated (`TRUE`).
 #' @param seed Random seed to set for kBET calculations
 #'
@@ -48,8 +48,8 @@ calculate_kbet <- function(integrated_sce,
 
   # Settings depending on whether data is integrated or not
   if (unintegrated){
-    # In the end, we'll return NA in the data frame for integration method
-    integration_method <- NA
+    # In the end, we'll return "unintegrated" in the data frame for integration method
+    integration_method <- "unintegrated"
     
     # use simply "PCA" for reduced dimensions
     reduced_dim_name <- "PCA"
