@@ -27,6 +27,15 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment) 
 })
 
+# Load helper functions
+source(
+  file.path(
+    "scripts", 
+    "utils", 
+    "integration-helpers.R"
+  )
+)
+
 # Set up optparse options
 option_list <- list(
   make_option(
@@ -116,9 +125,14 @@ if(!dir.exists(integrated_sce_dir)){
 # Anndata to SCE post-processing -----------------------------------------------
 
 # read in AnnData object as H5
-integrated_sce <- zellkonverter::readH5AD(opt$input_anndata_file, 
-                                          # if corrected only is set, skips reading `X` matrix
-                                          skip_assays = opt$corrected_only)
+integrated_sce <- zellkonverter::readH5AD(opt$input_anndata_file)
+
+# Remove uncorrected expression values if corrected_only is set
+# We do this after zellkonverter which always retain counts, even if empty.
+if (opt$corrected_only) {
+  integrated_sce <- remove_uncorrected_expression(integrated_sce)
+}
+
 
 # replace . added in anndata names with - found in other sce objects
 names(metadata(integrated_sce)) <- stringr::str_replace_all(names(metadata(integrated_sce)), "\\.", "-")
