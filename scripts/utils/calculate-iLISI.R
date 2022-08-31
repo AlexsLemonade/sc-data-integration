@@ -19,7 +19,7 @@ source(
 #' @param batch_column The variable in `integrated_sce` indicating batches. Default
 #'   is "batch".
 #' @param integration_method The name of the method that was used for integration 
-#' @param unintegrated Indicates whether the provided data is intregated (`FALSE`; default) or
+#' @param unintegrated Indicates whether the provided data is integrated (`FALSE`; default) or
 #'   integrated (`TRUE`).
 #'   
 #' @return Tibble with five columns with one row per cell. Columns are `ilisi_score`, 
@@ -32,8 +32,8 @@ calculate_ilisi <- function(integrated_sce,
   
   # Settings depending on whether data is integrated or not
   if (unintegrated){
-    # In the end, we'll return NA in the data frame for integration method
-    integration_method <- NA
+    # In the end, we'll return "unintegrated" in the data frame for integration method
+    integration_method <- "unintegrated"
     
     # use simply "PCA" for reduced dimensions
     reduced_dim_name <- "PCA"

@@ -21,7 +21,7 @@ source(
 #'  regression as significant. Default: 0.05
 #' @param integration_method The name of the method that was used for integration
 #'  to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
-#' @param unintegrated Indicates whether the provided data is intregated (`FALSE`; default) or
+#' @param unintegrated Indicates whether the provided data is integrated (`FALSE`; default) or
 #'   integrated (`TRUE`).
 #' @param seed Seed for initializing random sampling
 #'
@@ -43,8 +43,8 @@ calculate_pca_regression <- function(integrated_sce,
 
   # Settings depending on whether data is integrated or not
   if (unintegrated){
-    # In the end, we'll return NA in the data frame for integration method
-    integration_method <- NA
+    # In the end, we'll return "unintegrated" in the data frame for integration method
+    integration_method <- "unintegrated"
     
     # use simply "PCA" for reduced dimensions
     reduced_dim_name <- "PCA"
