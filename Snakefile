@@ -1,5 +1,5 @@
-pepfile: config['pepfile']
 configfile: "config.yaml"
+pepfile: config['pepfile']
 
 rule target:
     input:
