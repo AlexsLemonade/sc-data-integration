@@ -47,17 +47,11 @@ integrate_fastMNN <- function(combined_sce,
     stop("The provided `batch_column` column must be in `combined_sce` colData.")
   }
 
-  # check if the provided gene_list is all genes, in which case re-assign it to NULL
-  if ( identical( sort(gene_list), sort(rownames(rowData(combined_sce))) ) ){
-    gene_list <- NULL
-  }
-
   # Perform integration with fastMNN -------------------
   integrated_sce <- batchelor::fastMNN(combined_sce,
                                        # Specify batches.
                                        batch = colData(combined_sce)[,batch_column],
                                        # Which genes to use for integration
-                                       # The default value of NULL uses all genes
                                        subset.row = gene_list,
                                        # Perform cosine normalization?
                                        cos.norm = cosine_norm,
@@ -75,8 +69,9 @@ integrate_fastMNN <- function(combined_sce,
   # We will use `_corrected` for fastMNN's `reconstructed` and
   #  `_PCA` for fastMNN's `corrected`.
 
-  # Only add this information if all genes were used, meaning dimensions are compatible
-  if (is.null(gene_list)){
+  # Only add this information if the genes used is equivalent to all genes in the SCE, 
+  #  meaning dimensions are compatible
+  if ( identical( sort(gene_list), sort(rownames(rowData(combined_sce))) ) ){
     assay(combined_sce, "fastmnn_corrected")  <- assay(integrated_sce, "reconstructed")
   }
 
