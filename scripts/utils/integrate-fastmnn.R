@@ -47,6 +47,10 @@ integrate_fastMNN <- function(combined_sce,
     stop("The provided `batch_column` column must be in `combined_sce` colData.")
   }
 
+  # check if the provided gene_list is all genes, in which case re-assign it to NULL
+  if ( identical( sort(gene_list), sort(rownames(rowData(combined_sce))) ) ){
+    gene_list <- NULL
+  }
 
   # Perform integration with fastMNN -------------------
   integrated_sce <- batchelor::fastMNN(combined_sce,
