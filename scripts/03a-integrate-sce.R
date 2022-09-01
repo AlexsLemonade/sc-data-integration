@@ -237,15 +237,7 @@ if (integration_method == "fastmnn") {
   # Prepare `gene_list` argument
   if (opt$fastmnn_use_all_genes) {
     fastmnn_gene_list <- NULL
-  } else {
-    # If the variable genes are the same as all the genes, still set this to NULL
-    var_genes <- metadata(merged_sce_obj)$variable_genes
-    if (length(var_genes) == dim(merged_sce_obj)[1]) {
-      fastmnn_gene_list <- NULL
-    } else {
-      fastmnn_gene_list <- var_genes
-    }
-  }
+  } 
 
   # Perform integration
   integrated_sce_obj <- integrate_fastMNN(
