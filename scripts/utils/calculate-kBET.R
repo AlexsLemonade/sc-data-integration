@@ -24,6 +24,8 @@ source(
 #'    https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
 #      "Following the example in the kBET paper, we chose the k input value equal to
 #       5%, 10%, 15%, 20%, and 25% of the sample size"
+#' @param unintegrated Indicates whether the provided data is integrated (`FALSE`; default) or
+#'   integrated (`TRUE`).
 #' @param seed Random seed to set for kBET calculations
 #'
 #' @return Tibble with five columns: `k0_fraction`, the fraction of total sample sized used to
@@ -35,6 +37,7 @@ source(
 calculate_kbet <- function(integrated_sce,
                            batch_column = "batch",
                            integration_method = NULL,
+                           unintegrated = FALSE,
                            num_pcs = 20,
                            k0_fraction_range = c(0.05, 0.10, 0.15, 0.20, 0.25),
                            seed = NULL) {
@@ -43,17 +46,24 @@ calculate_kbet <- function(integrated_sce,
   set.seed(seed)
 
 
-  # Check integration method
-  integration_method <- check_integration_method(integration_method)
-
-
-  # Get PCs or analagous reduced dimensions
-  reduced_dim_name <- get_reduced_dim_name(integration_method)
-  pcs <- reducedDim(integrated_sce, reduced_dim_name)
-
-
+  # Settings depending on whether data is integrated or not
+  if (unintegrated){
+    # In the end, we'll return "unintegrated" in the data frame for integration method
+    integration_method <- "unintegrated"
+    
+    # use simply "PCA" for reduced dimensions
+    reduced_dim_name <- "PCA"
+  } else {
+    # Check integration method
+    integration_method <- check_integration_method(integration_method)
+    
+    # Get name for reduced dimensions
+    reduced_dim_name <- get_reduced_dim_name(integration_method)
+  }
   
-
+  # Pull out the PCs or analogous reduction
+  pcs <- reducedDim(integrated_sce, reduced_dim_name)
+  
   # Calculate the mean batch size for k0 calculation
   batches <- colData(integrated_sce)[,batch_column]
   mean_batch_size <- table(batches) %>%
