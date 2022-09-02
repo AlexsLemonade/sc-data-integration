@@ -88,8 +88,10 @@ combine_sce_objects <- function(sce_list = list(),
     # Add relevant library ID to colData row names
     colnames(sce_list[[i]]) <- paste0(colnames(sce_list[[i]]), "-", library_name)
 
-    # Add relevant library ID to metadata names
-    names(metadata(sce_list[[i]])) <- paste0(names(metadata(sce_list[[i]])), "-", library_name)
+    # Add relevant library ID to metadata names if metadata is present
+    if(length(metadata(sce_list[[i]])) != 0){
+      names(metadata(sce_list[[i]])) <- paste0(names(metadata(sce_list[[i]])), "-", library_name) 
+    }
 
     # Add colData column to track this batch
     sce_list[[i]][[batch_column]] <- library_name
@@ -284,11 +286,14 @@ perform_dim_reduction <- function(combined_sce,
 #' @param subset_hvg Indicates whether or not to subset the merged SCE object by highly variable genes.
 #'   If --subset_hvg is TRUE, the merged SCE object will only contain genes
 #'   identified as highly variable genes.
+#' @param batch_column Column present in colData of the SingleCellExperiment object
+#'   that contains the original identity of each library. Default is "batch".
 #'
 #' @return combined SCE object with variable genes added to metadata
 set_var_genes <- function(combined_sce,
                           num_genes = 5000,
-                          subset_hvg = FALSE){
+                          subset_hvg = FALSE,
+                          batch_column = "batch"){
 
   if(!is.logical(subset_hvg)){
     stop("--subset_hvg must be either TRUE or FALSE")
@@ -296,7 +301,8 @@ set_var_genes <- function(combined_sce,
 
   # grab variable genes
   var_genes <- perform_hvg_selection(combined_sce = combined_sce,
-                                     num_genes = num_genes)
+                                     num_genes = num_genes,
+                                     batch_column = batch_column)
 
   # add variable genes to metadata
   metadata(combined_sce)$variable_genes <- var_genes
