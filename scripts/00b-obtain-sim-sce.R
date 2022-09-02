@@ -32,9 +32,11 @@ project_root <- here::here()
 renv::load(project_root)
 
 # import libraries
-library(magrittr)
-library(optparse)
-library(SingleCellExperiment)
+suppressPackageStartupMessages({
+  library(magrittr)
+  library(optparse)
+  library(SingleCellExperiment)
+})
 
 # Set up optparse options
 option_list <- list(

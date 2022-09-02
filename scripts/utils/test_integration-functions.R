@@ -60,13 +60,17 @@ perform_dim_reduction(combined_sce,
 # should fail PCA
 #perform_dim_reduction(combined_sce, var_genes = var_genes, pca_type = "pca")
 
+
+# use this file for testing integration; the above combined_sce object isn't properly formatted
+#  after code changes
+combined_sce <- readRDS("results/human_cell_atlas/merged_sce/1M_Immune_Cells_merged_sce.rds")
 # Test harmony:
 integrate_harmony(combined_sce, "batch", from_pca=FALSE)
 integrated_sce<- integrate_harmony(combined_sce, "batch")
 
 
 # Test fastMNN:
-integrated_sce <-integrate_fastMNN(combined_sce)
+integrated_sce <- integrate_fastMNN(combined_sce, gene_list = metadata(combined_sce)$variable_genes)
 
 
 # plot UMAP pre and post integration
@@ -113,3 +117,14 @@ kbet <- calculate_kbet(integrated_sce, "batch", "harmony", seed = 2022,
                        # A full kBET run takes about 3 minutes; go faster for tests with only a small n=1 k0_fraction_range
                        k0_fraction_range = 0.01) 
 pca_regression <- calculate_pca_regression(integrated_sce, integration_method = "harmony", seed = 2022)
+
+
+# Test score calculation on unintegrated data
+# uses `combined_sce` variable; need to run through line 51 above
+calculate_pca_regression(combined_sce, unintegrated=TRUE, seed = 2022)
+calculate_kbet(combined_sce, "batch", unintegrated=TRUE, seed = 2022,
+               # A full kBET run takes about 3 minutes; go faster for tests with only a small n=1 k0_fraction_range
+               k0_fraction_range = 0.01) 
+calculate_batch_asw(combined_sce, unintegrated=TRUE)
+calculate_batch_ari(combined_sce, unintegrated=TRUE)
+calculate_ilisi(combined_sce, unintegrated=TRUE)
