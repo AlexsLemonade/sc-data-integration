@@ -19,6 +19,7 @@ source(
 #'  `harmony`: i) integrating using provided PCs (here, those calculated by the
 #'  `scpca-downstream-analyses` workflow, this is the default approach), and ii) integrating starting from the
 #'  normalized gene matrix, meaning Harmony will calculate PCs to use for integration.
+#'  Note that the returned SCE object will contain a dummy assay for corrected gene expression.
 #'
 #' @param combined_sce A combined SCE object. Must contain a cell column `batch`
 #'   that indicates the different groups to be integrated.
@@ -96,6 +97,15 @@ integrate_harmony <- function(combined_sce,
 
   # Add new PCs back into the combined_sce ----------------
   reducedDim(combined_sce, "harmony_PCA") <- harmony_results
+  
+  ## Add dummy (all 0s) corrected gene expression, which harmony does NOT actually calculate ---
+  dummy_expression <- Matrix::Matrix(matrix(0, 
+                        nrow = nrow(counts(combined_sce)), 
+                        ncol = ncol(counts(combined_sce))), 
+                 sparse = TRUE)
+  rownames(dummy_expression) <- rownames(counts(combined_sce))
+  colnames(dummy_expression) <- colnames(counts(combined_sce))
+  assay(combined_sce, "harmony_corrected") <- dummy_expression
   
   # Perform UMAP with the new PCs --------------------------
   combined_sce <- perform_dim_reduction(combined_sce, prefix = "harmony")
