@@ -13,8 +13,8 @@ The following are a list of parameters in the template notebook that can be used
 - `batch_column`: The column in the `colData` used to indicate which library each cell originated from, default is `batch`
 - `celltype_column`: The column in the `colData` used to indicate which cell type each cell belongs to, default is `celltype`
 - `num_pcs`: Number of principal components to use as input for calculating kBET, batch silhouette width, and batch ARI, default is 20
-- `ari_k_max`: For calculating the batch ARI, max number of centers to use for clustering by k-means, default is 25
 - `ari_k_min`: For calculating the batch ARI, min number of centers to use for clustering by k-means, default is 5
+- `ari_k_max`: For calculating the batch ARI, max number of centers to use for clustering by k-means, default is 25
 - `ari_k_increment`: For calculating the batch ARI, increment to increase the number of centers to use for clustering by k-means, e.g. for the default `ari_k_increment` of 5 with default `ari_k_min` and `ari_k_max`, a sequence will be created of `c(5, 10, 15, 20, 25)`
 - `k0_fraction_min`: For calculating kbet, min fraction of sample size to set k0, default is 0.05
 - `k0_fraction_max`: For calculating kbet, max fraction of sample size to set k0, default is 0.25
