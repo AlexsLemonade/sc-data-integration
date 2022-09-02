@@ -237,9 +237,7 @@ if (integration_method == "fastmnn") {
   # Prepare `gene_list` argument
   if (opt$fastmnn_use_all_genes) {
     fastmnn_gene_list <- NULL
-  } else {
-    fastmnn_gene_list <- metadata(merged_sce_obj)$variable_genes
-  }
+  } 
 
   # Perform integration
   integrated_sce_obj <- integrate_fastMNN(
@@ -290,7 +288,20 @@ if (integration_method == "seurat") {
   # Converted the integrated seurat object into an SCE object
   integrated_sce_obj <- as.SingleCellExperiment(integrated_seurat_obj)
   
+  # Rename assays appropriately:
   
+  # The converted `logcounts` is the CORRECTED expression
+  assay(integrated_sce_obj, paste0(opt$seurat_reduction_method, "_corrected")) <- logcounts(integrated_sce_obj)
+  
+  # The logcounts in SCT assay is logcounts
+  logcounts(integrated_sce_obj) <- logcounts( altExp(integrated_sce_obj, "SCT") )
+  
+  # The counts in RNA assay is counts  
+  counts(integrated_sce_obj) <- counts( altExp(integrated_sce_obj, "RNA") )
+  
+  # Remove altExps
+  integrated_sce_obj <- removeAltExps(integrated_sce_obj)
+
   # Convert reducedDims names back to <lowercase>_<UPPERCASE> because 
   #   `as.SingleCellExperiment` makes them all uppercase
   reducedDimNames(integrated_sce_obj) <- stringr::str_replace_all(
@@ -299,13 +310,7 @@ if (integration_method == "seurat") {
     opt$seurat_reduction_method
   )
 
-  # Restore the original `counts` assay into integrated_sce_obj because
-  #  `as.SingleCellExperiment` only keeps the `logcounts` assay
-  counts(integrated_sce_obj) <- counts(merged_sce_obj)
-  
-
 }
-
 
 
 # Remove uncorrected expression values, if specified ----------
