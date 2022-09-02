@@ -13,6 +13,8 @@ params:
   k0_fraction_min: 0.05
   k0_fraction_max: 0.25
   k0_fraction_increment: 0.05
+  num_regression_pcs: 50
+  sig_threshold:  0.05
   seed: 2022
   date: !r Sys.Date()
 
@@ -257,10 +259,16 @@ head(kbet_df)
 ```{r}
 # calculate PCA regression for unintegrated and integrated SCE separately
 pca_unintegrated <- calculate_pca_regression(merged_sce,
+                                             batch_column = params$batch_column,
+                                             num_pcs = params$num_regression_pcs,
+                                             significance_threshold = params$sig_threshold,
                                              seed = params$seed,
                                              unintegrated=TRUE)
 
 pca_integrated <- calculate_pca_regression(integrated_sce,
+                                           batch_column = params$batch_column,
+                                           num_pcs = params$num_regression_pcs,
+                                           significance_threshold = params$sig_threshold,
                                            seed = params$seed,
                                            integration_method = integration_method)
 
