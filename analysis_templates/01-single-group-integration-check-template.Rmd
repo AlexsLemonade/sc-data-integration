@@ -32,6 +32,13 @@ output:
 ## Set Up
 
 ```{r}
+# load the R project
+project_root <- here::here()
+renv::load(project_root)
+```
+
+
+```{r}
 suppressPackageStartupMessages({
  library(SingleCellExperiment)
  library(ggplot2) 
@@ -43,10 +50,6 @@ set.seed(params$seed)
 
 
 ```{r setup}
-# load the R project
-project_root <- here::here()
-renv::load(project_root)
-
 utils_dir <- file.path(project_root, "scripts", "utils")
 
 # source the helper functions to grab the integration method check 
@@ -135,7 +138,8 @@ plot_integration_umap(merged_sce,
 
 ```{r}
 # calculate ilisi for unintegrated and integrated SCE separately
-ilisi_unintegrated <- calculate_ilisi(merged_sce, 
+ilisi_unintegrated <- calculate_ilisi(merged_sce,
+                                      params$batch_column,
                                       unintegrated=TRUE)
 
 ilisi_integrated <- calculate_ilisi(integrated_sce,
