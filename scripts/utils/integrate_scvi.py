@@ -7,7 +7,7 @@ def integrate_scvi(merged_adata,
                    integrate_genes,
                    batch_column = ['batch'],
                    categorical_covariate_columns = None,
-                   continuous_covariate_columns = ['subsets_mito_percent'],
+                   continuous_covariate_columns = None,
                    seed=None):
 
     """
@@ -80,13 +80,19 @@ def integrate_scvi(merged_adata,
     else:
         raise TypeError("categorial_covariate_columns must be either type str or list.")
 
+    # if no covariates are provided set the combined covariates to just be the categorical cov
+    if continuous_covariate_columns is None:
+        combined_covariates = categorical_covariate_columns
     # make sure that input for covariate columns is a list
-    if type(continuous_covariate_columns) != list:
+    elif type(continuous_covariate_columns) != list:
         continuous_covariate_columns = [continuous_covariate_columns]
+        combined_covariates = continuous_covariate_columns + categorical_covariate_columns
+    else:
+        combined_covariates = continuous_covariate_columns + categorical_covariate_columns
 
     # check that batch, categorical, and continuous categorical keys are all found in obs
     # batch is now stored in categorical covariates so don't need to check separately
-    missing_cols = [col for col in (continuous_covariate_columns + categorical_covariate_columns)
+    missing_cols = [col for col in (combined_covariates)
                     if col not in merged_adata.obs]
     if missing_cols:
         raise ValueError("The following columns from batch_column, categorical_covariate_columns,"
