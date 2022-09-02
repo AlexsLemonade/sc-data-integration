@@ -7,8 +7,8 @@ params:
   batch_column: "batch"
   celltype_column: "celltype"
   num_pcs: 20
-  ari_k_max: 25
   ari_k_min: 5
+  ari_k_max: 25
   ari_k_increment: 5
   k0_fraction_min: 0.05
   k0_fraction_max: 0.25
