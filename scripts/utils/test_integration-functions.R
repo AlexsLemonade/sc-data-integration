@@ -60,13 +60,17 @@ perform_dim_reduction(combined_sce,
 # should fail PCA
 #perform_dim_reduction(combined_sce, var_genes = var_genes, pca_type = "pca")
 
+
+# use this file for testing integration; the above combined_sce object isn't properly formatted
+#  after code changes
+combined_sce <- readRDS("results/human_cell_atlas/merged_sce/1M_Immune_Cells_merged_sce.rds")
 # Test harmony:
 integrate_harmony(combined_sce, "batch", from_pca=FALSE)
 integrated_sce<- integrate_harmony(combined_sce, "batch")
 
 
 # Test fastMNN:
-integrated_sce <-integrate_fastMNN(combined_sce)
+integrated_sce <- integrate_fastMNN(combined_sce, gene_list = metadata(combined_sce)$variable_genes)
 
 
 # plot UMAP pre and post integration
