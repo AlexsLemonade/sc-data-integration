@@ -191,7 +191,6 @@ batch_ari_df <- dplyr::bind_rows(batch_ari_unintegrated, batch_ari_integrated)
 
 ```{r}
 head(batch_ari_df)
-
 ```
 ### Batch ASW
 
