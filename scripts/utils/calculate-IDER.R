@@ -37,6 +37,11 @@ calculate_IDER <- function(integrated_sce,
   # Set seed if given
   set.seed(seed)
 
+  
+  integrated_sce <- readRDS("results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_fastmnn_sce.rds")
+  
+  integration_method <- "fastmnn"
+  
   # Check integration method, and convert SCE to Seurat
   # Settings depending on whether data is integrated or not
   if (unintegrated){
@@ -61,8 +66,8 @@ calculate_IDER <- function(integrated_sce,
   
   
   # Convert integrated SCE to Seurat for CIDER input
-  seurat_obj <- scpcaTools::sce_to_seurat(integrated_sce, 
-                                          assay_name = assay_name)
+  seurat_obj <- scpcaTools::sce_to_seurat(integrated_sce, assay_name = "fastmnn_corrected")
+                                          assay_name = "assay_name")
   # To do: have to convert this mess??
   #> seurat_obj@meta.data
   #[1] orig.ident                 nCount_harmony_corrected   nFeature_harmony_corrected
