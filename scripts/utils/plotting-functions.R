@@ -130,6 +130,33 @@ plot_integration_umap <- function(merged_sce,
 
 
 
+
+
+#' Helper function to prepare integration method for plotting
+#'
+#' @param df Data frame containing `integration_method` column to prepare
+#'
+#' @return Data frame with additional column `integration_method_factor` that has
+#'  been relabeled and reordered for plotting
+prepare_integration_method <- function(df) {
+  df_updated <- df %>%
+    # Rename for labeling
+    dplyr::mutate(integration_method_factor = dplyr::if_else(
+      integration_method == "unintegrated", "Pre-Integration", "Post-integration")
+    ) %>% 
+    # Ensure pre-integration comes first
+    dplyr::mutate(integration_method_factor = 
+                    forcats::fct_relevel(
+                      integration_method_factor, 
+                      "Pre-Integration")
+    )
+  
+  return(df_updated)
+}
+
+
+
+
 #' Function to plot batch average silhouette width (ASW) metric
 #'
 #' @param asw_df Data frame containing batch ASW values calculated on both 
@@ -147,16 +174,7 @@ plot_batch_asw <- function(asw_df,
   #  integration method as a factor
   #  calculate mean silhouette widths across reps
   summarized_df <- asw_df %>%
-    # Rename for labeling
-    dplyr::mutate(integration_method_factor = dplyr::if_else(
-      integration_method == "unintegrated", "Pre-Integration", "Post-integration")
-    ) %>% 
-    # Ensure pre-integration comes first
-    dplyr::mutate(integration_method_factor = 
-                    forcats::fct_relevel(
-                      integration_method_factor, 
-                      "Pre-Integration")
-    ) %>%
+    prepare_integration_method() %>%
     # Summarize silhouette widths
     dplyr::group_by(rep, integration_method_factor) %>%
     dplyr::summarize(
@@ -183,5 +201,66 @@ plot_batch_asw <- function(asw_df,
 
   # return the plot
   return(asw_plot)
+  
+} 
+
+
+
+
+#' Function to plot PCA regression metric
+#'
+#' @param pca_df Data frame containing pca regression metrics calculated on both 
+#'  integrated and unintegrated SCEs. Expected columns are at least 
+#'  `rep`, `pc_batch_variance`, `pc_regression_scaled`, and `integration_method`
+#' @param seed for sina plot reproducibility
+#' 
+#' @return A cowplot plot grid of plots showing PCA regression metrics in two panels
+plot_pca_regression <- function(pca_df,
+                                seed = seed) {
+  
+  # Set seed if given
+  set.seed(seed)
+  
+  # Set up for plotting
+  pca_df <- pca_df %>%
+    prepare_integration_method() 
+  
+  # Find the integration method for the plot title
+  integration_method <- unique(pca_df$integration_method[pca_df$integration_method != "unintegrated"])
+  
+  # Make plot in two panels via cowplot
+  #  panel 1 is pc_batch_variance, and panel 2 is pc_regression_scaled
+  panel1 <- ggplot2::ggplot(pca_df) + 
+    ggplot2::aes(x = integration_method_factor,
+                 y = pc_batch_variance) + 
+    ggplot2::geom_violin() + 
+    ggforce::geom_sina(alpha = 0.6) +
+    # mean +/- SE
+    ggplot2::stat_summary(color = "red", size = ggplot2::rel(0.25)) +
+    ggplot2::labs(
+      x = "Integration status",
+      y = "PC batch variance for each replicate",
+      title = glue::glue("PC batch variance after integration with {integration_method}")
+    ) 
+
+  
+  panel2 <- ggplot2::ggplot(pca_df) + 
+    ggplot2::aes(x = integration_method_factor,
+                 y = pc_regression_scaled) + 
+    ggplot2::geom_violin() + 
+    ggforce::geom_sina(alpha = 0.6) +
+    # mean +/- SE
+    ggplot2::stat_summary(color = "red", size = ggplot2::rel(0.25)) +
+    ggplot2::labs(
+      x = "Integration status",
+      y = "PC scaled regression for each replicate",
+      title = glue::glue("PC scaled regression after integration with {integration_method}")
+    ) 
+  
+  # Combine panels into 2 rows
+  pca_plots <- cowplot::plot_grid(panel1, panel2, ncol = 1)
+  
+  # Return plot grid
+  return(pca_plots)
   
 } 

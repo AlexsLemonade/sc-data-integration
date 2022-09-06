@@ -282,8 +282,10 @@ pca_integrated <- calculate_pca_regression(integrated_sce,
 pca_df <- dplyr::bind_rows(pca_unintegrated, pca_integrated)
 ```
 
-```{r}
+```{r fig.height=8, fig.width=8}
 head(pca_df)
+
+plot_pca_regression(pca_df, seed = params$seed)
 ```
 
 ## Session Info
