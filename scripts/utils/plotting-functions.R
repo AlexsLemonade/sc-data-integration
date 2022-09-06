@@ -127,3 +127,61 @@ plot_integration_umap <- function(merged_sce,
   
   return(combined_umap)
 }
+
+
+
+#' Function to plot batch average silhouette width (ASW) metric
+#'
+#' @param asw_df Data frame containing batch ASW values calculated on both 
+#'  integrated and unintegrated SCEs. Expected columns are at least 
+#'  `rep`, `batch_asw`, and `integration_method`
+#' @param seed for sina plot reproducibility
+#' @return ggplot object 
+plot_batch_asw <- function(asw_df, 
+                           seed = seed) {
+  
+  # Set seed if given
+  set.seed(seed)
+  
+  # Set up for plotting:
+  #  integration method as a factor
+  #  calculate mean silhouette widths across reps
+  summarized_df <- asw_df %>%
+    # Rename for labeling
+    dplyr::mutate(integration_method_factor = dplyr::if_else(
+      integration_method == "unintegrated", "Pre-Integration", "Post-integration")
+    ) %>% 
+    # Ensure pre-integration comes first
+    dplyr::mutate(integration_method_factor = 
+                    forcats::fct_relevel(
+                      integration_method_factor, 
+                      "Pre-Integration")
+    ) %>%
+    # Summarize silhouette widths
+    dplyr::group_by(rep, integration_method_factor) %>%
+    dplyr::summarize(
+      mean_batch_asw = mean(batch_asw)
+    ) %>%
+    dplyr::ungroup()
+  
+  # Find the integration method for the plot title
+  integration_method <- unique(asw_df$integration_method[asw_df$integration_method != "unintegrated"])
+  
+  # Make the plot
+  asw_plot <- ggplot2::ggplot(summarized_df) + 
+    ggplot2::aes(x = integration_method_factor,
+                 y = mean_batch_asw) + 
+    ggplot2::geom_violin() + 
+    ggforce::geom_sina(alpha = 0.6) +
+    # mean +/- SE
+    ggplot2::stat_summary(color = "red", size = ggplot2::rel(0.25)) +
+    ggplot2::labs(
+      x = "Integration status",
+      y = "Batch ASW for each replicate",
+      title = glue::glue("Batch ASW after integration with {integration_method}")
+    ) 
+
+  # return the plot
+  return(asw_plot)
+  
+} 
