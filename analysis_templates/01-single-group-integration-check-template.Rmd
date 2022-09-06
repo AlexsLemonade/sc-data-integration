@@ -1,8 +1,8 @@
 ---
 params:
-  group_name: "sim1"
-  merged_sce: "../results/scib_simulated/merged_sce/sim1_merged_sce.rds"
-  integrated_sce: "../results/scib_simulated/integrated_sce/sim1_integrated_fastmnn_sce.rds"
+  group_name: "1M_Immune_Cells"
+  merged_sce: "../results/human_cell_atlas/merged_sce/1M_Immune_Cells_merged_sce.rds"
+  integrated_sce: "../results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_fastmnn_sce.rds"
   integration_method: "fastmnn"
   batch_column: "batch"
   celltype_column: "celltype"
@@ -254,7 +254,7 @@ kbet_df <- dplyr::bind_rows(kbet_unintegrated, kbet_integrated)
 ```
 
 ```{r}
-head(kbet_df)
+plot_kbet(kbet_df)
 ```
 
 
