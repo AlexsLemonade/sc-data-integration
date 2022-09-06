@@ -237,7 +237,9 @@ if (integration_method == "fastmnn") {
   # Prepare `gene_list` argument
   if (opt$fastmnn_use_all_genes) {
     fastmnn_gene_list <- NULL
-  } 
+  } else {
+    fastmnn_gene_list <- metadata(merged_sce_obj)$variable_genes
+  }
 
   # Perform integration
   integrated_sce_obj <- integrate_fastMNN(
