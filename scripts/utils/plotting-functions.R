@@ -127,3 +127,32 @@ plot_integration_umap <- function(merged_sce,
   
   return(combined_umap)
 }
+
+plot_kbet <- function(kbet_df){
+  
+  ggplot(kbet_df, aes(x = integration_method, y = kbet_stat, color = kbet_stat_type)) +
+    geom_violin(position = "dodge") +
+    ggforce::geom_sina(size = 0.2, alpha = 0.5,
+                position = position_dodge(width = 0.9)) + 
+    stat_summary(
+      aes(group = kbet_stat_type),
+      color = "black",
+      fun = "median",
+      fun.min = function(x) {
+        quantile(x, 0.25)
+      },
+      fun.max = function(x) {
+        quantile(x, 0.75)
+      },
+      geom = "pointrange",
+      position = position_dodge(width = 0.9),
+      size = 0.2
+    ) +
+    labs(
+      x = "Integration status",
+      y = "kBet rejection",
+      color = ""
+    ) +
+    scale_color_discrete(labels = c("Expected", "Observed"))
+  
+}
