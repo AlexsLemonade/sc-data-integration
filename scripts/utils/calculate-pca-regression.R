@@ -54,13 +54,6 @@ calculate_pca_regression <- function(integrated_sce,
     
     # Get name for reduced dimensions
     reduced_dim_name <- get_reduced_dim_name(integration_method)
-    
-    # if integration method is scvi, make sure num pcs is set to 10 or less
-    if(integration_method == "scvi"){
-      if(num_pcs > 10){
-        num_pcs = 10
-      }
-    }
   }
   
   # Pull out the PCs or analogous reduction
