@@ -121,7 +121,10 @@ plot_integration_umap <- function(sce,
 
 plot_kbet <- function(kbet_df){
   
-  ggplot(kbet_df, aes(x = integration_method, y = kbet_stat, color = kbet_stat_type)) +
+  kbet_df <- kbet_df %>%
+    dplyr::mutate(integration_method_factor = forcats::fct_relevel(integration_method, "unintegrated", after = 0))
+  
+  ggplot(kbet_df, aes(x = integration_method_factor, y = kbet_stat, color = kbet_stat_type)) +
     geom_violin(position = "dodge") +
     ggforce::geom_sina(size = 0.2, alpha = 0.5,
                 position = position_dodge(width = 0.9)) + 
