@@ -5,7 +5,10 @@ rule target:
     input:
         expand(os.path.join(config['results_dir'], "integrated_sce/{project}_integrated_{sce_method}_sce.rds"),
                project = pep.sample_table["project_name"],
-               sce_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scvi"])
+               sce_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scvi"]),
+        expand(os.path.join(config['results_dir'], "analysis_reports/{project}_integration_report.html"),
+               project = pep.sample_table["project_name"])
+
 
 # Rule used for building conda & renv environment
 rule build_renv:
@@ -170,4 +173,24 @@ rule integrate_scvi:
             --method "scvi" \
             --seed {config[seed]} \
             --corrected_only
+        """
+
+rule generate_report:
+    conda: "envs/scpca-renv.yaml"
+    input:
+        merged_sce_dir = rules.merge_sces.output,
+        integrated_sce_dir = "{basedir}/integrated_sce"
+    output:
+        "{basedir}/analysis_reports/{project}_integration_report.html"
+    shell:
+        """
+        Rscript -e \
+        "rmarkdown::render('analysis_templates/01-single-group-integration-check-template.Rmd', \
+                            clean = TRUE, \
+                            output_file = '{output}', \
+                            output_dir = 'dirname({output})', \
+                            params = list(group_name = '{wildcards.project}', \
+                                          merged_sce_dir = '{input.merged_sce_dir}', \
+                                          integrated_sce_dir = '{input.integrated_sce_dir}'), \
+                            envir = new.env())"
         """
