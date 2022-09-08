@@ -1,0 +1,2 @@
+project_name	source_id	tissue_group	files_directory	metadata_filename	celltype_filename	celltype_filetype
+1M_Immune_Cells	dfc88eb3-ac32-4bf6-804d-9c57368e524c	blood	s3://sc-data-integration/human_cell_atlas_data/loom	1M_Immune_Cells_2022-05-13_08.12.tsv	CensusImmune-BoneMarrow-10x_cell_type_2020-03-12.csv	csv
