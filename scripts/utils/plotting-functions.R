@@ -119,7 +119,7 @@ plot_integration_umap <- function(sce,
   return(umap)
 }
 
-#' Set order of axes for integration methods 
+#' Set order of integration methods 
 #'
 #' @param metrics_df Dataframe containing desired metrics to plot, must contain 
 #'   a column named "integration_method"
@@ -130,8 +130,8 @@ plot_integration_umap <- function(sce,
 #' @return updated dataframe with a new column, "integration_method_factor", containing the 
 #'   integration methods re-leveled to the desired axes_order 
 
-set_axes_order <- function(metrics_df,
-                           axes_order = c("unintegrated",
+set_integration_order <- function(metrics_df,
+                           integration_order = c("unintegrated",
                                           "fastmnn",
                                           "harmony",
                                           "rpca",
@@ -145,8 +145,8 @@ set_axes_order <- function(metrics_df,
   }
   
   # check that all labels provided in the `axes_order` are in the ordered column 
-  if (!all(axes_order  %in% unique(metrics_df$integration_method))){
-    stop("Check that all labels provied in `axes_order` are present in the `integration_method` column of the dataframe.")
+  if (!all(integration_order  %in% unique(metrics_df$integration_method))){
+    stop("Check that all labels provied in `integration_order` are present in the `integration_method` column of the dataframe.")
   }
   
   # reorder based on specified order 
@@ -154,7 +154,7 @@ set_axes_order <- function(metrics_df,
     dplyr::mutate(integration_method_factor = dplyr::if_else(integration_method == "unintegrated", 
                                                              "Pre-Integration", 
                                                              integration_method)) %>%
-    dplyr::mutate(integration_method_factor = forcats::fct_relevel(integration_method, axes_order))
+    dplyr::mutate(integration_method_factor = forcats::fct_relevel(integration_method, integration_order))
   
   return(updated_metrics_df)
 }
@@ -175,7 +175,7 @@ plot_kbet <- function(kbet_df){
   }
   
   # set order of integration methods on axes
-  kbet_df_updated <- set_axes_order(kbet_df)
+  kbet_df_updated <- set_integration_order(kbet_df)
   
   # sina plot inside violin plot with rejection rate on y axis and integration method on x axis
   ggplot(kbet_df_updated, aes(x = integration_method_factor, y = kbet_stat, color = kbet_stat_type)) +
