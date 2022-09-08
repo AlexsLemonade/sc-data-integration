@@ -46,6 +46,11 @@ parser.add_argument('--continuous_covariates',
                     type = str,
                     help = 'A comma-separated list of columns containing additional continous data to be'
                     ' included as a covariate. Default is "subsets_mito_percent".')
+parser.add_argument('--num_latent',
+                    dest = 'num_latent',
+                    type = int,
+                    default = 20,
+                    help = 'Number of dimensions to return from the latent space.')
 parser.add_argument('--use_hvg',
                     dest = 'use_hvg',
                     action = 'store_true',
@@ -115,6 +120,7 @@ scvi_integrated_adata = integrate_scvi(merged_adata,
                                        batch_column = args.batch_column,
                                        categorical_covariate_columns = categorical_covariates,
                                        continuous_covariate_columns = continuous_covariates,
+                                       num_latent = args.num_latent,
                                        seed = args.seed)
 
 # remove raw data and logcounts to minimize space if corrected_only is true
