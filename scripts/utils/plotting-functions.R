@@ -246,7 +246,7 @@ plot_batch_ari <- function(batch_ari_df){
       size = 0.1
     ) +
     labs(
-      x = "Integration status",
+      x = "Integration method",
       y = "Batch ARI"
     ) +
     theme(axis.text.x = element_text(angle = 90))
