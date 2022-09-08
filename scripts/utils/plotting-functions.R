@@ -118,3 +118,90 @@ plot_integration_umap <- function(sce,
   
   return(umap)
 }
+
+#' Set order of integration methods 
+#'
+#' @param metrics_df Dataframe containing desired metrics to plot, must contain 
+#'   a column named "integration_method"
+#' @param integration_order Vector indicating the desired order of the integration methods
+#'   on the axes for plotting. Default is c("unintegrated", "fastmnn", "harmony",
+#'   "rpca", "cca", "scanorama", "scvi")
+#'
+#' @return updated dataframe with a new column, "integration_method_factor", containing the 
+#'   integration methods re-leveled to the desired axes_order 
+
+set_integration_order <- function(metrics_df,
+                                  integration_order = c("unintegrated",
+                                                        "fastmnn",
+                                                        "harmony",
+                                                        "rpca",
+                                                        "cca",
+                                                        "scanorama",
+                                                        "scvi")){
+  
+  # make sure that provided dataframe contains `integration_method` as a column 
+  if (!"integration_method" %in% colnames(metrics_df)){
+    stop("`metrics_df` is missing the column named `integration_method`.")
+  }
+  
+  # check that all labels provided in the `integration_order` argument are in the integration_method column 
+  if (!all(integration_order  %in% unique(metrics_df$integration_method))){
+    stop("Check that all labels provied in `integration_order` are present in the `integration_method` column of the dataframe.")
+  }
+  
+  # reorder based on specified order 
+  updated_metrics_df <- metrics_df %>%
+    dplyr::mutate(integration_method_factor = dplyr::if_else(integration_method == "unintegrated", 
+                                                             "Pre-Integration", 
+                                                             integration_method)) %>%
+    dplyr::mutate(integration_method_factor = forcats::fct_relevel(integration_method, integration_order))
+  
+  return(updated_metrics_df)
+}
+
+
+#' Plot kBET rejection rate across integration methods
+#'
+#' @param kbet_df Dataframe containing the calculated kBET rejection rates with the following columns: 
+#'   "integration_method", "kbet_stat", and "kbet_stat_type"
+#'
+#' @return A ggplot object containing a violin plot of kBET rejection rates across integration methods 
+
+plot_kbet <- function(kbet_df){
+  
+  # check that all expected columns are present in dataframe 
+  if(!all(c("integration_method", "kbet_stat", "kbet_stat_type") %in% colnames(kbet_df))){
+    stop("Required columns are missing from input dataframe, make sure that `calculate_kbet` has been run successfully.")
+  }
+  
+  # set order of integration methods on axes
+  kbet_df_updated <- set_integration_order(kbet_df)
+  
+  # sina plot inside violin plot with rejection rate on y axis and integration method on x axis
+  ggplot(kbet_df_updated, aes(x = integration_method_factor, y = kbet_stat, color = kbet_stat_type)) +
+    geom_violin(position = "dodge") +
+    ggforce::geom_sina(size = 0.2, alpha = 0.5,
+                position = position_dodge(width = 0.9)) + 
+    # add median point to plot
+    stat_summary(
+      aes(group = kbet_stat_type),
+      color = "black",
+      fun = "median",
+      fun.min = function(x) {
+        quantile(x, 0.25)
+      },
+      fun.max = function(x) {
+        quantile(x, 0.75)
+      },
+      geom = "pointrange",
+      position = position_dodge(width = 0.9),
+      size = 0.2
+    ) +
+    labs(
+      x = "Integration status",
+      y = "kBet rejection rate",
+      color = ""
+    ) +
+    scale_color_discrete(labels = c("Expected", "Observed"))
+  
+}

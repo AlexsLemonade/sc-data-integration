@@ -270,6 +270,12 @@ head(batch_asw_df)
 
 ### kBET 
 
+Below we look at the kBET rejection rate, comparing the expected and observed rejection rate for each integration method. 
+kBET is calculated by comparing the local batch label distribution to the batch distribution across the entire population of cells. 
+A well-integrated dataset would show a similar distribution of batch labels in the local neighborhoods as well as the global neighborhood, which translates into a low observed rejection rate.
+The authors caution that kBET is very sensitive to any kind of bias, therefore kBET rates close to or equal to 1 may indicate bias in data and kBET values should be interpreted with caution.
+More information on kBET can be found in the original [publication](https://doi.org/10.1038/s41592-018-0254-1) and on their [GitHub](https://github.com/theislab/kBET).
+
 ```{r}
 # create k range needed for input to ARI function from params 
 
@@ -308,7 +314,7 @@ kbet_df <- dplyr::bind_rows(kbet_unintegrated, kbet_integrated_list)
 ```
 
 ```{r}
-head(kbet_df)
+plot_kbet(kbet_df)
 ```
 
 
