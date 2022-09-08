@@ -201,7 +201,7 @@ plot_kbet <- function(kbet_df){
       size = 0.2
     ) +
     labs(
-      x = "Integration status",
+      x = "Integration method",
       y = "kBet rejection rate",
       color = ""
     ) +
@@ -243,9 +243,9 @@ plot_batch_asw <- function(asw_df,
     aes(x = integration_method_factor,
         y = mean_batch_asw) +
     geom_violin() +
-    ggforce::geom_sina(alpha = 0.6) +
+    ggforce::geom_sina(alpha = 0.6, size = rel(0.5)) +
     stat_summary(
-      color = "black",
+      color = "red",
       fun = "median",
       fun.min = function(x) {
         quantile(x, 0.25)
@@ -258,7 +258,7 @@ plot_batch_asw <- function(asw_df,
       size = 0.2
     ) +
     labs(
-      x = "Integration status",
+      x = "Integration method",
       y = "Batch ASW across replicates"
     )
 

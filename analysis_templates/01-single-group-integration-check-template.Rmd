@@ -149,8 +149,7 @@ missing_umap <- purrr::imap(sce_list, check_umap_name) %>%
 if(!is.null(missing_umap)){
   stop(glue::glue("
        Missing UMAP embeddings from SCE object. Make sure that UMAP embeddings are present and labeled with {missing_umap}.
-
-       "))
+      "))
 }
 ```
 
@@ -261,7 +260,6 @@ batch_asw_integrated_list <- integration_methods %>%
 
 # create combined DF
 batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated_list)
-
 ```
 
 ```{r}
