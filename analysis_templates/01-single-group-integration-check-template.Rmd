@@ -207,6 +207,15 @@ head(ilisi_df)
 ```
 
 ### Batch ARI
+
+The below plot looks at the batch adjusted rand index (ARI) for each integration method. 
+Cells are first downsampled to 80% of the total number of cells before clustering is performed using k-means clustering. 
+The ARI between clustering results and batch assignments is then calculated and then this is repeated 20 times. 
+We also calculated batch ARI across a range of k for k-means, the number of centers used for clustering. 
+The plots show the batch ARI on the y-axis across each integration method indicated on the y-axis and are facted by the value of k used for k-means clustering.
+If datasets are well integrated we would anticipate the batch ARI to be close to 0 and the 1-batch ARI to be close to 1, indicating that batches are well integrated across clustering assignments and low concordance between clusters and batch assignment. 
+
+
 ```{r}
 # create k range needed for input to ARI function from params 
 
@@ -242,7 +251,7 @@ batch_ari_df <- dplyr::bind_rows(batch_ari_unintegrated, batch_ari_integrated_li
 ```
 
 ```{r}
-head(batch_ari_df)
+plot_batch_ari(batch_ari_df)
 ```
 ### Batch ASW
 
