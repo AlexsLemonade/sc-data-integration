@@ -159,6 +159,7 @@ rule integrate_scvi:
           --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
           --output_anndata "{output.integrated_anndata}" \
           --continuous_covariates {config[continuous_covariates]} \
+          --num_latent {config[num_latent]} \
           --seed {config[seed]} \
           --use_hvg \
           --corrected_only
