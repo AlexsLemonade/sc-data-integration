@@ -13,5 +13,8 @@ seed: 2022
 num_hvg: 5000
 grouping_var: "project_name"
 
-# for scvi only, what columns in the coldata should be used as covariates in integration
+# params for scvi only
+# what columns in the coldata should be used as covariates in integration
 continuous_covariates: "subsets_mito_percent"
+# how many dimensions to return in the latent space
+num_latent: 20
