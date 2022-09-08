@@ -243,7 +243,13 @@ batch_ari_df <- dplyr::bind_rows(batch_ari_unintegrated, batch_ari_integrated_li
 ```{r}
 head(batch_ari_df)
 ```
+
 ### Batch ASW
+
+Below we look at the batch average silhouette width (AWS) across integration methods.
+Silhouette width is used to assess consistency within clusters and measures how well a given data point adheres to its own cluster vs. other clusters.
+The batch silhouette width, averaged across analysis replicates, therefore measures to what extent a given data point is adheres to its batch group, which is not desired after integration.
+Therefore, a well-integrated dataset would show lower batch ASW values compared to an unintegrated or poorly-integrated dataset, because clustering post-integration should not be primarily dictated by batch. 
 
 ```{r}
 # calculate batch ASW for unintegrated and integrated SCE separately
