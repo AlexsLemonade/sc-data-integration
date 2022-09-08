@@ -174,12 +174,15 @@ plot_kbet <- function(kbet_df){
     stop("Required columns are missing from input dataframe, make sure that `calculate_kbet` has been run successfully.")
   }
   
+  # set order of integration methods on axes
   kbet_df_updated <- set_axes_order(kbet_df)
   
+  # sina plot inside violin plot with rejection rate on y axis and integration method on x axis
   ggplot(kbet_df_updated, aes(x = integration_method_factor, y = kbet_stat, color = kbet_stat_type)) +
     geom_violin(position = "dodge") +
     ggforce::geom_sina(size = 0.2, alpha = 0.5,
                 position = position_dodge(width = 0.9)) + 
+    # add median point to plot
     stat_summary(
       aes(group = kbet_stat_type),
       color = "black",
