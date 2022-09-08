@@ -8,6 +8,7 @@ def integrate_scvi(merged_adata,
                    batch_column = ['batch'],
                    categorical_covariate_columns = None,
                    continuous_covariate_columns = None,
+                   num_latent = 20,
                    seed=None):
 
     """
@@ -36,6 +37,7 @@ def integrate_scvi(merged_adata,
         data to be included as a covariate. Default is None.
     continuous_covariate_columns : A list of columns containing additional continous
         data to be included as a covariate. Default is `['subsets_mito_percent']`.
+    num_latent: Number of dimensions to return from the latent space.
     seed : Random seed to set prior to scanorama. A seed will only be set if this
         is not `None`.
 
@@ -111,7 +113,8 @@ def integrate_scvi(merged_adata,
                                   continuous_covariate_keys = continuous_covariate_columns)
 
     # create and train model
-    scvi_model = scvi.model.SCVI(merged_adata)
+    scvi_model = scvi.model.SCVI(merged_adata,
+                                 n_latent = num_latent)
     scvi_model.train()
 
     # dimensionality reduction, mean of the approximate posterior
