@@ -119,12 +119,41 @@ plot_integration_umap <- function(sce,
   return(umap)
 }
 
+set_axes_order <- function(metrics_df,
+                           axes_order = c("unintegrated",
+                                          "fastmnn",
+                                          "harmony",
+                                          "rpca",
+                                          "cca",
+                                          "scanorama",
+                                          "scvi")){
+  
+  # make sure that provided dataframe contains `integration_method` as a column 
+  if (!"integration_method" %in% colnames(metrics_df)){
+    stop("`metrics_df` is missing the column named `integration_method`.")
+  }
+  
+  # check that all labels provided in the `axes_order` are in the ordered column 
+  if (!all(axes_order  %in% unique(metrics_df$integration_method))){
+    stop("Check that all labels provied in `axes_order` are present in the `integration_method` column of the dataframe.")
+  }
+  
+  # reorder based on specified order 
+  updated_metrics_df <- metrics_df %>%
+    dplyr::mutate(integration_method_factor = dplyr::if_else(integration_method == "unintegrated", 
+                                                             "Pre-Integration", 
+                                                             integration_method)) %>%
+    dplyr::mutate(integration_method_factor = forcats::fct_relevel(integration_method, axes_order))
+  
+  return(updated_metrics_df)
+}
+
+
 plot_kbet <- function(kbet_df){
   
-  kbet_df <- kbet_df %>%
-    dplyr::mutate(integration_method_factor = forcats::fct_relevel(integration_method, "unintegrated", after = 0))
+  kbet_df_updated <- set_axes_order(kbet_df)
   
-  ggplot(kbet_df, aes(x = integration_method_factor, y = kbet_stat, color = kbet_stat_type)) +
+  ggplot(kbet_df_updated, aes(x = integration_method_factor, y = kbet_stat, color = kbet_stat_type)) +
     geom_violin(position = "dodge") +
     ggforce::geom_sina(size = 0.2, alpha = 0.5,
                 position = position_dodge(width = 0.9)) + 
@@ -144,7 +173,7 @@ plot_kbet <- function(kbet_df){
     ) +
     labs(
       x = "Integration status",
-      y = "kBet rejection",
+      y = "kBet rejection rate",
       color = ""
     ) +
     scale_color_discrete(labels = c("Expected", "Observed"))
