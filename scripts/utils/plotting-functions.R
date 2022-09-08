@@ -119,6 +119,17 @@ plot_integration_umap <- function(sce,
   return(umap)
 }
 
+#' Set order of axes for integration methods 
+#'
+#' @param metrics_df Dataframe containing desired metrics to plot, must contain 
+#'   a column named "integration_method"
+#' @param axes_order Vector indicating the desired order of the integration methods
+#'   on the axes for plotting. Default is c("unintegrated", "fastmnn", "harmony",
+#'   "rpca", "cca", "scanorama", "scvi")
+#'
+#' @return updated dataframe with a new column, "integration_method_factor", containing the 
+#'   integration methods re-leveled to the desired axes_order 
+
 set_axes_order <- function(metrics_df,
                            axes_order = c("unintegrated",
                                           "fastmnn",
@@ -149,7 +160,19 @@ set_axes_order <- function(metrics_df,
 }
 
 
+#' Plot kBET rejection rate across integration methods
+#'
+#' @param kbet_df Dataframe containing the calculated kBET rejection rates with the following columns: 
+#'   "integration_method", "kbet_stat", and "kbet_stat_type"
+#'
+#' @return A ggplot object containing a violin plot of kBET rejection rates across integration methods 
+
 plot_kbet <- function(kbet_df){
+  
+  # check that all expected columns are present in dataframe 
+  if(!all(c("integration_method", "kbet_stat", "kbet_stat_type") %in% colnames(kbet_df))){
+    stop("Required columns are missing from input dataframe, make sure that `calculate_kbet` has been run successfully.")
+  }
   
   kbet_df_updated <- set_axes_order(kbet_df)
   
