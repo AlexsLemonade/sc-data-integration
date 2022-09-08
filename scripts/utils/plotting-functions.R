@@ -205,3 +205,50 @@ plot_kbet <- function(kbet_df){
     scale_color_discrete(labels = c("Expected", "Observed"))
   
 }
+
+#' Plot batch adjusted rand index (ARI) across integration methods
+#'
+#' @param batch_ari_df Dataframe containing the calculated batch ARI after clustering 
+#'   across a range of values used for k (number of centers) in k-means clustering. 
+#'   The dataframe must contain the following columns: 
+#'   "integration_method", "batch_ari", and "k"
+#'
+#' @return A ggplot object containing a sina plot of batch ARI across integration 
+#'   methods and faceted across values of k tested 
+
+plot_batch_ari <- function(batch_ari_df){
+
+  # check that all expected columns are present in dataframe 
+  if(!all(c("integration_method", "batch_ari", "k") %in% colnames(batch_ari_df))){
+    stop("Required columns are missing from input dataframe, make sure that `calculate_batch_ari` has been run successfully.")
+  }
+  
+  # set order of integration methods on axes
+  batch_ari_updated_df <- set_integration_order(batch_ari_df)
+  
+  # sina plot inside violin plot with batch ARI on y axis and integration method on x axis
+  ggplot(batch_ari_updated_df, aes(x = integration_method_factor, y = batch_ari)) +
+    ggforce::geom_sina(size = 0.3, alpha = 0.5) + 
+    # facet by value of K used
+    facet_wrap(~k) +
+    # add median point to plot
+    stat_summary(
+      aes(y = batch_ari),
+      color = "red",
+      fun = "median",
+      fun.min = function(x) {
+        quantile(x, 0.25)
+      },
+      fun.max = function(x) {
+        quantile(x, 0.75)
+      },
+      geom = "pointrange",
+      size = 0.1
+    ) +
+    labs(
+      x = "Integration status",
+      y = "Batch ARI"
+    ) +
+    theme(axis.text.x = element_text(angle = 90))
+  
+}
