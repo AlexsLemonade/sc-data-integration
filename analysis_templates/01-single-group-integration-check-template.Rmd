@@ -1,9 +1,8 @@
 ---
 params:
-  group_name: "sim1"
-  merged_sce: "../results/scib_simulated/merged_sce/sim1_merged_sce.rds"
-  integrated_sce: "../results/scib_simulated/integrated_sce/sim1_integrated_fastmnn_sce.rds"
-  integration_method: "fastmnn"
+  group_name: "1M_Immune_Cells"
+  merged_sce_dir: "../results/human_cell_atlas/merged_sce"
+  integrated_sce_dir: "../results/human_cell_atlas/integrated_sce"
   batch_column: "batch"
   celltype_column: "celltype"
   num_pcs: 20
@@ -18,7 +17,7 @@ params:
   seed: 2022
   date: !r Sys.Date()
 
-title: "`r glue::glue('Integration evaluation for {params$group_name} with {params$integration_method}')`"
+title: "`r glue::glue('Integration evaluation for {params$group_name}')`"
 author: "CCDL"
 date: "`r params$date`"
 output: 
@@ -67,72 +66,123 @@ source(file.path(utils_dir, "calculate-pca-regression.R"))
 ```
 
 
-```{r file-checks}
-# check integration method and reassign
-integration_method <- check_integration_method(params$integration_method)
+```{r}
+# build file paths for merged and integrated files 
+merged_sce_file <- paste0(params$group_name, "_merged_sce.rds")
+merged_sce_path <- file.path(params$merged_sce_dir, 
+                             merged_sce_file)
 
-# check for input files  
-if(!file.exists(params$merged_sce)){
+# check for merged/ unintegrated SCE file
+if(!file.exists(merged_sce_path)){
   stop("Merged SCE file provided does not exist")
-}
-
-if(!file.exists(params$integrated_sce)){
-  stop("Integrated SCE file provided does not exist")
 }
 ```
 
 
-```{r sce-checks}
-# read in sce objects 
-merged_sce <- readr::read_rds(params$merged_sce)
-integrated_sce <- readr::read_rds(params$integrated_sce)
+```{r}
+# find all integrated SCE files for given project 
+integrated_sce_files <- list.files(params$integrated_sce_dir,
+                                   pattern = params$group_name,
+                                   full.names = TRUE)
 
-# check that batch column is found in colData of both merged and integrated sce
-coldata_names <- intersect(colnames(colData(merged_sce)), colnames(colData(integrated_sce)))
+# extract integration methods for project from list of possible methods based on files that exist
+expected_methods <- c("fastmnn", "scvi", "harmony", "scanorama", "cca", "rpca")
+expected_methods_check <- paste(expected_methods, collapse = "|")
+integration_methods <- stringr::str_extract(integrated_sce_files, expected_methods_check)
+
+# check to make sure all integration methods are accounted for and have an associated file
+if( !identical(sort(integration_methods), sort(expected_methods))){
+  stop("All integration files are not present in provided `integrated_sce_dir`.")
+}
+
+# construct a list of all sce files for reading in merged + integrated files together
+all_sce_files <- c(merged_sce_path, integrated_sce_files)
+
+# read in rds files and create a list of all sce objects
+sce_list <- purrr::map(all_sce_files, readr::read_rds) %>%
+  set_names(c("unintegrated", integration_methods))
+```
+
+
+
+```{r sce-checks}
+
+# check that batch column is found in colData of both merged and integrated sce objects
+# first find all the column names of the coldata found in common
+coldata_names <- sce_list %>%
+    purrr::map(~ colnames(colData(.))) %>%
+    unname() %>%
+    unlist() %>%
+    unique()
+
 if(!params$batch_column %in% coldata_names){
-  stop("Provided batch_column should be present in both the colData of the merged SCE and integrated SCE.")
+  stop("Provided batch_column should be present in both the colData of the merged SCE and all integrated SCE objects.")
 }
 
 if(!params$celltype_column %in% coldata_names){
-  stop("Provided celltype_column should be present in both the colData of the merged SCE and integrated SCE.")
+  stop("Provided celltype_column should be present in both the colData of the merged SCE and all integrated SCE objects.")
 }
 
-# grab dim reduction name to use for plotting 
-integrated_umap_name <- paste0(integration_method, "_UMAP")
 
-# check that UMAP is present in both SCE objects 
-if(!"UMAP" %in% reducedDimNames(merged_sce)){
-  stop("Missing UMAP embeddings from merged SCE object")
+# check that umaps for pre-integrated and integrated are present
+check_umap_name <- function(sce,
+                            integration_method){
+  
+  if(integration_method == "unintegrated"){
+    umap_name <- "UMAP"
+  } else {
+    # grab dim reduction name to use for plotting 
+    umap_name <- paste0(integration_method, "_UMAP") 
+  }
+  
+  if(!umap_name %in% reducedDimNames(sce)){
+    missing_umap <- umap_name
+  } else {
+    missing_umap <- NULL
+  }
+  
+  return(missing_umap)
 }
 
-if(!integrated_umap_name %in% reducedDimNames(integrated_sce)){
-  stop(glue::glue("Missing UMAP embeddings from integrated SCE object. 
-       Make sure that UMAP embeddings are present and labeled with {integrated_umap_name}.")
-  )
+missing_umap <- purrr::imap(sce_list, check_umap_name) %>%
+  unlist()
+if(!is.null(missing_umap)){
+  stop(glue::glue("
+       Missing UMAP embeddings from SCE object. Make sure that UMAP embeddings are present and labeled with {missing_umap}.
+       
+       "))
 }
 ```
 
 ## UMAPs
 
-```{r batch-umaps}
+```{r batch-umaps, fig.height=15, fig.width=10, warning=FALSE}
 # create umap plots labeling by batch column
-plot_integration_umap(merged_sce,
-                      integrated_sce,
-                      integration_method,
-                      params$group_name,
-                      cell_label_column = params$batch_column)
+batch_umaps <- names(sce_list) %>%
+  purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
+                                      integration_method = .x,
+                                      params$group_name,
+                                      cell_label_column = params$batch_column))
+gridExtra::grid.arrange(grobs = batch_umaps, ncol = 2)
 ```
 
-```{r celltype-umaps}
+```{r celltype-umaps, fig.width=15, fig.height=20, warning=FALSE}
 # create umap plots labeling by celltype column
-plot_integration_umap(merged_sce,
-                      integrated_sce,
-                      integration_method,
-                      params$group_name,
-                      cell_label_column = params$celltype_column)
+celltype_umaps <- names(sce_list) %>%
+  purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
+                                      integration_method = .x,
+                                      params$group_name,
+                                      cell_label_column = params$celltype_column))
+gridExtra::grid.arrange(grobs = celltype_umaps, ncol = 2)
 ```
 
 ## Integration metrics 
+
+```{r}
+# separate out merged sce for calculation of metrics 
+merged_sce <- sce_list$unintegrated
+```
+
 
 ### iLISI
 
@@ -142,12 +192,13 @@ ilisi_unintegrated <- calculate_ilisi(merged_sce,
                                       params$batch_column,
                                       unintegrated=TRUE)
 
-ilisi_integrated <- calculate_ilisi(integrated_sce,
-                                    params$batch_column,
-                                    integration_method = integration_method)
+ilisi_integrated_list <- integration_methods %>%
+  purrr::imap(~ calculate_ilisi(integrated_sce = sce_list[[.x]],
+                                params$batch_column,
+                                integration_method = .x))
 
 # create combined DF 
-ilisi_df <- dplyr::bind_rows(ilisi_unintegrated, ilisi_integrated)
+ilisi_df <- dplyr::bind_rows(ilisi_unintegrated, ilisi_integrated_list)
 ```
 
 
@@ -171,7 +222,7 @@ k_range <- seq(params$ari_k_min,
 ```
 
 
-```{r}
+```{r, warning=FALSE}
 # calculate batch ARI for unintegrated and integrated SCE separately
 batch_ari_unintegrated <- calculate_batch_ari(merged_sce,
                                               seed = params$seed,
@@ -179,14 +230,15 @@ batch_ari_unintegrated <- calculate_batch_ari(merged_sce,
                                               num_pcs = params$num_pcs,
                                               unintegrated=TRUE)
 
-batch_ari_integrated <- calculate_batch_ari(integrated_sce,
-                                            seed = params$seed,
-                                            k_range = k_range,
-                                            num_pcs = params$num_pcs,
-                                            integration_method = integration_method)
+batch_ari_integrated_list <- integration_methods %>%
+  purrr::imap(~ calculate_batch_ari(integrated_sce = sce_list[[.x]],
+                                    seed = params$seed,
+                                    k_range = k_range,
+                                    num_pcs = params$num_pcs,
+                                    integration_method = .x))
 
 # create combined DF 
-batch_ari_df <- dplyr::bind_rows(batch_ari_unintegrated, batch_ari_integrated)
+batch_ari_df <- dplyr::bind_rows(batch_ari_unintegrated, batch_ari_integrated_list)
 ```
 
 ```{r}
@@ -201,13 +253,14 @@ batch_asw_unintegrated <- calculate_batch_asw(merged_sce,
                                               num_pcs = params$num_pcs,
                                               unintegrated=TRUE)
 
-batch_asw_integrated <- calculate_batch_asw(integrated_sce,
-                                            seed = params$seed,
-                                            num_pcs = params$num_pcs,
-                                            integration_method = integration_method)
+batch_asw_integrated_list <- integration_methods %>%
+  purrr::imap(~ calculate_batch_asw(integrated_sce = sce_list[[.x]],
+                                    seed = params$seed,
+                                    num_pcs = params$num_pcs,
+                                    integration_method = .x))
 
 # create combined DF 
-batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated)
+batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated_list)
 
 ```
 
@@ -241,15 +294,16 @@ kbet_unintegrated <- calculate_kbet(merged_sce,
                                     k0_fraction_range = k0_fraction_range,
                                     unintegrated=TRUE)
 
-kbet_integrated <- calculate_kbet(integrated_sce,
-                                  params$batch_column,
-                                  seed = params$seed,
-                                  num_pcs = params$num_pcs,
-                                  k0_fraction_range = k0_fraction_range,
-                                  integration_method = integration_method)
+kbet_integrated_list <- integration_methods %>%
+  purrr::imap(~ calculate_kbet(integrated_sce = sce_list[[.x]],
+                               params$batch_column,
+                               seed = params$seed,
+                               num_pcs = params$num_pcs,
+                               k0_fraction_range = k0_fraction_range,
+                               integration_method = .x))
 
 # create combined DF 
-kbet_df <- dplyr::bind_rows(kbet_unintegrated, kbet_integrated)
+kbet_df <- dplyr::bind_rows(kbet_unintegrated, kbet_integrated_list)
 
 ```
 
@@ -260,7 +314,7 @@ head(kbet_df)
 
 ### PCA Regression
 
-```{r}
+```{r, warning=FALSE}
 # calculate PCA regression for unintegrated and integrated SCE separately
 pca_unintegrated <- calculate_pca_regression(merged_sce,
                                              batch_column = params$batch_column,
@@ -269,15 +323,16 @@ pca_unintegrated <- calculate_pca_regression(merged_sce,
                                              seed = params$seed,
                                              unintegrated=TRUE)
 
-pca_integrated <- calculate_pca_regression(integrated_sce,
-                                           batch_column = params$batch_column,
-                                           num_pcs = params$num_regression_pcs,
-                                           significance_threshold = params$sig_threshold,
-                                           seed = params$seed,
-                                           integration_method = integration_method)
+pca_integrated_list <- integration_methods %>%
+  purrr::imap(~ calculate_pca_regression(integrated_sce = sce_list[[.x]],
+                                         batch_column = params$batch_column,
+                                         num_pcs = params$num_regression_pcs,
+                                         significance_threshold = params$sig_threshold,
+                                         seed = params$seed,
+                                         integration_method = .x))
 
 # create combined DF 
-pca_df <- dplyr::bind_rows(pca_unintegrated, pca_integrated)
+pca_df <- dplyr::bind_rows(pca_unintegrated, pca_integrated_list)
 ```
 
 ```{r}

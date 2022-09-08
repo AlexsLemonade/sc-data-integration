@@ -33,6 +33,7 @@ plot_umap_panel <- function(sce,
     # relabel legend and resize dots
     guides(color = guide_legend(title = cell_label_column,
                                 override.aes = list(size = 1)))+
+    theme(text = element_text(size = 14)) +
     ggtitle(plot_title)
   
   return(umap)
@@ -56,30 +57,31 @@ plot_umap_panel <- function(sce,
 #' @return Combined ggplot containing a UMAP for both the unintegrated and integrated dataset
 #'   with cells colored by the specified `cell_label_column`
 #'   
-plot_integration_umap <- function(merged_sce,
-                                  integrated_sce,
+plot_integration_umap <- function(sce,
                                   integration_method,
                                   group_name,
                                   cell_label_column,
                                   max_celltypes = 5) {
   
   # check that column to label cells by is present in colData
-  coldata_names <- intersect(colnames(colData(merged_sce)), colnames(colData(integrated_sce)))
-  if(!cell_label_column %in% coldata_names){
-    stop("Provided cell_label_column should be present in both the colData of the merged SCE and integrated SCE.")
+  if(!cell_label_column %in% colnames(colData(sce))){
+    stop("Provided cell_label_column should be present in the SCE object.")
   }
   
   # if using celltype, we only want to label the top `max_celltypes`
   if(cell_label_column == "celltype"){
     # only need to relabel if > `max_celltypes` exist
-    num_celltypes <- length(unique(colData(merged_sce)[,cell_label_column]))
+    num_celltypes <- length(unique(colData(sce)[,cell_label_column]))
     if(num_celltypes > max_celltypes){
       
-      merged_coldata_df <- colData(merged_sce) %>%
-        as.data.frame()
+      coldata_df <- colData(sce) %>%
+        as.data.frame() %>%
+        # make sure that celltype is a character vector and not a Factor
+        # this can happen if converting from AnnData and will cause errors later on
+        dplyr::mutate(celltype = as.character(celltype))
     
       # select top `max_celltypes` cell types based on frequency 
-      selected_celltypes <- merged_coldata_df[,cell_label_column] %>%
+      selected_celltypes <- coldata_df[,cell_label_column] %>%
         table() %>%
         as.data.frame() %>%
         dplyr::arrange(desc(Freq)) %>% 
@@ -88,42 +90,31 @@ plot_integration_umap <- function(merged_sce,
         as.character()
       
       # if not in top cell types set to "other" for both merged and integrated SCE
-      merged_coldata_df <- merged_coldata_df %>%
+      coldata_df <- coldata_df %>%
         # first label everything outside of selected celltypes as other then if NA convert back to NA 
         dplyr::mutate(new_celltype = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"),
                       celltype = dplyr::if_else(!is.na(celltype), new_celltype, NA_character_)) %>%
         dplyr::select(-new_celltype)
       
-      colData(merged_sce) <- DataFrame(merged_coldata_df)
-      
-      integrated_coldata_df <- colData(integrated_sce) %>%
-        as.data.frame() %>%
-        dplyr::mutate(new_celltype = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"),
-                      celltype = dplyr::if_else(!is.na(celltype), new_celltype, NA_character_))
-      
-      colData(integrated_sce) <- DataFrame(integrated_coldata_df)
-    
+      colData(sce) <- DataFrame(coldata_df)
     }
   }
   
-  num_colors <- length(unique(merged_sce[[cell_label_column]]))
+  num_colors <- length(unique(sce[[cell_label_column]]))
   plot_colors <- rainbow(num_colors)
   
-  pre_integration_umap <- plot_umap_panel(sce = merged_sce,
-                                          cell_label_column,
-                                          umap_name = "UMAP",
-                                          plot_colors,
-                                          plot_title = paste(group_name, "Pre-Integration"))
+  if(integration_method == "unintegrated"){
+    umap_name <- "UMAP"
+  } else {
+    # grab dim reduction name to use for plotting 
+    umap_name <- paste0(integration_method, "_UMAP") 
+  }
   
-  post_integration_umap <- plot_umap_panel(sce = integrated_sce,
-                                           cell_label_column,
-                                           umap_name = paste0(integration_method, "_UMAP"),
-                                           plot_colors,
-                                           plot_title = paste(group_name, 
-                                                              "Post-Integration with", 
-                                                              integration_method))
+  umap <- plot_umap_panel(sce = sce,
+                          cell_label_column,
+                          umap_name = umap_name,
+                          plot_colors,
+                          plot_title = integration_method)
   
-  combined_umap <- cowplot::plot_grid(pre_integration_umap, post_integration_umap, ncol = 1)
-  
-  return(combined_umap)
+  return(umap)
 }
