@@ -131,13 +131,13 @@ plot_integration_umap <- function(sce,
 #'   integration methods re-leveled to the desired axes_order 
 
 set_integration_order <- function(metrics_df,
-                           integration_order = c("unintegrated",
-                                          "fastmnn",
-                                          "harmony",
-                                          "rpca",
-                                          "cca",
-                                          "scanorama",
-                                          "scvi")){
+                                  integration_order = c("unintegrated",
+                                                        "fastmnn",
+                                                        "harmony",
+                                                        "rpca",
+                                                        "cca",
+                                                        "scanorama",
+                                                        "scvi")){
   
   # make sure that provided dataframe contains `integration_method` as a column 
   if (!"integration_method" %in% colnames(metrics_df)){
