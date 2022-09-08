@@ -123,7 +123,7 @@ plot_integration_umap <- function(sce,
 #'
 #' @param metrics_df Dataframe containing desired metrics to plot, must contain 
 #'   a column named "integration_method"
-#' @param axes_order Vector indicating the desired order of the integration methods
+#' @param integration_order Vector indicating the desired order of the integration methods
 #'   on the axes for plotting. Default is c("unintegrated", "fastmnn", "harmony",
 #'   "rpca", "cca", "scanorama", "scvi")
 #'
@@ -144,7 +144,7 @@ set_integration_order <- function(metrics_df,
     stop("`metrics_df` is missing the column named `integration_method`.")
   }
   
-  # check that all labels provided in the `axes_order` are in the ordered column 
+  # check that all labels provided in the `integration_order` argument are in the integration_method column 
   if (!all(integration_order  %in% unique(metrics_df$integration_method))){
     stop("Check that all labels provied in `integration_order` are present in the `integration_method` column of the dataframe.")
   }
