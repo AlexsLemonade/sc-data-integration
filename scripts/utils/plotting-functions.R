@@ -254,7 +254,6 @@ plot_batch_asw <- function(asw_df,
         quantile(x, 0.75)
       },
       geom = "pointrange",
-      position = position_dodge(width = 0.9),
       size = 0.2
     ) +
     labs(
