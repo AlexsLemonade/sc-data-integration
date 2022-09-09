@@ -276,3 +276,50 @@ plot_batch_ari <- function(batch_ari_df,
   return(batch_ari_plot)
   
 }
+
+
+#' Plot iLISI score across each cell in an integrated dataset
+#'
+#' @param ilisi_df Dataframe containing the calculated ilisi scores for each cell
+#'   The dataframe must contain the following columns: 
+#'   "integration_method", "ilisi_score", and "library"
+#'
+#' @return A gggplot object containing both a boxplot and density plot of the ilisi score 
+#'  across integration methods
+
+plot_ilisi <- function(ilisi_df){
+  
+  # check that all expected columns are present in dataframe 
+  if(!all(c("integration_method", "ilisi_score", "library") %in% colnames(ilisi_df))){
+    stop("Required columns are missing from input dataframe, make sure that `calculate_ilisi` has been run successfully.")
+  }
+  
+  # define number of batches for normalization 
+  num_batches <- length(unique(ilisi_df$library))
+  
+  # set order of integration methods on axes
+  ilisi_df_updated <- set_integration_order(ilisi_df) %>%
+    # normalize following scIB method
+    # https://github.com/theislab/scib/blob/067eb1aee7044f5ce0652fa363ec8deab0e9668d/scib/metrics/lisi.py#L98-L100
+    dplyr::mutate(ilisi_score_norm = (ilisi_score-1)/(num_batches - 1))
+  
+  ilisi_boxplot <- ggplot(ilisi_df_updated, aes(y = ilisi_score_norm, x = integration_method_factor)) +
+    geom_boxplot() +
+    labs(
+      x = "Integration method",
+      y = "iLISI"
+    )
+  
+  ilisi_density <- ggplot(ilisi_df_updated, aes(x = ilisi_score_norm, color = integration_method_factor)) +
+    geom_density() +
+    labs(
+      color = "Integration method",
+      x = "iLISI"
+    )
+  
+  # create a combined boxplot and density plot
+  ilisi_plots <- cowplot::plot_grid(ilisi_boxplot, ilisi_density, ncol = 1)
+  
+  return(ilisi_plots)
+  
+}
