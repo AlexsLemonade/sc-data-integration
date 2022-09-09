@@ -101,8 +101,7 @@ plot_integration_umap <- function(sce,
   }
 
   num_colors <- length(unique(sce[[cell_label_column]]))
-  plot_colors <- palette.colors(num_colors,
-                                palette = "Okabe-Ito")
+  plot_colors <- rainbow(num_colors)
 
   if(integration_method == "unintegrated"){
     umap_name <- "UMAP"
