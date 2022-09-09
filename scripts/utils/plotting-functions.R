@@ -217,7 +217,7 @@ plot_kbet <- function(kbet_df){
 #'
 #' @param asw_df Data frame containing batch ASW values calculated on both
 #'  integrated and unintegrated SCEs. Expected columns are at least
-#'  `rep`, `batch_asw`, and `integration_method`
+#'  `rep`, `batch_asw`, `asw_cluster`, `cell_name`, and `integration_method`
 #' @param seed for sina plot reproducibility
 #' @return ggplot object
 plot_batch_asw <- function(asw_df,
@@ -227,30 +227,33 @@ plot_batch_asw <- function(asw_df,
   set.seed(seed)
 
   # Check that all expected columns are present in dataframe
-  expected_columns <- c("integration_method", "rep", "batch_asw", "asw_cluster")
+  expected_columns <- c("integration_method", "rep", "batch_asw", "cell_name", "asw_cluster")
   if(!all(expected_columns%in% colnames(asw_df))){
     stop("Required columns are missing from input dataframe, make sure that `calculate_batch_asw` has been run successfully.")
   }
-  
+
   # Set integration method order
   asw_df_updated <- set_integration_order(asw_df)
-  
+
 
   # Make the sina plot
   asw_plot <- asw_df_updated %>%
-    dplyr::group_by(rep, integration_method_factor, asw_cluster) %>%
+    # Extract library name into its own column
+    dplyr::mutate(library_id = stringr::word(cell_name, -1, sep = "-")) %>%
+    dplyr::group_by(rep, integration_method_factor, library_id) %>%
     dplyr::summarize(
       mean_batch_asw = mean(batch_asw)
     ) %>%
     dplyr::ungroup() %>%
-    ggplot() + 
-    aes(x = integration_method_factor, 
-        color = factor(asw_cluster), 
+    ggplot() +
+    aes(x = integration_method_factor,
+        color = library_id,
         y = mean_batch_asw) +
-    ggforce::geom_sina(size = 0.8, alpha = 0.7) +
+    ggforce::geom_sina(size = 0.8, alpha = 0.7,
+                       position = position_dodge(width = 0.5)) +
     # add median/IQR pointrange to plot
     stat_summary(
-      aes(group = factor(asw_cluster)),
+      aes(group = library_id),
       color = "black",
       fun = "median",
       fun.min = function(x) {
@@ -260,7 +263,7 @@ plot_batch_asw <- function(asw_df,
         quantile(x, 0.75)
       },
       geom = "pointrange",
-      position = position_dodge(width = 0.9),
+      position = position_dodge(width = 0.5),
       size = 0.2
     ) +
     labs(
@@ -269,51 +272,120 @@ plot_batch_asw <- function(asw_df,
       color = "Batch"
     )
 
-  
+
   # return the plot
   return(asw_plot)
 
 }
 
 
+#' Plot batch adjusted rand index (ARI) across integration methods
+#'
+#' @param batch_ari_df Dataframe containing the calculated batch ARI after clustering
+#'   across a range of values used for k (number of centers) in k-means clustering.
+#'   The dataframe must contain the following columns:
+#'   "integration_method", "batch_ari", and "k"
+#'@param facet_group Group to facet plots by, can be one of "integration_method" or
+#'  "k". The group not chosen for faceting will be used for the x-axis
+#'
+#' @return A ggplot object containing a sina plot of batch ARI across integration
+#'   methods and values of k tested
+
+plot_batch_ari <- function(batch_ari_df,
+                           facet_group){
+
+  # check that all expected columns are present in dataframe
+  if(!all(c("integration_method", "batch_ari", "k") %in% colnames(batch_ari_df))){
+    stop("Required columns are missing from input dataframe, make sure that `calculate_batch_ari` has been run successfully.")
+  }
+
+  # check that x axes group and facet group are one of k or integration method factor
+  if(!facet_group %in% c("integration_method", "k")) {
+    stop("`facet_group` must be one of `integration_method` or `k`")
+  }
+
+  # set order of integration methods on axes
+  batch_ari_updated_df <- set_integration_order(batch_ari_df)
+
+  # define x axis, facet group variables, and plot labels
+  if (facet_group == "integration_method"){
+    facet_group_label <- "integration_method_factor"
+    # make sure that x axes is factor if k is used
+    batch_ari_updated_df$k <- as.factor(batch_ari_updated_df$k)
+    x_axis_group <- rlang::sym("k")
+    # set axes label
+    x_label <- "Value of k for k-means"
+  } else {
+    facet_group_label <- "k"
+    x_axis_group <- "integration_method_factor"
+    x_label <- "Integration method"
+  }
+
+
+  # sina plot with batch ARI on y axis
+  batch_ari_plot <- ggplot(batch_ari_updated_df, aes_string(x_axis_group , y = "batch_ari")) +
+    ggforce::geom_sina(size = 0.3, alpha = 0.5) +
+    # facet by desired label
+    facet_wrap(as.formula(paste("~", facet_group_label))) +
+    # add median point to plot
+    stat_summary(
+      color = "red",
+      fun = "median",
+      fun.min = function(x) {
+        quantile(x, 0.25)
+      },
+      fun.max = function(x) {
+        quantile(x, 0.75)
+      },
+      geom = "pointrange",
+      size = 0.1
+    ) +
+    labs(
+      x = x_label,
+      y = "Batch ARI"
+    ) +
+    theme(axis.text.x = element_text(angle = 90))
+
+  return(batch_ari_plot)
+}
 
 
 
 #' Function to plot PCA regression metric
 #'
-#' @param pca_df Data frame containing pca regression metrics calculated on both 
-#'  integrated and unintegrated SCEs. Expected columns are at least 
+#' @param pca_df Data frame containing pca regression metrics calculated on both
+#'  integrated and unintegrated SCEs. Expected columns are at least
 #'  `rep`, `pc_batch_variance`, `pc_regression_scaled`, and `integration_method`
 #' @param seed for sina plot reproducibility
-#' 
+#'
 #' @return A faceted plot showing PCA regression metrics across integration methods
 plot_pca_regression <- function(pca_df,
                                 seed = seed) {
-  
+
   # Set seed if given
   set.seed(seed)
-  
-  
+
+
   # Check that all expected columns are present in dataframe
   expected_columns <- c("integration_method", "rep", "pc_batch_variance", "pc_regression_scaled")
   if(!all(expected_columns%in% colnames(pca_df))){
     stop("Required columns are missing from input dataframe, make sure that `calculate_pca_regression()` has been run successfully.")
   }
-  
+
   # Set up for plotting
   pca_df_updated <- pca_df %>%
-    tidyr::pivot_longer(dplyr::starts_with("pc_"), 
+    tidyr::pivot_longer(dplyr::starts_with("pc_"),
                         names_to = "metric") %>%
     dplyr::mutate(metric = ifelse(
-      metric == "pc_batch_variance", 
-      "PC batch variance", 
+      metric == "pc_batch_variance",
+      "PC batch variance",
       "PC scaled regression"
     )) %>%
     set_integration_order()
-  
-  pca_reg_plot <- ggplot(pca_df_updated) + 
+
+  pca_reg_plot <- ggplot(pca_df_updated) +
     aes(x = integration_method_factor,
-        y = value) + 
+        y = value) +
     ggforce::geom_sina(size = 0.8, alpha = 0.5) +
     # facet by quantity
     facet_grid(rows = vars(metric),
@@ -334,7 +406,7 @@ plot_pca_regression <- function(pca_df,
     labs(
       x = "Integration method",
       y = "Metric value"
-    ) 
-  
+    )
+
   return(pca_reg_plot)
-} 
+}
