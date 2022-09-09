@@ -256,7 +256,6 @@ plot_batch_ari <- function(batch_ari_df,
     facet_wrap(as.formula(paste("~", facet_group_label))) +
     # add median point to plot
     stat_summary(
-      aes(y = batch_ari),
       color = "red",
       fun = "median",
       fun.min = function(x) {
