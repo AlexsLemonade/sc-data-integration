@@ -435,7 +435,10 @@ plot_ilisi <- function(ilisi_df){
   ilisi_df_updated <- set_integration_order(ilisi_df) %>%
     # normalize following scIB method
     # https://github.com/theislab/scib/blob/067eb1aee7044f5ce0652fa363ec8deab0e9668d/scib/metrics/lisi.py#L98-L100
-    dplyr::mutate(ilisi_score_norm = (ilisi_score-1)/(num_batches - 1))
+    dplyr::mutate(ilisi_score_norm = (ilisi_score-1)/(num_batches - 1),
+                  # order by median ilisi score ensuring that unintegrated will be first regardless
+                  integration_method_factor = forcats::fct_reorder(integration_method_factor, ilisi_score, .fun = median),
+                  integration_method_factor = forcats::fct_relevel(integration_method_factor, "unintegrated"))
   
   ilisi_boxplot <- ggplot(ilisi_df_updated, aes(y = ilisi_score_norm, x = integration_method_factor)) +
     geom_boxplot(outlier.size = 0.25) +
