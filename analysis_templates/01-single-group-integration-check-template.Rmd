@@ -20,7 +20,7 @@ params:
 title: "`r glue::glue('Integration evaluation for {params$group_name}')`"
 author: "CCDL"
 date: "`r params$date`"
-output: 
+output:
   html_document:
     toc: true
     toc_depth: 2
@@ -40,7 +40,7 @@ renv::load(project_root)
 ```{r}
 suppressPackageStartupMessages({
  library(SingleCellExperiment)
- library(ggplot2) 
+ library(ggplot2)
 })
 theme_set(theme_bw())
 
@@ -51,13 +51,13 @@ set.seed(params$seed)
 ```{r setup}
 utils_dir <- file.path(project_root, "scripts", "utils")
 
-# source the helper functions to grab the integration method check 
+# source the helper functions to grab the integration method check
 source(file.path(utils_dir, "integration-helpers.R"))
 
 # source plotting functions
 source(file.path(utils_dir, "plotting-functions.R"))
 
-# source functions for calculating integration metrics 
+# source functions for calculating integration metrics
 source(file.path(utils_dir, "calculate-batch-ARI.R"))
 source(file.path(utils_dir, "calculate-batch-ASW.R"))
 source(file.path(utils_dir, "calculate-iLISI.R"))
@@ -67,9 +67,9 @@ source(file.path(utils_dir, "calculate-pca-regression.R"))
 
 
 ```{r}
-# build file paths for merged and integrated files 
+# build file paths for merged and integrated files
 merged_sce_file <- paste0(params$group_name, "_merged_sce.rds")
-merged_sce_path <- file.path(params$merged_sce_dir, 
+merged_sce_path <- file.path(params$merged_sce_dir,
                              merged_sce_file)
 
 # check for merged/ unintegrated SCE file
@@ -80,7 +80,7 @@ if(!file.exists(merged_sce_path)){
 
 
 ```{r}
-# find all integrated SCE files for given project 
+# find all integrated SCE files for given project
 integrated_sce_files <- list.files(params$integrated_sce_dir,
                                    pattern = params$group_name,
                                    full.names = TRUE)
@@ -127,20 +127,20 @@ if(!params$celltype_column %in% coldata_names){
 # check that umaps for pre-integrated and integrated are present
 check_umap_name <- function(sce,
                             integration_method){
-  
+
   if(integration_method == "unintegrated"){
     umap_name <- "UMAP"
   } else {
-    # grab dim reduction name to use for plotting 
-    umap_name <- paste0(integration_method, "_UMAP") 
+    # grab dim reduction name to use for plotting
+    umap_name <- paste0(integration_method, "_UMAP")
   }
-  
+
   if(!umap_name %in% reducedDimNames(sce)){
     missing_umap <- umap_name
   } else {
     missing_umap <- NULL
   }
-  
+
   return(missing_umap)
 }
 
@@ -149,8 +149,7 @@ missing_umap <- purrr::imap(sce_list, check_umap_name) %>%
 if(!is.null(missing_umap)){
   stop(glue::glue("
        Missing UMAP embeddings from SCE object. Make sure that UMAP embeddings are present and labeled with {missing_umap}.
-       
-       "))
+      "))
 }
 ```
 
@@ -176,10 +175,10 @@ celltype_umaps <- names(sce_list) %>%
 gridExtra::grid.arrange(grobs = celltype_umaps, ncol = 2)
 ```
 
-## Integration metrics 
+## Integration metrics
 
 ```{r}
-# separate out merged sce for calculation of metrics 
+# separate out merged sce for calculation of metrics
 merged_sce <- sce_list$unintegrated
 ```
 
@@ -203,7 +202,7 @@ ilisi_integrated_list <- integration_methods %>%
                                 params$batch_column,
                                 integration_method = .x))
 
-# create combined DF 
+# create combined DF
 ilisi_df <- dplyr::bind_rows(ilisi_unintegrated, ilisi_integrated_list)
 ```
 
@@ -214,24 +213,23 @@ plot_ilisi(ilisi_df)
 
 ### Batch ARI
 
-The below plot looks at the batch adjusted rand index (ARI) for each integration method. 
-Cells are first downsampled to 80% of the total number of cells before clustering is performed using k-means clustering. 
-The ARI between clustering results and batch assignments is then calculated and this is repeated 20 times. 
-We also calculated batch ARI across a range of k for k-means, the number of centers used for clustering. 
+The below plots look at the batch adjusted rand index (ARI) for each integration method.
+Cells are first downsampled to 80% of the total number of cells before clustering is performed using k-means clustering.
+The ARI between clustering results and batch assignments is then calculated and this is repeated 20 times.
+We also calculated batch ARI across a range of k for k-means, the number of centers used for clustering.
 The plots show the batch ARI on the y-axis across each integration method and value of k used for k-means clustering.
 The first plot shows the integration method on the x-axis and plots are faceted by values of k, while the second plot shows each integration method as a separate plot and displays batch ARI across the range of k indicated on the x-axis.
-If datasets are well integrated we would anticipate the batch ARI to be close to 0 and the 1-batch ARI to be close to 1, indicating that batches are well integrated across clustering assignments and low concordance between clusters and batch assignment. 
-
+If datasets are well integrated we would anticipate the batch ARI to be close to 0 and the 1-batch ARI to be close to 1, indicating that batches are well integrated across clustering assignments and low concordance between clusters and batch assignment.
 
 ```{r}
-# create k range needed for input to ARI function from params 
+# create k range needed for input to ARI function from params
 
-# make sure that max is not less than min 
+# make sure that max is not less than min
 if(params$ari_k_max < params$ari_k_min){
   stop("`ari_k_max` must be greater than `ari_k_min`.")
 }
 
-## get krange 
+## get krange
 k_range <- seq(params$ari_k_min,
               params$ari_k_max,
               params$ari_k_increment)
@@ -253,21 +251,28 @@ batch_ari_integrated_list <- integration_methods %>%
                                     num_pcs = params$num_pcs,
                                     integration_method = .x))
 
-# create combined DF 
+# create combined DF
 batch_ari_df <- dplyr::bind_rows(batch_ari_unintegrated, batch_ari_integrated_list)
 ```
 
 ```{r}
-plot_batch_ari(batch_ari_df, 
+plot_batch_ari(batch_ari_df,
                facet_group = "k")
 ```
 ```{r}
-plot_batch_ari(batch_ari_df, 
+plot_batch_ari(batch_ari_df,
                facet_group = "integration_method")
 ```
 
 
 ### Batch ASW
+
+Below we look at the batch average silhouette width (ASW) across integration methods.
+Silhouette width is used to assess consistency within clusters and measures how well a given data point adheres to its own cluster vs. other clusters.
+To calculate this quantity, cells are first downsampled to 80% of the total number of cells.
+Batch silhouette width is calculated across 20 replicates of downsampling, and the mean silhouette widths are calculated (ASW) and shown below.
+The batch silhouette width therefore measures to what extent a given data point adheres to its batch group, which is not desired after integration.
+Therefore, a well-integrated dataset would show lower batch ASW values compared to an unintegrated or poorly-integrated dataset, because batches should not primarily determine clustering after successful integration.
 
 ```{r}
 # calculate batch ASW for unintegrated and integrated SCE separately
@@ -282,32 +287,31 @@ batch_asw_integrated_list <- integration_methods %>%
                                     num_pcs = params$num_pcs,
                                     integration_method = .x))
 
-# create combined DF 
+# create combined DF
 batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated_list)
-
 ```
 
 ```{r}
-head(batch_asw_df)
+plot_batch_asw(batch_asw_df, seed = params$seed)
 ```
 
-### kBET 
+### kBET
 
-Below we look at the kBET rejection rate, comparing the expected and observed rejection rate for each integration method. 
-kBET is calculated by comparing the local batch label distribution to the batch distribution across the entire population of cells. 
+Below we look at the kBET rejection rate, comparing the expected and observed rejection rate for each integration method.
+kBET is calculated by comparing the local batch label distribution to the batch distribution across the entire population of cells.
 A well-integrated dataset would show a similar distribution of batch labels in the local neighborhoods as well as the global neighborhood, which translates into a low observed rejection rate.
 The authors caution that kBET is very sensitive to any kind of bias, therefore kBET rates close to or equal to 1 may indicate bias in data and kBET values should be interpreted with caution.
 More information on kBET can be found in the original [publication](https://doi.org/10.1038/s41592-018-0254-1) and on their [GitHub](https://github.com/theislab/kBET).
 
 ```{r}
-# create k range needed for input to ARI function from params 
+# create k range needed for input to ARI function from params
 
-# make sure that max is not less than min 
+# make sure that max is not less than min
 if(params$k0_fraction_max < params$k0_fraction_min){
   stop("`k0_fraction_max` must be greater than `k0_fraction_min`.")
 }
 
-## get krange 
+## get krange
 k0_fraction_range <- seq(params$k0_fraction_min,
                          params$k0_fraction_max,
                          params$k0_fraction_increment)
@@ -331,7 +335,7 @@ kbet_integrated_list <- integration_methods %>%
                                k0_fraction_range = k0_fraction_range,
                                integration_method = .x))
 
-# create combined DF 
+# create combined DF
 kbet_df <- dplyr::bind_rows(kbet_unintegrated, kbet_integrated_list)
 
 ```
@@ -342,6 +346,12 @@ plot_kbet(kbet_df)
 
 
 ### PCA Regression
+
+Below we look at two measures, PC batch variance and scaled PC regression, as derived in the [kBET manuscript](https://doi.org/10.1038/s41592-018-0254-1) (see the _Methods_ section **Principal component regression**.)
+These measures can be used to assess the contribution of batches to overall variance, which we expect to be lower after successful integration, and these measures are less sensitive to bias compared to the kBET metric itself.
+According to the linked manuscript, the PC batch variance approximates the "total contribution of the batch effect to the variance in the data."
+As this measure may become increasingly difficult to interpret as data dimensionality increases, the additional measure, scaled PC regression, is the "sum of explained variance of all PCs" that are significantly correlated to batches, and it represents a more robust "proxy for the batch effect."
+We calculate these values via downsampling to 80% of cells across 20 replicates, and results for each replicate are shown in plots below.
 
 ```{r, warning=FALSE}
 # calculate PCA regression for unintegrated and integrated SCE separately
@@ -360,12 +370,12 @@ pca_integrated_list <- integration_methods %>%
                                          seed = params$seed,
                                          integration_method = .x))
 
-# create combined DF 
+# create combined DF
 pca_df <- dplyr::bind_rows(pca_unintegrated, pca_integrated_list)
 ```
 
-```{r}
-head(pca_df)
+```{r, fig.height = 2, fig.width = 4}
+plot_pca_regression(pca_df, seed = params$seed)
 ```
 
 ## Session Info
