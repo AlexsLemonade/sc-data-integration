@@ -226,26 +226,32 @@ plot_batch_asw <- function(asw_df,
   # Set seed if given
   set.seed(seed)
 
-  # Set up for plotting:
-  #  integration method as a factor
-  #  calculate mean silhouette widths across reps
-  summarized_df <- asw_df %>%
-    set_integration_order() %>%
-    # Summarize silhouette widths
-    dplyr::group_by(rep, integration_method_factor) %>%
+  # Check that all expected columns are present in dataframe
+  expected_columns <- c("integration_method", "rep", "batch_asw", "asw_cluster")
+  if(!all(expected_columns%in% colnames(asw_df))){
+    stop("Required columns are missing from input dataframe, make sure that `calculate_batch_asw` has been run successfully.")
+  }
+  
+  # Set integration method order
+  asw_df_updated <- set_integration_order(asw_df)
+  
+
+  # Make the sina plot
+  asw_plot <- asw_df_updated %>%
+    dplyr::group_by(rep, integration_method_factor, asw_cluster) %>%
     dplyr::summarize(
       mean_batch_asw = mean(batch_asw)
     ) %>%
-    dplyr::ungroup()
-
-  # Make the plot
-  asw_plot <- ggplot(summarized_df) +
-    aes(x = integration_method_factor,
+    dplyr::ungroup() %>%
+    ggplot() + 
+    aes(x = integration_method_factor, 
+        color = factor(asw_cluster), 
         y = mean_batch_asw) +
-    geom_violin() +
-    ggforce::geom_sina(alpha = 0.6, size = rel(0.5)) +
+    ggforce::geom_sina(size = 0.8, alpha = 0.7) +
+    # add median/IQR pointrange to plot
     stat_summary(
-      color = "red",
+      aes(group = factor(asw_cluster)),
+      color = "black",
       fun = "median",
       fun.min = function(x) {
         quantile(x, 0.25)
@@ -254,13 +260,16 @@ plot_batch_asw <- function(asw_df,
         quantile(x, 0.75)
       },
       geom = "pointrange",
+      position = position_dodge(width = 0.9),
       size = 0.2
     ) +
     labs(
       x = "Integration method",
-      y = "Batch ASW across replicates"
+      y = "Batch average silhouette width",
+      color = "Batch"
     )
 
+  
   # return the plot
   return(asw_plot)
 
