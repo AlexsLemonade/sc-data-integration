@@ -101,7 +101,8 @@ plot_integration_umap <- function(sce,
   }
 
   num_colors <- length(unique(sce[[cell_label_column]]))
-  plot_colors <- rainbow(num_colors)
+  plot_colors <- palette.colors(num_colors,
+                                palette = "Okabe-Ito")
 
   if(integration_method == "unintegrated"){
     umap_name <- "UMAP"
@@ -452,7 +453,8 @@ plot_ilisi <- function(ilisi_df){
     labs(
       color = "Integration method",
       x = "iLISI"
-    )
+    ) +
+    ggokabeito::scale_color_okabe_ito()
   
   # create a combined boxplot and density plot
   ilisi_plots <- cowplot::plot_grid(ilisi_boxplot, ilisi_density, ncol = 1)
