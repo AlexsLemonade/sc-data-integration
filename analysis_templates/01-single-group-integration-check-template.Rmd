@@ -327,6 +327,12 @@ plot_kbet(kbet_df)
 
 ### PCA Regression
 
+Below we look at two measures, PC batch variance and scaled PC regression, as derived in the [kBET manuscript](https://doi.org/10.1038/s41592-018-0254-1) (see the _Methods_ section **Principal component regression**.)
+These measures can be used to assess the contribution of batches to overall variance, which we expect to be lower after successful integration, and these measures are less sensitive to bias compared to the kBET metric itself.
+According to the linked manuscript, the PC batch variance approximates the "total contribution of the batch effect to the variance in the data."
+As this measure may be become increasingly difficult to interpret as data dimensionality increases, the additional measure scaled PC regression is the "sum of explained variance of all PCs" that are significantly correlated to batches, and it represents a more robust "proxy for the batch effect."
+We calculate these values via downsampling to 80% of cells across 20 replicates, and results for each replicate are shown in plots below.
+
 ```{r, warning=FALSE}
 # calculate PCA regression for unintegrated and integrated SCE separately
 pca_unintegrated <- calculate_pca_regression(merged_sce,
@@ -348,8 +354,8 @@ pca_integrated_list <- integration_methods %>%
 pca_df <- dplyr::bind_rows(pca_unintegrated, pca_integrated_list)
 ```
 
-```{r}
-head(pca_df)
+```{r, fig.height = 2, fig.width = 4}
+plot_pca_regression(pca_df, seed = params$seed)
 ```
 
 ## Session Info

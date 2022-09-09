@@ -49,6 +49,9 @@ calculate_pca_regression <- function(integrated_sce,
     # use simply "PCA" for reduced dimensions
     reduced_dim_name <- "PCA"
   } else {
+    
+    #integrated_sce <- readr::read_rds("results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_scvi_sce.rds")
+   # integration_method <- "scvi"
     # Check integration method
     integration_method <- check_integration_method(integration_method)
     
@@ -80,14 +83,19 @@ calculate_pca_regression <- function(integrated_sce,
   frac_cells <- 0.8        # fraction of cells to downsample to
   nreps <- 20              # number of times to repeat sub-sampling procedure
 
+  # If there are fewer than `num_pcs`, set to the total number of PCs
+  if (ncol(pcs) < num_pcs) {
+    print("Warning: There are fewer PCs in the data than were specified when running `calculate_pca_regression()`. All available PCs will be used.")
+    num_pcs <- ncol(pcs)
+  }
+  
   batch_variances <- c()
   pc_reg_scales   <- c()
   
   # Perform over `nreps` subsets of data 
   for (i in 1:nreps) {
     
-    integrated_sce <- readr::read_rds("results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_seurat-rpca_sce.rds")
-    
+
 
     # Prepare data for modeling, beginning with downsampling the PCs (keep all PCs, but only frac of cells)
     pc_tibble <- downsample_pcs_for_metrics(pcs, frac_cells, ncol(pcs))$pcs %>%
