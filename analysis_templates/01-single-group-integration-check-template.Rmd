@@ -269,7 +269,6 @@ batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated_li
 ```
 
 ```{r}
-head(batch_asw_df)
 
 plot_batch_asw(batch_asw_df, seed = params$seed)
 ```
