@@ -61,7 +61,7 @@ calculate_pca_regression <- function(integrated_sce,
   colnames(pcs) <- NULL # ensure names are NULL for future renaming (needed for Seurat methods)
   
   perform_regression <- function(df) {
-    # Adapted from https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L168-L181pcs
+    # Adapted from https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L168-L181
     # Note that we do not return this quantity: https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L177
     #   because it appears to be a hold-over from this line: https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L160
     #   , and it doesn't make sense to retain only one coefficient's of the P-values; the P-value we want is the REGRESSION P-value, as described in the paper.
