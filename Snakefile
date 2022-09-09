@@ -188,7 +188,7 @@ rule generate_report:
         "rmarkdown::render('analysis_templates/01-single-group-integration-check-template.Rmd', \
                             clean = TRUE, \
                             output_file = '{output}', \
-                            output_dir = 'dirname({output})', \
+                            output_dir = dirname('{output}'), \
                             params = list(group_name = '{wildcards.project}', \
                                           merged_sce_dir = '{input.merged_sce_dir}', \
                                           integrated_sce_dir = '{input.integrated_sce_dir}'), \
