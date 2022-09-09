@@ -21,10 +21,10 @@ suppressPackageStartupMessages({
 #'   integrated (`TRUE`).
 #'   
 #' @return Tibble with six columns: `rep`, representing the given downsampling replicate;
-#'   `k`, the given k for k-means; `batch_asw`, the calculated silhouette width for the given
-#'   combination of `rep` and `k`. `asw_cluster`, the assigned cluster for the cell during
-#'   silhouette calculation; `asw_other`, the other assigned for the cell during silhouette 
-#'   calculation; `integration_method`, the given integration method
+#'   `batch_asw`, the calculated silhouette width for the given `rep`; `asw_cluster`, 
+#'   the assigned cluster for the cell during silhouette calculation; `asw_other`, 
+#'   the other assigned for the cell during silhouette calculation; 
+#'   `integration_method`, the given integration method
 calculate_batch_asw <- function(integrated_sce,
                                 num_pcs = 20,
                                 seed = NULL,
