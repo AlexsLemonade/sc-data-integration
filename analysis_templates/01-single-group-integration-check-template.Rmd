@@ -185,6 +185,12 @@ merged_sce <- sce_list$unintegrated
 
 ### iLISI
 
+The iLISI (integration local inverse Simpson's index) metric can be used to measure the local distribution of batches in the integrated dataset, as defined in [Korsunksky et al.](https://doi.org/10.1038/s41592-019-0619-0). 
+The iLISI score can be interpreted as describing how many batches are represented within a local neighborhood. 
+The range of iLISI scores will be from 1 to the number of batches, however we have normalized the score following the same method utilized by the `scIB` benchmarking tools: (ilisi - 1)/(num batches -1)
+Therefore, we would expect that well integrated datasets to be close to 1 indicating high mixing of batches, while poorly integrated datasets would be close to 0 indicating poor mixing.
+
+
 ```{r}
 # calculate ilisi for unintegrated and integrated SCE separately
 ilisi_unintegrated <- calculate_ilisi(merged_sce,
@@ -201,8 +207,8 @@ ilisi_df <- dplyr::bind_rows(ilisi_unintegrated, ilisi_integrated_list)
 ```
 
 
-```{r}
-head(ilisi_df)
+```{r fig.height=4, fig.width=4}
+plot_ilisi(ilisi_df)
 ```
 
 ### Batch ARI
