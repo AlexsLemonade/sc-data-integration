@@ -217,7 +217,7 @@ plot_kbet <- function(kbet_df){
 #'
 #' @param asw_df Data frame containing batch ASW values calculated on both
 #'  integrated and unintegrated SCEs. Expected columns are at least
-#'  `rep`, `batch_asw`, and `integration_method`
+#'  `rep`, `batch_asw`, `asw_cluster`, `cell_name`, and `integration_method`
 #' @param seed for sina plot reproducibility
 #' @return ggplot object
 plot_batch_asw <- function(asw_df,
@@ -227,7 +227,7 @@ plot_batch_asw <- function(asw_df,
   set.seed(seed)
 
   # Check that all expected columns are present in dataframe
-  expected_columns <- c("integration_method", "rep", "batch_asw", "asw_cluster")
+  expected_columns <- c("integration_method", "rep", "batch_asw", "cell_name", "asw_cluster")
   if(!all(expected_columns%in% colnames(asw_df))){
     stop("Required columns are missing from input dataframe, make sure that `calculate_batch_asw` has been run successfully.")
   }
@@ -238,19 +238,22 @@ plot_batch_asw <- function(asw_df,
 
   # Make the sina plot
   asw_plot <- asw_df_updated %>%
-    dplyr::group_by(rep, integration_method_factor, asw_cluster) %>%
+    # Extract library name into its own column
+    dplyr::mutate(library_id = stringr::word(cell_name, -1, sep = "-")) %>%
+    dplyr::group_by(rep, integration_method_factor, library_id) %>%
     dplyr::summarize(
       mean_batch_asw = mean(batch_asw)
     ) %>%
     dplyr::ungroup() %>%
     ggplot() + 
     aes(x = integration_method_factor, 
-        color = factor(asw_cluster), 
+        color = library_id, 
         y = mean_batch_asw) +
-    ggforce::geom_sina(size = 0.8, alpha = 0.7) +
+    ggforce::geom_sina(size = 0.8, alpha = 0.7, 
+                       position = position_dodge(width = 0.5)) +
     # add median/IQR pointrange to plot
     stat_summary(
-      aes(group = factor(asw_cluster)),
+      aes(group = library_id),
       color = "black",
       fun = "median",
       fun.min = function(x) {
@@ -260,14 +263,14 @@ plot_batch_asw <- function(asw_df,
         quantile(x, 0.75)
       },
       geom = "pointrange",
-      position = position_dodge(width = 0.9),
+      position = position_dodge(width = 0.5),
       size = 0.2
     ) +
     labs(
       x = "Integration method",
       y = "Batch average silhouette width",
       color = "Batch"
-    )
+    ) 
 
   
   # return the plot
