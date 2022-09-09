@@ -314,7 +314,7 @@ plot_pca_regression <- function(pca_df,
   pca_reg_plot <- ggplot(pca_df_updated) + 
     aes(x = integration_method_factor,
         y = value) + 
-    ggforce::geom_sina(alpha = 0.5) +
+    ggforce::geom_sina(size = 0.8, alpha = 0.5) +
     # facet by quantity
     facet_grid(rows = vars(metric),
                scales = "free_y") +
