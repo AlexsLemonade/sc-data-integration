@@ -286,7 +286,7 @@ plot_batch_asw <- function(asw_df,
 #'  `rep`, `pc_batch_variance`, `pc_regression_scaled`, and `integration_method`
 #' @param seed for sina plot reproducibility
 #' 
-#' @return A cowplot plot grid of plots showing PCA regression metrics in two panels
+#' @return A faceted plot showing PCA regression metrics across integration methods
 plot_pca_regression <- function(pca_df,
                                 seed = seed) {
   
