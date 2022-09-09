@@ -348,3 +348,74 @@ plot_batch_ari <- function(batch_ari_df,
   return(batch_ari_plot)
   
 }
+
+#' Plot batch adjusted rand index (ARI) across integration methods
+#'
+#' @param batch_ari_df Dataframe containing the calculated batch ARI after clustering 
+#'   across a range of values used for k (number of centers) in k-means clustering. 
+#'   The dataframe must contain the following columns: 
+#'   "integration_method", "batch_ari", and "k"
+#'@param facet_group Group to facet plots by, can be one of "integration_method" or 
+#'  "k". The group not chosen for faceting will be used for the x-axis 
+#'
+#' @return A ggplot object containing a sina plot of batch ARI across integration 
+#'   methods and values of k tested 
+
+plot_batch_ari <- function(batch_ari_df,
+                           facet_group){
+
+  # check that all expected columns are present in dataframe 
+  if(!all(c("integration_method", "batch_ari", "k") %in% colnames(batch_ari_df))){
+    stop("Required columns are missing from input dataframe, make sure that `calculate_batch_ari` has been run successfully.")
+  }
+  
+  # check that x axes group and facet group are one of k or integration method factor
+  if(!facet_group %in% c("integration_method", "k")) {
+    stop("`facet_group` must be one of `integration_method` or `k`")
+  }
+  
+  # set order of integration methods on axes
+  batch_ari_updated_df <- set_integration_order(batch_ari_df)
+  
+  # define x axis, facet group variables, and plot labels 
+  if (facet_group == "integration_method"){
+    facet_group_label <- "integration_method_factor"
+    # make sure that x axes is factor if k is used
+    batch_ari_updated_df$k <- as.factor(batch_ari_updated_df$k)
+    x_axis_group <- rlang::sym("k")
+    # set axes label 
+    x_label <- "Value of k for k-means"
+  } else {
+    facet_group_label <- "k"
+    x_axis_group <- "integration_method_factor"
+    x_label <- "Integration method"
+  }
+  
+  
+  # sina plot with batch ARI on y axis
+  batch_ari_plot <- ggplot(batch_ari_updated_df, aes_string(x_axis_group , y = "batch_ari")) +
+    ggforce::geom_sina(size = 0.3, alpha = 0.5) + 
+    # facet by desired label
+    facet_wrap(as.formula(paste("~", facet_group_label))) +
+    # add median point to plot
+    stat_summary(
+      color = "red",
+      fun = "median",
+      fun.min = function(x) {
+        quantile(x, 0.25)
+      },
+      fun.max = function(x) {
+        quantile(x, 0.75)
+      },
+      geom = "pointrange",
+      size = 0.1
+    ) +
+    labs(
+      x = x_label,
+      y = "Batch ARI"
+    ) +
+    theme(axis.text.x = element_text(angle = 90))
+
+  return(batch_ari_plot)
+  
+}
