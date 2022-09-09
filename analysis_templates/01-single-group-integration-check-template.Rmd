@@ -246,9 +246,11 @@ head(batch_ari_df)
 
 ### Batch ASW
 
-Below we look at the batch average silhouette width (AWS) across integration methods.
+Below we look at the batch average silhouette width (ASW) across integration methods.
 Silhouette width is used to assess consistency within clusters and measures how well a given data point adheres to its own cluster vs. other clusters.
-The batch silhouette width, averaged across analysis replicates, therefore measures to what extent a given data point adheres to its batch group, which is not desired after integration.
+To calculate this quantity, cells are first downsampled to 80% of the total number of cells.
+Batch silhouette width is calculated across 20 replicates of downsampling, and the mean silhouette widths are calculated (ASW) and shown below.
+The batch silhouette width therefore measures to what extent a given data point adheres to its batch group, which is not desired after integration.
 Therefore, a well-integrated dataset would show lower batch ASW values compared to an unintegrated or poorly-integrated dataset, because batches should not primarily determine clustering after successful integration.
 
 ```{r}
