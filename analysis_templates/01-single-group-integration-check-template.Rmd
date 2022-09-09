@@ -267,12 +267,10 @@ batch_asw_integrated_list <- integration_methods %>%
                                     integration_method = .x))
 
 # create combined DF
-batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated_list) %>%
-  dplyr::mutate(library_id = stringr::word(cell_name, -1, sep = "-")) 
+batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated_list) 
 ```
 
 ```{r}
-
 plot_batch_asw(batch_asw_df, seed = params$seed)
 ```
 
