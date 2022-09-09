@@ -91,8 +91,6 @@ calculate_pca_regression <- function(integrated_sce,
   
   # Perform over `nreps` subsets of data 
   for (i in 1:nreps) {
-    
-
 
     # Prepare data for modeling, beginning with downsampling the PCs (keep all PCs, but only frac of cells)
     pc_tibble <- downsample_pcs_for_metrics(pcs, frac_cells, ncol(pcs))$pcs %>%
