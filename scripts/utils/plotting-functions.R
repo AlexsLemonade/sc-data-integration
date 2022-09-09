@@ -304,7 +304,7 @@ plot_ilisi <- function(ilisi_df){
     dplyr::mutate(ilisi_score_norm = (ilisi_score-1)/(num_batches - 1))
   
   ilisi_boxplot <- ggplot(ilisi_df_updated, aes(y = ilisi_score_norm, x = integration_method_factor)) +
-    geom_boxplot() +
+    geom_boxplot(outlier.size = 0.25) +
     labs(
       x = "Integration method",
       y = "iLISI"
