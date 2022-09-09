@@ -190,7 +190,6 @@ rule generate_report:
                             output_file = '{output}', \
                             output_dir = dirname('{output}'), \
                             params = list(group_name = '{wildcards.project}', \
-                                          merged_sce_dir = '{input.merged_sce_dir}', \
-                                          integrated_sce_dir = '{input.integrated_sce_dir}'), \
-                            envir = new.env())"
+                                          merged_sce_dir = '{workflow.basedir}/{input.merged_sce_dir}', \
+                                          integrated_sce_dir = '{workflow.basedir}/{input.integrated_sce_dir}'))"
         """
