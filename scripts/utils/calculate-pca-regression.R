@@ -58,6 +58,7 @@ calculate_pca_regression <- function(integrated_sce,
   
   # Pull out the PCs or analogous reduction
   pcs <- reducedDim(integrated_sce, reduced_dim_name)
+  colnames(pcs) <- NULL # ensure names are NULL for future renaming (needed for Seurat methods)
   
   perform_regression <- function(df) {
     # Adapted from https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L168-L181
@@ -79,6 +80,12 @@ calculate_pca_regression <- function(integrated_sce,
   frac_cells <- 0.8        # fraction of cells to downsample to
   nreps <- 20              # number of times to repeat sub-sampling procedure
 
+  # If there are fewer than `num_pcs`, set to the total number of PCs
+  if (ncol(pcs) < num_pcs) {
+    print("Warning: There are fewer PCs in the data than were specified when running `calculate_pca_regression()`. All available PCs will be used.")
+    num_pcs <- ncol(pcs)
+  }
+  
   batch_variances <- c()
   pc_reg_scales   <- c()
   
