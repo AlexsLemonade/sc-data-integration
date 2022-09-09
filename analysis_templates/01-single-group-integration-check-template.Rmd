@@ -206,6 +206,16 @@ head(ilisi_df)
 ```
 
 ### Batch ARI
+
+The below plot looks at the batch adjusted rand index (ARI) for each integration method.
+Cells are first downsampled to 80% of the total number of cells before clustering is performed using k-means clustering.
+The ARI between clustering results and batch assignments is then calculated and this is repeated 20 times.
+We also calculated batch ARI across a range of k for k-means, the number of centers used for clustering.
+The plots show the batch ARI on the y-axis across each integration method and value of k used for k-means clustering.
+The first plot shows the integration method on the x-axis and plots are faceted by values of k, while the second plot shows each integration method as a separate plot and displays batch ARI across the range of k indicated on the x-axis.
+If datasets are well integrated we would anticipate the batch ARI to be close to 0 and the 1-batch ARI to be close to 1, indicating that batches are well integrated across clustering assignments and low concordance between clusters and batch assignment.
+
+
 ```{r}
 # create k range needed for input to ARI function from params
 
@@ -241,8 +251,14 @@ batch_ari_df <- dplyr::bind_rows(batch_ari_unintegrated, batch_ari_integrated_li
 ```
 
 ```{r}
-head(batch_ari_df)
+plot_batch_ari(batch_ari_df,
+               facet_group = "k")
 ```
+```{r}
+plot_batch_ari(batch_ari_df,
+               facet_group = "integration_method")
+```
+
 
 ### Batch ASW
 
@@ -267,7 +283,7 @@ batch_asw_integrated_list <- integration_methods %>%
                                     integration_method = .x))
 
 # create combined DF
-batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated_list) 
+batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated_list)
 ```
 
 ```{r}
@@ -276,8 +292,8 @@ plot_batch_asw(batch_asw_df, seed = params$seed)
 
 ### kBET
 
-Below we look at the kBET rejection rate, comparing the expected and observed rejection rate for each integration method. 
-kBET is calculated by comparing the local batch label distribution to the batch distribution across the entire population of cells. 
+Below we look at the kBET rejection rate, comparing the expected and observed rejection rate for each integration method.
+kBET is calculated by comparing the local batch label distribution to the batch distribution across the entire population of cells.
 A well-integrated dataset would show a similar distribution of batch labels in the local neighborhoods as well as the global neighborhood, which translates into a low observed rejection rate.
 The authors caution that kBET is very sensitive to any kind of bias, therefore kBET rates close to or equal to 1 may indicate bias in data and kBET values should be interpreted with caution.
 More information on kBET can be found in the original [publication](https://doi.org/10.1038/s41592-018-0254-1) and on their [GitHub](https://github.com/theislab/kBET).
