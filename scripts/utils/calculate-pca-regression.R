@@ -58,9 +58,10 @@ calculate_pca_regression <- function(integrated_sce,
   
   # Pull out the PCs or analogous reduction
   pcs <- reducedDim(integrated_sce, reduced_dim_name)
+  colnames(pcs) <- NULL # ensure names are NULL for future renaming (needed for Seurat methods)
   
   perform_regression <- function(df) {
-    # Adapted from https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L168-L181
+    # Adapted from https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L168-L181pcs
     # Note that we do not return this quantity: https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L177
     #   because it appears to be a hold-over from this line: https://github.com/theislab/kBET/blob/f35171dfb04c7951b8a09ac778faf7424c4b6bc0/R/kBET-utils.R#L160
     #   , and it doesn't make sense to retain only one coefficient's of the P-values; the P-value we want is the REGRESSION P-value, as described in the paper.
@@ -84,6 +85,9 @@ calculate_pca_regression <- function(integrated_sce,
   
   # Perform over `nreps` subsets of data 
   for (i in 1:nreps) {
+    
+    integrated_sce <- readr::read_rds("results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_seurat-rpca_sce.rds")
+    
 
     # Prepare data for modeling, beginning with downsampling the PCs (keep all PCs, but only frac of cells)
     pc_tibble <- downsample_pcs_for_metrics(pcs, frac_cells, ncol(pcs))$pcs %>%
