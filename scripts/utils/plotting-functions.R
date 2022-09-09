@@ -274,3 +274,67 @@ plot_batch_asw <- function(asw_df,
   return(asw_plot)
 
 }
+
+
+
+
+
+#' Function to plot PCA regression metric
+#'
+#' @param pca_df Data frame containing pca regression metrics calculated on both 
+#'  integrated and unintegrated SCEs. Expected columns are at least 
+#'  `rep`, `pc_batch_variance`, `pc_regression_scaled`, and `integration_method`
+#' @param seed for sina plot reproducibility
+#' 
+#' @return A cowplot plot grid of plots showing PCA regression metrics in two panels
+plot_pca_regression <- function(pca_df,
+                                seed = seed) {
+  
+  # Set seed if given
+  set.seed(seed)
+  
+  
+  # Check that all expected columns are present in dataframe
+  expected_columns <- c("integration_method", "rep", "pc_batch_variance", "pc_regression_scaled")
+  if(!all(expected_columns%in% colnames(pca_df))){
+    stop("Required columns are missing from input dataframe, make sure that `calculate_pca_regression()` has been run successfully.")
+  }
+  
+  # Set up for plotting
+  pca_df_updated <- pca_df %>%
+    tidyr::pivot_longer(dplyr::starts_with("pc_"), 
+                        names_to = "metric") %>%
+    dplyr::mutate(metric = ifelse(
+      metric == "pc_batch_variance", 
+      "PC batch variance", 
+      "PC scaled regression"
+    )) %>%
+    set_integration_order()
+  
+  pca_reg_plot <- ggplot(pca_df_updated) + 
+    aes(x = integration_method_factor,
+        y = value) + 
+    ggforce::geom_sina(alpha = 0.5) +
+    # facet by quantity
+    facet_grid(rows = vars(metric),
+               scales = "free_y") +
+    # add median/IQR pointrange to plot
+    stat_summary(
+      color = "red",
+      fun = "median",
+      fun.min = function(x) {
+        quantile(x, 0.25)
+      },
+      fun.max = function(x) {
+        quantile(x, 0.75)
+      },
+      geom = "pointrange",
+      size = 0.15
+    ) +
+    labs(
+      x = "Integration method",
+      y = "Metric value"
+    ) 
+  
+  return(pca_reg_plot)
+} 
