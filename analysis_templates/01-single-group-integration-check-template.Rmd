@@ -250,19 +250,11 @@ batch_ari_df <- dplyr::bind_rows(batch_ari_unintegrated, batch_ari_integrated_li
 ```
 
 ```{r}
-<<<<<<< HEAD
 plot_batch_ari(batch_ari_df,
                facet_group = "k")
 ```
 ```{r}
 plot_batch_ari(batch_ari_df,
-=======
-plot_batch_ari(batch_ari_df,
-               facet_group = "k")
-```
-```{r}
-plot_batch_ari(batch_ari_df,
->>>>>>> main
                facet_group = "integration_method")
 ```
 
