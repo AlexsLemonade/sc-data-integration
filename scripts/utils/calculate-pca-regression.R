@@ -49,9 +49,6 @@ calculate_pca_regression <- function(integrated_sce,
     # use simply "PCA" for reduced dimensions
     reduced_dim_name <- "PCA"
   } else {
-    
-    #integrated_sce <- readr::read_rds("results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_scvi_sce.rds")
-   # integration_method <- "scvi"
     # Check integration method
     integration_method <- check_integration_method(integration_method)
     
