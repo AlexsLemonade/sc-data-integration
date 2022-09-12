@@ -17,7 +17,7 @@ rule build_renv:
     conda: "envs/scpca-renv.yaml"
     shell:
         """
-        Rscript -e "renv::restore('{input}')"
+        Rscript -e "renv::restore(lockfile = '{input}')"
         date -u -Iseconds  > {output}
         """
 
@@ -179,7 +179,10 @@ rule generate_report:
     conda: "envs/scpca-renv.yaml"
     input:
         merged_sce_dir = rules.merge_sces.output,
-        integrated_sce_dir = "{basedir}/integrated_sce"
+        integrated_sce_files = expand("{basedir}/integrated_sce/{project_name}_integrated_{integration_method}_sce.rds",
+                                      basedir = config["results_dir"],
+                                      project_name = pep.sample_table["project_name"],
+                                      integration_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scvi"])
     output:
         "{basedir}/analysis_reports/{project}_integration_report.html"
     shell:
@@ -191,5 +194,5 @@ rule generate_report:
                             output_dir = dirname('{output}'), \
                             params = list(group_name = '{wildcards.project}', \
                                           merged_sce_dir = '{workflow.basedir}/{input.merged_sce_dir}', \
-                                          integrated_sce_dir = '{workflow.basedir}/{input.integrated_sce_dir}'))"
+                                          integrated_sce_dir = dirname('{input.integrated_sce_files}'))"
         """
