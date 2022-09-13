@@ -43,6 +43,7 @@ rule merge_sces:
         """
 
 rule convert_sce_anndata:
+    conda: "envs/scpca-renv.yaml"
     input:
         processed_tsv = config["processed_tsv"],
         merged_sce_dir = "{basedir}/merged_sce"
@@ -127,25 +128,17 @@ rule integrate_scanorama:
     input:
         merged_anndata_dir = "{basedir}/merged_anndata"
     output:
-        integrated_anndata = temp("{basedir}/integrated_anndata/{project}_integrated_scanorama.h5"),
-        integrated_sce = "{basedir}/integrated_sce/{project}_integrated_scanorama_sce.rds"
+        temp("{basedir}/integrated_anndata/{project}_integrated_scanorama.h5")
     params:
         merged_anndata_file = "{project}_anndata.h5",
     shell:
         """
         python scripts/03b-integrate-scanorama.py \
           --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
-          --output_anndata "{output.integrated_anndata}" \
+          --output_anndata "{output}" \
           --seed {config[seed]} \
           --use_hvg \
           --corrected_only
-
-        Rscript scripts/04-post-process-anndata.R \
-            --input_anndata_file "{output.integrated_anndata}" \
-            --output_sce_file "{output.integrated_sce}" \
-            --method "scanorama" \
-            --seed {config[seed]} \
-            --corrected_only
         """
 
 rule integrate_scvi:
@@ -153,28 +146,37 @@ rule integrate_scvi:
     input:
         merged_anndata_dir = "{basedir}/merged_anndata"
     output:
-        integrated_anndata = temp("{basedir}/integrated_anndata/{project}_integrated_scvi.h5"),
-        integrated_sce = "{basedir}/integrated_sce/{project}_integrated_scvi_sce.rds"
+        temp("{basedir}/integrated_anndata/{project}_integrated_scvi.h5")
     params:
         merged_anndata_file = "{project}_anndata.h5",
     shell:
         """
         python scripts/03c-integrate-scvi.py \
           --input_anndata "{input.merged_anndata_dir}/{params.merged_anndata_file}" \
-          --output_anndata "{output.integrated_anndata}" \
+          --output_anndata "{output}" \
           --continuous_covariates {config[continuous_covariates]} \
           --num_latent {config[num_latent]} \
           --seed {config[seed]} \
           --use_hvg \
           --corrected_only
+        """
 
+rule convert_anndata:
+    conda: "envs/scpca-renv.yaml"
+    input:
+        "{basedir}/integrated_anndata/{project}_integrated_{method}.h5"
+    output:
+        "{basedir}/integrated_sce/{project}_integrated_{method}_sce.rds"
+    shell:
+        """
         Rscript scripts/04-post-process-anndata.R \
-            --input_anndata_file "{output.integrated_anndata}" \
-            --output_sce_file "{output.integrated_sce}" \
-            --method "scvi" \
+            --input_anndata_file "{input}" \
+            --output_sce_file "{output}" \
+            --method "{wildcards.method}" \
             --seed {config[seed]} \
             --corrected_only
         """
+
 
 rule generate_report:
     conda: "envs/scpca-renv.yaml"
