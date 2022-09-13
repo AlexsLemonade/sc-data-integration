@@ -119,10 +119,6 @@ if(!params$batch_column %in% coldata_names){
   stop("Provided batch_column should be present in both the colData of the merged SCE and all integrated SCE objects.")
 }
 
-if(!params$celltype_column %in% coldata_names){
-  stop("Provided celltype_column should be present in both the colData of the merged SCE and all integrated SCE objects.")
-}
-
 
 # check that umaps for pre-integrated and integrated are present
 check_umap_name <- function(sce,
@@ -155,7 +151,7 @@ if(!is.null(missing_umap)){
 
 ## UMAPs
 
-```{r batch-umaps, fig.height=15, fig.width=10, warning=FALSE}
+```{r batch-umaps, fig.height=15, fig.width=10, warning=FALSE, message=FALSE}
 # create umap plots labeling by batch column
 batch_umaps <- names(sce_list) %>%
   purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
@@ -165,14 +161,25 @@ batch_umaps <- names(sce_list) %>%
 gridExtra::grid.arrange(grobs = batch_umaps, ncol = 2)
 ```
 
-```{r celltype-umaps, fig.width=15, fig.height=20, warning=FALSE}
-# create umap plots labeling by celltype column
+```{r celltype-umaps, fig.width=15, fig.height=20, warning=FALSE, message=FALSE}
+# only print out celltype UMAP plot if celltype information is provided
+if(params$celltype_column %in% coldata_names){
+ # create umap plots labeling by celltype column
 celltype_umaps <- names(sce_list) %>%
   purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
                                       integration_method = .x,
                                       params$group_name,
                                       cell_label_column = params$celltype_column))
-gridExtra::grid.arrange(grobs = celltype_umaps, ncol = 2)
+gridExtra::grid.arrange(grobs = celltype_umaps, ncol = 2) 
+} else {
+  glue::glue("
+    <div class=\"alert alert-info\">
+    
+    No celltype information found for this dataset.
+    
+    </div>
+  ")
+}
 ```
 
 ## Integration metrics
@@ -207,7 +214,7 @@ ilisi_df <- dplyr::bind_rows(ilisi_unintegrated, ilisi_integrated_list)
 ```
 
 
-```{r fig.height=4, fig.width=4}
+```{r fig.height=5, fig.width=5}
 plot_ilisi(ilisi_df)
 ```
 
@@ -374,7 +381,7 @@ pca_integrated_list <- integration_methods %>%
 pca_df <- dplyr::bind_rows(pca_unintegrated, pca_integrated_list)
 ```
 
-```{r, fig.height = 2, fig.width = 4}
+```{r, fig.height = 4, fig.width = 6}
 plot_pca_regression(pca_df, seed = params$seed)
 ```
 
