@@ -296,10 +296,10 @@ if (integration_method == "seurat") {
   assay(integrated_sce_obj, paste0(opt$seurat_reduction_method, "_corrected")) <- logcounts(integrated_sce_obj)
   
   # The logcounts in SCT assay is logcounts
-  logcounts(integrated_sce_obj) <- logcounts( altExp(integrated_sce_obj, "SCT") )
+  logcounts(integrated_sce_obj) <- logcounts( altExp(integrated_sce_obj, "SCT") )[rownames(integrated_sce_obj),]
   
   # The counts in RNA assay is counts  
-  counts(integrated_sce_obj) <- counts( altExp(integrated_sce_obj, "RNA") )
+  counts(integrated_sce_obj) <- counts( altExp(integrated_sce_obj, "RNA") )[rownames(integrated_sce_obj),]
   
   # Remove altExps
   integrated_sce_obj <- removeAltExps(integrated_sce_obj)
