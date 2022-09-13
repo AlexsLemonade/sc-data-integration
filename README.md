@@ -54,17 +54,13 @@ mamba install snakemake peppy
 
 
 Python-based environments will be built automatically by Snakemake when the workflow is run, but the environment for R should be built before running the workflow.
-To create or update the necessary environment for the R scripts, which includes an isolated version of `R`, `pandoc`, and the `renv` package installation, run the following command:
+To create or update the necessary environment for the R scripts, which includes an isolated version of `R`, `pandoc`, and the `renv` package installation, run the following command from the base of the repository:
 
 ```
-snakemake --use-conda --conda-create-envs-only -c2 build_renv
+bash setup_envs.sh
 ```
-
-If you are on an Apple Silicon (M1/Arm) Mac, you will need a slightly different command, which forces the installation of the Intel version of R, which is required for Bioconductor packages:
-
-```
-CONDA_SUBDIR=osx-64 snakemake --use-conda --conda-create-envs-only -c2 build_renv
-```
+This script will use Snakemake to install all necessary components for the workflow in an isoloated Conda enviroment.
+If you are on an Apple Silicon (M1/M2/Arm) Mac, this should properly handle setting up R to use an Intel-based build for compatibility with Bioconductor packages.
 
 This installation may take up to an hour, as all of the R packages will likely have to be compiled from scratch.
 However, this should be a one-time cost, and ensures that you have all of the tools for the workflow installed and ready.
