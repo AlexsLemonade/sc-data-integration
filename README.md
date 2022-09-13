@@ -60,8 +60,7 @@ To create or update the necessary environment for the R scripts, which includes 
 bash setup_envs.sh
 ```
 This script will use Snakemake to install all necessary components for the workflow in an isoloated Conda enviroment.
-Note that this script uses 1 core by default, but snakemake setting can be changed within the script itself.
-If you are on an Apple Silicon (M1/M2/Arm) Mac, this should properly handle setting up R to use an Intel-based build for compatibiity with Bioconductor packages.
+If you are on an Apple Silicon (M1/M2/Arm) Mac, this should properly handle setting up R to use an Intel-based build for compatibility with Bioconductor packages.
 
 This installation may take up to an hour, as all of the R packages will likely have to be compiled from scratch.
 However, this should be a one-time cost, and ensures that you have all of the tools for the workflow installed and ready.
