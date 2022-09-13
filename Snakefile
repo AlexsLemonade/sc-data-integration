@@ -1,11 +1,12 @@
 configfile: "config.yaml"
 pepfile: config['pepfile']
+INTEGRATION_METHODS = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scvi"]
 
 rule target:
     input:
-        expand(os.path.join(config['results_dir'], "integrated_sce/{project}_integrated_{sce_method}_sce.rds"),
+        expand(os.path.join(config['results_dir'], "integrated_sce/{project}_integrated_{integration_methods}_sce.rds"),
                project = pep.sample_table["project_name"],
-               sce_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scvi"]),
+               integration_methods = INTEGRATION_METHODS),
         expand(os.path.join(config['results_dir'], "analysis_reports/{project}_integration_report.html"),
                project = pep.sample_table["project_name"])
 
@@ -179,10 +180,8 @@ rule generate_report:
     conda: "envs/scpca-renv.yaml"
     input:
         merged_sce_dir = rules.merge_sces.output,
-        integrated_sce_files = expand(os.path.join("{basedir}/integrated_sce", "{project}_integrated_{integration_method}_sce.rds"),
-                                      basedir = config["results_dir"],
-                                      project = pep.sample_table["project_name"],
-                                      integration_method = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scvi"])
+        integrated_sce_files = expand(os.path.join("{{basedir}}/integrated_sce", "{{project}}_integrated_{integration_method}_sce.rds"),
+                                      integration_method = INTEGRATION_METHODS)
     output:
         "{basedir}/analysis_reports/{project}_integration_report.html"
     params:
