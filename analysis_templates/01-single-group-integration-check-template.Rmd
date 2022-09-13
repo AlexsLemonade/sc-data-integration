@@ -1,6 +1,6 @@
 ---
 params:
-  group_name: "AdultHemOrgans"
+  group_name: "1M_Immune_Cells"
   merged_sce_dir: "../results/human_cell_atlas/merged_sce"
   integrated_sce_dir: "../results/human_cell_atlas/integrated_sce"
   batch_column: "batch"
