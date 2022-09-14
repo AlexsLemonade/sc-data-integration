@@ -439,10 +439,10 @@ downsample_pcs_for_metrics <- function(integrated_pcs, frac_cells, num_pcs) {
   downsampled_integrated_pcs <- integrated_pcs[downsampled_indices,1:num_pcs]
   
   # Obtain batch labels as integer values
-  downsampled_batch_labels <- stringr::str_replace_all(
+  downsampled_batch_labels <- stringr::word(
     rownames(downsampled_integrated_pcs),
-    "^[ACGT]+-",
-    ""
+    2,
+    sep = "-"
   ) %>%
     as.factor() %>%
     as.numeric()
