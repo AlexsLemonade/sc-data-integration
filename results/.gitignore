@@ -1,8 +1,0 @@
-# Ignore all subdirectories, except analysis_reports/
-
-*/filtered_sce/
-*/scpca-downstream-analyses/
-*/merged_sce/
-*/merged_anndata/
-*/integrated_sce/
-*/integrated_anndata/

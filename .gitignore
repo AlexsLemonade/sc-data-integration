@@ -7,6 +7,9 @@ data/
 # ignore gtf files 
 *.gtf*
 
+# ignore result files
+results/
+
 # ignore snakemake outputs 
 .snakemake/
 .snakemake_timestamp
