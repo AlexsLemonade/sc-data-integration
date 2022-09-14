@@ -182,7 +182,7 @@ rule generate_report:
     conda: "envs/scpca-renv.yaml"
     input:
         merged_sce_dir = rules.merge_sces.output,
-        integrated_sce_files = expand(os.path.join("{{basedir}}/integrated_sce", "{{project}}_integrated_{integration_method}_sce.rds"),
+        integrated_sce_files = expand("{{basedir}}/integrated_sce/{{project}}_integrated_{integration_method}_sce.rds",
                                       integration_method = INTEGRATION_METHODS)
     output:
         "{basedir}/analysis_reports/{project}_integration_report.html"
