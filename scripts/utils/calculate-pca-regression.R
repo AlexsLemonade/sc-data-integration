@@ -75,7 +75,6 @@ calculate_pca_regression <- function(integrated_sce,
     return(reg_result)
   }
 
-  
   # Set up parameters - using the same as for ARI and AWS
   frac_cells <- 0.8        # fraction of cells to downsample to
   nreps <- 20              # number of times to repeat sub-sampling procedure
@@ -114,7 +113,9 @@ calculate_pca_regression <- function(integrated_sce,
       # Perform regression PC~batch and unnest
       dplyr::mutate(fit = purrr::map(data, perform_regression)) %>%
       dplyr::select(-data) %>%
-      tidyr::unnest(fit)
+      tidyr::unnest(fit) %>%
+      # determine p-value significance
+      dplyr::mutate(significant = p.adjust(p.value, method = 'BH') < significance_threshold)
 
   
     # Calculate metrics from regression  results --------------
@@ -137,17 +138,15 @@ calculate_pca_regression <- function(integrated_sce,
     # Calculate the "sum of explained variance of all PCs with significant <R^2 from the batch regression>
     #  scaled by the variance explained by the top `num_pcs` PCs as a proxy for the batch effect" (pg 50, Methods section)
     
-    # First, determine which corrected P-values are significant
-    corrected_pvalues_sig <- unname(p.adjust(pc_regression_results$p.value, method = 'BH')) < significance_threshold
-  
-    # keep only top `num_pcs`
-    corrected_pvalues_sig <- corrected_pvalues_sig[1:num_pcs]
+    # Add in variance column and keep only `num_pcs`
+    pc_regression_results <- pc_regression_results %>%
+      dplyr::mutate(pc_variance = pcs_variance) %>%
+      dplyr::filter(PC_index <= num_pcs)
     
-    # This the "proxy for the batch effect, scaled 0-1 where 0 = no effect and 1 = strong effect
-    # Perform across top `num_pcs` only
-    pc_reg_scale <- sum(explained_variance[corrected_pvalues_sig])/sum(explained_variance[1:num_pcs])
-  
-    
+    sig_variance <- sum(pc_regression_results$pc_variance[pc_regression_results$significant == TRUE])
+    total_variance <- sum(pc_regression_results$pc_variance)
+    pc_reg_scale <- sig_variance/total_variance
+
     # Store quantities
     batch_variances <- c(batch_variances, batch_variance)
     pc_reg_scales   <- c(pc_reg_scales, pc_reg_scale)
