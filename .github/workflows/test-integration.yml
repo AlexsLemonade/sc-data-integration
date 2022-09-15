@@ -4,9 +4,6 @@ on:
   pull_request:
     branches:
       - main
-  push:
-    branches:
-      - allyhawkins/snakemake-github-action
 
 jobs:
   test-snakemake:
