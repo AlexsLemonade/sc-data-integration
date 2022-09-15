@@ -22,9 +22,13 @@ plot_umap_panel <- function(sce,
     stop("Number of colors provided must be equal to the number of categories used to classify cells in
          the specified cell_label_column.")
   }
+  
+  # randomly shuffle cells prior to plotting
+  col_order <- sample(ncol(sce))
+  shuffled_sce <- sce[,col_order]
 
   # create umap and label with provided cell label column
-  umap <- scater::plotReducedDim(sce,
+  umap <- scater::plotReducedDim(shuffled_sce,
                                  dimred = umap_name,
                                  colour_by = cell_label_column,
                                  point_size = 0.1,
@@ -32,8 +36,11 @@ plot_umap_panel <- function(sce,
     scale_color_manual(values = plot_colors) +
     # relabel legend and resize dots
     guides(color = guide_legend(title = cell_label_column,
-                                override.aes = list(size = 1)))+
-    theme(text = element_text(size = 14)) +
+                                override.aes = list(size = 3),
+                                label.theme = element_text(size = 16))) +
+    theme(legend.position = "none") +
+    theme(text = element_text(size = 14),
+          legend.title = element_text(size = 16)) +
     ggtitle(plot_title)
 
   return(umap)
@@ -70,6 +77,10 @@ plot_integration_umap <- function(sce,
 
   # if using celltype, we only want to label the top `max_celltypes`
   if(cell_label_column == "celltype"){
+    
+    # make sure that NA is actually set to NA, specifically a problem for python methods 
+    colData(sce)[[cell_label_column]][which(colData(sce)[[cell_label_column]] == "NA")] <- NA_character_
+    
     # only need to relabel if > `max_celltypes` exist
     num_celltypes <- length(unique(colData(sce)[,cell_label_column]))
     if(num_celltypes > max_celltypes){
