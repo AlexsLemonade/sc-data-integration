@@ -15,6 +15,6 @@ grouping_var: "project_name"
 
 # params for scvi only
 # what columns in the coldata should be used as covariates in integration
-continuous_covariates: None
+continuous_covariates: "subsets_mito_percent"
 # how many dimensions to return in the latent space
 num_latent: 20
