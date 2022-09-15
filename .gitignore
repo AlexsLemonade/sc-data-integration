@@ -7,7 +7,7 @@ data/
 # ignore gtf files 
 *.gtf*
 
-# ignore result files
+# ignore results files
 results/
 
 # ignore snakemake outputs 
