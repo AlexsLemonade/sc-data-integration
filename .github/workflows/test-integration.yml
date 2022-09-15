@@ -18,7 +18,7 @@ jobs:
       - name: Test snakemake
         uses: snakemake/snakemake-github-action@v1
           with:
-          directory: '.test'
-          snakefile: 'Snakefile'
-          args: '--list'
-          task: 'run'
+            directory: '.test'
+            snakefile: 'Snakefile'
+            args: '--list'
+            task: 'run'
