@@ -18,3 +18,4 @@ snakemake -c1 --use-conda \
   add_celltype=false \
   pepfile="sample-info/scib-simulated-project-pep.yaml" \
   continuous_covariates=None
+
