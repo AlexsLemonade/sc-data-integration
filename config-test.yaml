@@ -1,20 +1,6 @@
-## data specific params
+# Config file with relevant parameters updated for testing the
+#  Snakefile pipeline with only one HCA dataset
+
 processed_tsv: "sample-info/test/hca-processed-libraries.tsv"
-sce_dir: "results/human_cell_atlas/scpca-downstream-analyses"
-results_dir: "results/human_cell_atlas"
 pepfile: "sample-info/test/hca-project-pep.yaml"
-
-# cell type information paramaters
-add_celltype: true
 celltype_file: "sample-info/test/hca-celltype-info.tsv"
-
-# workflow paramters
-seed: 2022
-num_hvg: 5000
-grouping_var: "project_name"
-
-# params for scvi only
-# what columns in the coldata should be used as covariates in integration
-continuous_covariates: "subsets_mito_percent"
-# how many dimensions to return in the latent space
-num_latent: 20
