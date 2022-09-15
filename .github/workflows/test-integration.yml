@@ -1,0 +1,19 @@
+name: Test integration workflow
+
+on:
+    push:
+        branches:
+            - main
+
+jobs:
+    runs-on: ubuntu-latest
+    steps:
+       - uses: actions/checkout@v3
+
+        - name: Test snakemake
+        uses: snakemake/snakemake-github-action@v1
+        with:
+            directory: '.test'
+            snakefile: 'Snakefile'
+            args: '--cores 1 --dry-run'
+            task: 'run'
