@@ -1,9 +1,11 @@
 name: Test integration workflow
 
 on:
-    push:
-        branches:
-            - main
+  pull_request:
+    - main
+  push:
+    branches:
+      - allyhawkins/snakemake-github-action
 
 jobs:
     runs-on: ubuntu-latest
