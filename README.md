@@ -185,3 +185,16 @@ snakemake -c4 --use-conda
 
 You can adjust the number of cores used by adjusting the `-c4` flag with however many cores you want to use where the given number represents the number of desired cores (here, 4).
 Note that you will want to have [set up the R conda environment already](#snakemakeconda-setup), especially if you are on an Apple Silicon Mac.
+
+To run the workflow for development, you may wish to specify the `config-test.yaml` file, which will only run one project through the pipeline to save time:
+
+```
+snakemake -c4 --use-conda --configfile config-test.yaml
+```
+
+Finally, to run the `scib_simulated` data through the pipeline, use:
+
+```
+snakemake -c4 --use-conda --configfile config-scib_simulated.yaml
+```
+

@@ -1,0 +1,14 @@
+# Config file with relevant parameters updated for running `scib_simulated` data
+#  through the Snakefile
+
+## data specific params
+processed_tsv: "sample-info/scib-simulated-processed-libraries.tsv"
+sce_dir: "results/scib_simulated/scpca-downstream-analyses"
+results_dir: "results/scib_simulated"
+pepfile: "sample-info/scib-simulated-project-pep.yaml"
+
+# cell type information parameters
+add_celltype: false
+
+# params for scvi only
+continuous_covariates: None
