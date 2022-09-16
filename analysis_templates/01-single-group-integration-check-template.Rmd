@@ -154,7 +154,7 @@ batch_umaps <- names(sce_list) %>%
                                      integration_method = .x,
                                      params$group_name,
                                      cell_label_column = params$batch_column,
-                                     seed = opt$seed))
+                                     seed = params$seed))
 
   batch_legend <- cowplot::get_legend(batch_umaps[[1]])
   
@@ -176,7 +176,7 @@ if(params$celltype_column %in% coldata_names){
                                        integration_method = .x,
                                        params$group_name,
                                        cell_label_column = params$celltype_column,
-                                       seed = opt$seed))
+                                       seed = params$seed))
   
   celltype_legend <- cowplot::get_legend(celltype_umaps[[1]])
   
