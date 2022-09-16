@@ -15,7 +15,7 @@ jobs:
       - name: Test snakemake
         uses: snakemake/snakemake-github-action@v1.24.0
         with:
-          directory: '.test'
+          directory: '.'
           snakefile: 'Snakefile'
           args: '--list --configfile config.yaml'
           task: 'run'
