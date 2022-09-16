@@ -58,7 +58,6 @@ source(file.path(utils_dir, "plotting-functions.R"))
 source(file.path(utils_dir, "calculate-batch-ARI.R"))
 source(file.path(utils_dir, "calculate-batch-ASW.R"))
 source(file.path(utils_dir, "calculate-iLISI.R"))
-source(file.path(utils_dir, "calculate-kBET.R"))
 source(file.path(utils_dir, "calculate-pca-regression.R"))
 ```
 
@@ -152,9 +151,10 @@ if(!is.null(missing_umap)){
 # create umap plots labeling by batch column
 batch_umaps <- names(sce_list) %>%
   purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
-                                      integration_method = .x,
-                                      params$group_name,
-                                      cell_label_column = params$batch_column))
+                                     integration_method = .x,
+                                     params$group_name,
+                                     cell_label_column = params$batch_column,
+                                     seed = opt$seed))
 
   batch_legend <- cowplot::get_legend(batch_umaps[[1]])
   
@@ -175,7 +175,8 @@ if(params$celltype_column %in% coldata_names){
     purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
                                        integration_method = .x,
                                        params$group_name,
-                                       cell_label_column = params$celltype_column))
+                                       cell_label_column = params$celltype_column,
+                                       seed = opt$seed))
   
   celltype_legend <- cowplot::get_legend(celltype_umaps[[1]])
   
