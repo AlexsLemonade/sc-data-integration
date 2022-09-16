@@ -1,8 +1,8 @@
 ---
 params:
-  group_name: "1M_Immune_Cells"
-  merged_sce_dir: "../results/human_cell_atlas/merged_sce"
-  integrated_sce_dir: "../results/human_cell_atlas/integrated_sce"
+  group_name: "sim1"
+  merged_sce_dir: "../results/scib_simulated/merged_sce"
+  integrated_sce_dir: "../results/scib_simulated/integrated_sce"
   batch_column: "batch"
   celltype_column: "celltype"
   num_pcs: 20
@@ -23,7 +23,7 @@ date: "`r params$date`"
 output:
   html_document:
     toc: true
-    toc_depth: 2
+    toc_depth: 3
     toc_float: true
     number_sections: true
 ---
