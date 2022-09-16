@@ -17,5 +17,5 @@ jobs:
         with:
           directory: '.'
           snakefile: 'Snakefile'
-          args: '--list --configfile config.yaml'
+          args: '--list'
           task: 'run'
