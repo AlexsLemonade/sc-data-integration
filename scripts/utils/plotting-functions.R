@@ -7,6 +7,7 @@
 #' @param plot_colors Vector of colors to use for labeling cells. Must be
 #'   equivalent to the number of categories present in the cell_label_column.
 #' @param plot_title Title to use for the plot
+#' @param seed Random seed to set prior to shuffling SCE object
 #'
 #' @return ggplot2 object containing UMAP
 #'
@@ -14,7 +15,10 @@ plot_umap_panel <- function(sce,
                             cell_label_column,
                             umap_name,
                             plot_colors,
-                            plot_title = NULL){
+                            plot_title = NULL, 
+                            seed = NULL){
+  
+  set.seed(seed)
 
   # check that plot_colors is equal to the number of categories present in the cell label column
   color_categories <- unique(colData(sce)[,cell_label_column])
@@ -60,6 +64,7 @@ plot_umap_panel <- function(sce,
 #'   If the `cell_label_column == celltype` and contains more than the specified `max_celltypes`
 #'   then only the top N cell types, where N is `max_celltypes`, will be labeled in the UMAP and all other cells will be
 #'   labeled with "other". Default is 5.
+#' @param seed Random seed to use for randomizing plotting in UMAPs
 #'
 #' @return Combined ggplot containing a UMAP for both the unintegrated and integrated dataset
 #'   with cells colored by the specified `cell_label_column`
@@ -68,8 +73,11 @@ plot_integration_umap <- function(sce,
                                   integration_method,
                                   group_name,
                                   cell_label_column,
-                                  max_celltypes = 5) {
+                                  max_celltypes = 5, 
+                                  seed = NULL) {
 
+  set.seed(seed)
+  
   # check that column to label cells by is present in colData
   if(!cell_label_column %in% colnames(colData(sce))){
     stop("Provided cell_label_column should be present in the SCE object.")
@@ -125,7 +133,8 @@ plot_integration_umap <- function(sce,
                           cell_label_column,
                           umap_name = umap_name,
                           plot_colors,
-                          plot_title = integration_method)
+                          plot_title = integration_method,
+                          seed = seed)
 
   return(umap)
 }
