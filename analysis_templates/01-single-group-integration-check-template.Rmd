@@ -1,14 +1,17 @@
 ---
 params:
-  group_name: "1M_Immune_Cells"
-  merged_sce_dir: "../results/human_cell_atlas/merged_sce"
-  integrated_sce_dir: "../results/human_cell_atlas/integrated_sce"
+  group_name: "sim1"
+  merged_sce_dir: "../results/scib_simulated/merged_sce"
+  integrated_sce_dir: "../results/scib_simulated/integrated_sce"
   batch_column: "batch"
   celltype_column: "celltype"
   num_pcs: 20
   ari_k_min: 5
   ari_k_max: 25
   ari_k_increment: 5
+  k0_fraction_min: 0.05
+  k0_fraction_max: 0.25
+  k0_fraction_increment: 0.05
   num_regression_pcs: 50
   sig_threshold:  0.05
   seed: 2022
@@ -20,7 +23,7 @@ date: "`r params$date`"
 output:
   html_document:
     toc: true
-    toc_depth: 2
+    toc_depth: 3
     toc_float: true
     number_sections: true
 ---
@@ -58,6 +61,7 @@ source(file.path(utils_dir, "plotting-functions.R"))
 source(file.path(utils_dir, "calculate-batch-ARI.R"))
 source(file.path(utils_dir, "calculate-batch-ASW.R"))
 source(file.path(utils_dir, "calculate-iLISI.R"))
+source(file.path(utils_dir, "calculate-kBET.R"))
 source(file.path(utils_dir, "calculate-pca-regression.R"))
 ```
 
@@ -151,45 +155,25 @@ if(!is.null(missing_umap)){
 # create umap plots labeling by batch column
 batch_umaps <- names(sce_list) %>%
   purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
-                                     integration_method = .x,
-                                     params$group_name,
-                                     cell_label_column = params$batch_column,
-                                     seed = params$seed))
-
-  batch_legend <- cowplot::get_legend(batch_umaps[[1]])
-  
-  ggpubr::ggarrange(plotlist = batch_umaps,
-                    common.legend = TRUE, 
-                    legend = "right",
-                    legend.grob = batch_legend, 
-                    ncol = 2, 
-                    nrow = 4) 
+                                      integration_method = .x,
+                                      params$group_name,
+                                      cell_label_column = params$batch_column))
+gridExtra::grid.arrange(grobs = batch_umaps, ncol = 2)
 ```
-
 
 ```{r celltype-umaps, fig.width=15, fig.height=20, warning=FALSE, message=FALSE}
 # only print out celltype UMAP plot if celltype information is provided
 if(params$celltype_column %in% coldata_names){
-  # create umap plots labeling by celltype column
-  celltype_umaps <- names(sce_list) %>%
-    purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
-                                       integration_method = .x,
-                                       params$group_name,
-                                       cell_label_column = params$celltype_column,
-                                       seed = params$seed))
-  
-  celltype_legend <- cowplot::get_legend(celltype_umaps[[1]])
-  
-  ggpubr::ggarrange(plotlist = celltype_umaps,
-                    common.legend = TRUE, 
-                    legend = "right",
-                    legend.grob = celltype_legend, 
-                    ncol = 2, 
-                    nrow = 4) 
-
+ # create umap plots labeling by celltype column
+celltype_umaps <- names(sce_list) %>%
+  purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
+                                      integration_method = .x,
+                                      params$group_name,
+                                      cell_label_column = params$celltype_column))
+gridExtra::grid.arrange(grobs = celltype_umaps, ncol = 2) 
 } else {
   glue::glue("
-    <div class=\"alert alert-warning\">
+    <div class=\"alert alert-info\">
     
     No celltype information found for this dataset.
     
@@ -317,6 +301,56 @@ batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated_li
 ```{r}
 plot_batch_asw(batch_asw_df, seed = params$seed)
 ```
+
+### kBET
+
+Below we look at the kBET rejection rate, comparing the expected and observed rejection rate for each integration method.
+kBET is calculated by comparing the local batch label distribution to the batch distribution across the entire population of cells.
+A well-integrated dataset would show a similar distribution of batch labels in the local neighborhoods as well as the global neighborhood, which translates into a low observed rejection rate.
+The authors caution that kBET is very sensitive to any kind of bias, therefore kBET rates close to or equal to 1 may indicate bias in data and kBET values should be interpreted with caution.
+More information on kBET can be found in the original [publication](https://doi.org/10.1038/s41592-018-0254-1) and on their [GitHub](https://github.com/theislab/kBET).
+
+```{r}
+# create k range needed for input to ARI function from params
+
+# make sure that max is not less than min
+if(params$k0_fraction_max < params$k0_fraction_min){
+  stop("`k0_fraction_max` must be greater than `k0_fraction_min`.")
+}
+
+## get krange
+k0_fraction_range <- seq(params$k0_fraction_min,
+                         params$k0_fraction_max,
+                         params$k0_fraction_increment)
+```
+
+
+```{r}
+# calculate kBET for unintegrated and integrated SCE separately
+kbet_unintegrated <- calculate_kbet(merged_sce,
+                                    params$batch_column,
+                                    seed = params$seed,
+                                    num_pcs = params$num_pcs,
+                                    k0_fraction_range = k0_fraction_range,
+                                    unintegrated=TRUE)
+
+kbet_integrated_list <- integration_methods %>%
+  purrr::imap(~ calculate_kbet(integrated_sce = sce_list[[.x]],
+                               params$batch_column,
+                               seed = params$seed,
+                               num_pcs = params$num_pcs,
+                               k0_fraction_range = k0_fraction_range,
+                               integration_method = .x))
+
+# create combined DF
+kbet_df <- dplyr::bind_rows(kbet_unintegrated, kbet_integrated_list)
+
+```
+
+```{r}
+plot_kbet(kbet_df)
+```
+
 
 ### PCA Regression
 
