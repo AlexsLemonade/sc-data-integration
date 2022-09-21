@@ -71,17 +71,6 @@ check_sim_files <- function(filename) {
 purrr::walk(sim1_filenames, check_sim_files)
 
 
-# I actually don't think we care about overwriting for this, because it's super quick!!
-# Determine which sim1a files should be created
-#if(!is.null(opt$overwrite)) {
-#  # If overwriting, all SCEs
-#  missing_sim1a_filenames <- sim1a_filenames
-#} else {
-#  # if not overwriting, only SCEs that do not exist yet
-#  sim1a_files_present <- file.exists(file.path(opt$sce_dir, sim1a_filenames))
-#  missing_sim1a_filenames <- sim1a_filenames[sim1a_files_present == FALSE]
-#}
-
   
 ## Define cell group subsets ----------------------------------------
 
@@ -124,14 +113,20 @@ sim1c_retain_celltypes <- tibble::tribble(
   6, c(3, 4)
 ) 
 
-# Grab existing SCE from S3 ----------------------------------------------------
+# Grab existing SCE from S3 if specified -------------------------------
 
-# only copy from S3 if option to copy is used at the command line
+
+# Create filenames for sim1a, b, and c
+sim1a_filenames <- stringr::str_replace_all(sim1_filenames, "sim1_", "sim1a_")
+sim1b_filenames <- stringr::str_replace_all(sim1_filenames, "sim1_", "sim1b_")
+sim1c_filenames <- stringr::str_replace_all(sim1_filenames, "sim1_", "sim1c_")
+all_filenames <- basename( c(sim1a_filenames, sim1b_filenames, sim1c_filenames) )
+
 if(!is.null(opt$copy_s3)){
-  # grab all library ID's that should have SCE's copied over
-  libraries_include <- paste("--include '", "*", library_id,"'", "*", sep = '', collapse = ' ')
-  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_output_dir,
-                     '--exclude "*"', libraries_include, '--recursive', sep = " ")
+  # copy over any existing SCEs
+  aws_includes <- paste("--include '", all_filenames, "'", sep = '', collapse = ' ')
+  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_dir,
+                     '--exclude "*"', aws_includes, sep = " ")
   system(sync_call, ignore.stdout = TRUE)
   
 }
@@ -144,10 +139,10 @@ subset_export_sce <- function(input_sce_file, output_sce_file, celltypes_df) {
   # output_sce_file: output file to write subsetted SCE
   # celltypes_df: data frame of which cell types to retain
   
-  sce <- readr::read_rds(file.path(opt$sce_dir, input_sce_file))
+  sce <- readr::read_rds(input_sce_file)
   
   # grab the batch index
-  batch_index <- stringr::str_split(input_sce_file, "_") %>% 
+  batch_index <- stringr::str_split(basename(input_sce_file), "_") %>% 
     magrittr::extract2(1) %>% 
     magrittr::extract(2) %>% 
     stringr::str_replace("Batch", "") %>%
@@ -170,76 +165,33 @@ subset_export_sce <- function(input_sce_file, output_sce_file, celltypes_df) {
 }
 
 
+# Create the sim1a, sim1b, and sim1c files ----------------
+
+# If we are not overwriting, then we only want to run files that are missing
+# If we are overwriting, then we want to run all filenames
+if (is.null(opt$overwrite)) {
+  # Missing files only
+  missing_sim1a <- sim1a_filenames[!file.exists(sim1a_filenames)]
+  missing_sim1b <- sim1b_filenames[!file.exists(sim1b_filenames)]
+  missing_sim1c <- sim1c_filenames[!file.exists(sim1c_filenames)]
+} else {
+  # All files
+  missing_sim1a <- sim1a_filenames
+  missing_sim1b <- sim1b_filenames
+  missing_sim1c <- sim1c_filenames
+}
+
+# Subset and export all SCE objects for each set of files that need to be created
+purrr::walk2(sim1_filenames, missing_sim1a, subset_export_sce, sim1a_retain_celltypes)
+purrr::walk2(sim1_filenames, missing_sim1b, subset_export_sce, sim1b_retain_celltypes)
+purrr::walk2(sim1_filenames, missing_sim1c, subset_export_sce, sim1c_retain_celltypes)
 
 
-
-# Create filenames for sim1a, b, and c
-sim1a_filenames <- stringr::str_replace_all(sim1_filenames, "sim1_", "sim1a_")
-sim1b_filenames <- stringr::str_replace_all(sim1_filenames, "sim1_", "sim1b_")
-sim1c_filenames <- stringr::str_replace_all(sim1_filenames, "sim1_", "sim1c_")
-
-
-# Subset and export all SCE objects for each set
-purrr::walk2(sim1_filenames, sim1a_filenames, subset_export_sce, sim1a_retain_celltypes)
-purrr::walk2(sim1_filenames, sim1b_filenames, subset_export_sce, sim1b_retain_celltypes)
-purrr::walk2(sim1_filenames, sim1c_filenames, subset_export_sce, sim1c_retain_celltypes)
-
-
-  
-# Copy files back to S3
-  
-  
-  # if any libraries are missing a corresponding sce, then create that sce 
-  if(length(missing_sce_files) != 0){
-    
-    # first need to see if the hdf5 file is present to create the SCE 
-    # if the hdf5 file isn't there, grab it from AWS before converting
-    
-    # list of all hdf5 files that correspond to missing sce files
-    # obtain the path relative to the hdf5 directory
-    hdf5_missing_sce <- library_metadata_df %>%
-      dplyr::filter(local_sce_path %in% missing_sce_files) %>%
-      dplyr::mutate(missing_filepath = file.path(hdf5_filename)) %>%
-      dplyr::pull(missing_filepath) %>%
-      unique()
-    
-    # construct full paths for searching if hdf5 file exists 
-    full_missing_hdf5_path <- file.path(opt$h5_dir,
-                                        hdf5_missing_sce)
-    
-    # if any hdf5 files don't exist for missing SCE's then grab those from AWS S3
-    if(!all(file.exists(full_missing_hdf5_path))){
-      
-      # get list of hdf5 files inside s3 directory to include in copying
-      aws_local_copy <- hdf5_missing_sce[which(!file.exists(full_missing_hdf5_path))]
-      aws_includes <- paste("--include '", "*", aws_local_copy, "'", sep = '', collapse = ' ')
-      
-      # build one sync call to copy all missing hdf5 files 
-      sync_call <- paste('aws s3 cp', opt$s3_h5_bucket, opt$h5_dir, 
-                         '--exclude "*"', aws_includes, '--recursive', sep = " ")
-      
-      system(sync_call, ignore.stdout = TRUE)
-    }
-    
-    # group metadata by hdf5 filename to get list of individual sce files that should be produced for each H5 file
-    grouped_metadata_df <- library_metadata_df %>%
-      dplyr::filter(hdf5_filename %in% hdf5_missing_sce) %>%
-      dplyr::group_by(hdf5_filename) %>%
-      dplyr::summarise(sce_files = list(local_sce_path))
-    
-    # convert to sce objects and write files 
-    sce_list <- purrr::map2(file.path(opt$h5_dir, grouped_metadata_df$hdf5_filename),
-                            grouped_metadata_df$sce_files, 
-                            ~ hdf5_to_sce(h5_file = .x, 
-                                          sce_file_list = .y, 
-                                          h5_group_column = opt$h5_group_column))
-    
-    # sync sce output to S3 
-    all_sce_files <- unique(library_metadata_df$local_sce_file)
-    aws_includes <- paste("--include '", all_sce_files, "'", sep = '', collapse = ' ')
-    sync_call <- paste('aws s3 sync', opt$sce_output_dir, opt$s3_sce_bucket, 
+# Copy back to S3
+all_written_files <- c(missing_sim1a, missing_sim1b, missing_sim1c)
+aws_includes <- paste("--include '", all_written_files, "'", sep = '', collapse = ' ')
+sync_call <- paste('aws s3 sync', opt$sce_dir, opt$s3_sce_bucket, 
                        '--exclude "*"', aws_includes, sep = " ")
-    system(sync_call, ignore.stdout = TRUE)
-    
-  }
+system(sync_call, ignore.stdout = TRUE)
+
   

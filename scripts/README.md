@@ -73,6 +73,18 @@ The SRA identifier was searched and matched to the corresponding sample identifi
 The ID submitted by the user in the cell type file was mapped to the `library_biomaterial_id` available in the HCA portal.
 
 
+### Simulation `SingleCellExperiment` objectss
+
+We additionally process several simulated datasets, referred to as `scib_simulated`, in the pipeline. 
+To prepare simulation data for use in the pipeline, there are two scripts which are run:
+
+- `00b-obtain-sim-sce.R`, which prepares two simulated projects `sim1` and `sim2` for `scpca-downstream-analyses` input by converting them from H5 to RDS files with normalized SCE objects, and batches are further split into separate RDS files.
+- `00c-create-sim-subsets.R` prepares three additional simulation projects derived from `sim1`: `sim1a`, `sim1b`, and `sim1c`. 
+The script saves additional RDS files containing SCE objects for each batch in each of the three subsetted simulations.
+These versions of `sim1` were designed to have different schematics of celltypes across batches in order to explore how celltype presence overlap (or lack of overlap) among different bacthes influences integration.
+
+
+
 ## Running HCA test datasets through `scpca-downstream-analyses`
 
 Before libraries can be integrated, data downloaded from the Human Cell Atlas Data portal will need to be filtered to remove empty droplets and low quality cells and undergo normalization.
