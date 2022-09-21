@@ -15,10 +15,11 @@ rule target:
 rule build_renv:
     input: workflow.source_path("renv.lock")
     output: "renv/.snakemake_timestamp"
+    log: "logs/build_renv.log"
     conda: "envs/scpca-renv.yaml"
     shell:
         """
-        Rscript -e "renv::restore(lockfile = '{input}')"
+        Rscript -e "renv::restore(lockfile = '{input}')" &> {log}
         date -u -Iseconds  > {output}
         """
 
@@ -41,7 +42,8 @@ rule merge_sces:
           --grouping_var {config[grouping_var]} \
           --merged_sce_dir "{output}" \
           --num_hvg {config[num_hvg]} \
-          --subset_hvg
+          --subset_hvg \
+          &> {log}
         """
 
 rule convert_sce_anndata:
@@ -59,7 +61,8 @@ rule convert_sce_anndata:
           --library_file "{input.processed_tsv}" \
           --merged_sce_dir "{input.merged_sce_dir}" \
           --grouping_var {config[grouping_var]} \
-          --anndata_output_dir "{output}"
+          --anndata_output_dir "{output}" \
+          &> {log}
         """
 
 
@@ -82,7 +85,8 @@ rule integrate_fastmnn:
           --output_sce_file "{output}" \
           --method fastMNN \
           --seed {config[seed]} \
-          --corrected_only
+          --corrected_only \
+          &> {log}
         """
 
 rule integrate_harmony:
@@ -104,7 +108,8 @@ rule integrate_harmony:
           --output_sce_file "{output}" \
           --method harmony \
           --seed {config[seed]} \
-          --corrected_only
+          --corrected_only \
+          &> {log}
         """
 
 rule integrate_seurat:
@@ -130,7 +135,8 @@ rule integrate_seurat:
           --method seurat \
           --seurat_reduction_method {wildcards.method} \
           --num_genes {params.num_genes} \
-          --corrected_only
+          --corrected_only \
+          &> {log}
         """
 
 rule integrate_scanorama:
@@ -150,7 +156,8 @@ rule integrate_scanorama:
           --output_anndata "{output}" \
           --seed {config[seed]} \
           --use_hvg \
-          --corrected_only
+          --corrected_only \
+          &> {log}
         """
 
 rule integrate_scvi:
@@ -172,7 +179,8 @@ rule integrate_scvi:
           --num_latent {config[num_latent]} \
           --seed {config[seed]} \
           --use_hvg \
-          --corrected_only
+          --corrected_only \
+          &> {log}
         """
 
 rule convert_anndata_sce:
@@ -186,11 +194,12 @@ rule convert_anndata_sce:
     shell:
         """
         Rscript scripts/04-post-process-anndata.R \
-            --input_anndata_file "{input}" \
-            --output_sce_file "{output}" \
-            --method "{wildcards.method}" \
-            --seed {config[seed]} \
-            --corrected_only
+          --input_anndata_file "{input}" \
+          --output_sce_file "{output}" \
+          --method "{wildcards.method}" \
+          --seed {config[seed]} \
+          --corrected_only \
+          &> {log}
         """
 
 
@@ -215,5 +224,6 @@ rule generate_report:
                             output_dir = dirname('{output}'), \
                             params = list(group_name = '{wildcards.project}', \
                                           merged_sce_dir = '{workflow.basedir}/{input.merged_sce_dir}', \
-                                          integrated_sce_dir = '{workflow.basedir}/{params.integrated_sce_dir}'))"
+                                          integrated_sce_dir = '{workflow.basedir}/{params.integrated_sce_dir}'))" \
+          &> {log}
         """
