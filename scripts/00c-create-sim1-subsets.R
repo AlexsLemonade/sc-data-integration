@@ -194,4 +194,3 @@ sync_call <- paste('aws s3 sync', opt$sce_dir, opt$s3_sce_bucket,
                        '--exclude "*"', aws_includes, sep = " ")
 system(sync_call, ignore.stdout = TRUE)
 
-  
