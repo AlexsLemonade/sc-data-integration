@@ -29,6 +29,8 @@ rule merge_sces:
         sce_dir = config["sce_dir"]
     output:
         directory(os.path.join(config["results_dir"], "merged_sce"))
+    log:
+        "logs/merge_sce.log"
     shell:
         """
         Rscript scripts/02-prepare-merged-sce.R \
@@ -49,6 +51,8 @@ rule convert_sce_anndata:
         merged_sce_dir = "{basedir}/merged_sce"
     output:
         directory("{basedir}/merged_anndata")
+    log:
+        "logs/{basedir}/convert_sce_anndata.log"
     shell:
         """
         Rscript scripts/02a-convert-sce-to-anndata.R \
@@ -67,6 +71,8 @@ rule integrate_fastmnn:
         merged_sce_dir = "{basedir}/merged_sce"
     output:
         "{basedir}/integrated_sce/{project}_integrated_fastmnn_sce.rds"
+    log:
+        "logs/{basedir}/integrate_fastmnn-{project}.log"
     params:
         merged_sce_file = "{project}_merged_sce.rds",
     shell:
@@ -87,6 +93,8 @@ rule integrate_harmony:
         merged_sce_dir = "{basedir}/merged_sce"
     output:
         "{basedir}/integrated_sce/{project}_integrated_harmony_sce.rds"
+    log:
+        "logs/{basedir}/integrate_harmony-{project}.log"
     params:
         merged_sce_file = "{project}_merged_sce.rds",
     shell:
@@ -107,6 +115,8 @@ rule integrate_seurat:
         merged_sce_dir = "{basedir}/merged_sce"
     output:
         "{basedir}/integrated_sce/{project}_integrated_seurat-{method}_sce.rds"
+    log:
+        "logs/{basedir}/integrate_seurat-{method}-{project}.log"
     wildcard_constraints:
         method = "cca|rpca"
     params:
@@ -129,6 +139,8 @@ rule integrate_scanorama:
         merged_anndata_dir = "{basedir}/merged_anndata"
     output:
         temp("{basedir}/integrated_anndata/{project}_integrated_scanorama.h5")
+    log:
+        "logs/{basedir}/integrate_scanorama-{project}.log"
     params:
         merged_anndata_file = "{project}_anndata.h5",
     shell:
@@ -147,6 +159,8 @@ rule integrate_scvi:
         merged_anndata_dir = "{basedir}/merged_anndata"
     output:
         temp("{basedir}/integrated_anndata/{project}_integrated_scvi.h5")
+    log:
+        "logs/{basedir}/integrate_scvi-{project}.log"
     params:
         merged_anndata_file = "{project}_anndata.h5",
     shell:
@@ -161,12 +175,14 @@ rule integrate_scvi:
           --corrected_only
         """
 
-rule convert_anndata:
+rule convert_anndata_sce:
     conda: "envs/scpca-renv.yaml"
     input:
         "{basedir}/integrated_anndata/{project}_integrated_{method}.h5"
     output:
         "{basedir}/integrated_sce/{project}_integrated_{method}_sce.rds"
+    log:
+        "logs/{basedir}/convert_anndata_sce-{method}-{project}.log"
     shell:
         """
         Rscript scripts/04-post-process-anndata.R \
@@ -186,6 +202,8 @@ rule generate_report:
                                       integration_method = INTEGRATION_METHODS)
     output:
         "{basedir}/analysis_reports/{project}_integration_report.html"
+    log:
+        "logs/{basedir}/generate_report-{project}.log"
     params:
         integrated_sce_dir = "{basedir}/integrated_sce"
     shell:
