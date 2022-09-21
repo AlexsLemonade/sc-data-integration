@@ -133,6 +133,9 @@ if(!is.null(opt$copy_s3)){
 
 
 
+
+# Create the sim1a, sim1b, and sim1c files ----------------
+
 subset_export_sce <- function(input_sce_file, output_sce_file, celltypes_df) {
   # Helper function to read in, subset, and export a sim1 SCE file
   # input_sce_file: input file to read SCE to subset
@@ -150,10 +153,10 @@ subset_export_sce <- function(input_sce_file, output_sce_file, celltypes_df) {
   
   # Define array of celltypes to keep
   keep_celltypes <- paste0("Group", 
-                    celltypes_df %>% 
-                      dplyr::filter(batch == batch_index) %>%
-                      dplyr::pull(celltypes) %>%
-                      magrittr::extract2(1)
+                           celltypes_df %>% 
+                             dplyr::filter(batch == batch_index) %>%
+                             dplyr::pull(celltypes) %>%
+                             magrittr::extract2(1)
   )
   
   # Subset to only those batches
@@ -163,9 +166,6 @@ subset_export_sce <- function(input_sce_file, output_sce_file, celltypes_df) {
   # Export sce_subsetted to RDS file
   readr::write_rds(sce_subsetted, output_sce_file)
 }
-
-
-# Create the sim1a, sim1b, and sim1c files ----------------
 
 # If we are not overwriting, then we only want to run files that are missing
 # If we are overwriting, then we want to run all filenames
