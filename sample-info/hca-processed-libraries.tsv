@@ -1,4 +1,4 @@
-library_biomaterial_id	sample_biomaterial_id	loom_filename	project_name	tissue_group	diagnosis	organ_part	unfiltered_sce_filename	sce_unfiltered_files_s3_bucket	sce_unfiltered_files_folder	filtered_sce_filename
+library_biomaterial_id	sample_biomaterial_id	loom_filename	project_name	tissue_group	diagnosis	organ_part	unfiltered_sce_filename	sce_unfiltered_files_s3_bucket	folder_structure	filtered_sce_filename
 SRX7129196	SAMN13262714	f89aaa2c-2c5d-42fa-80ec-53b9d1851911.loom	HumanBrainSubstantiaNigra	brain	normal	cortex	SRX7129196_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	brain/HumanBrainSubstantiaNigra	SRX7129196_filtered_sce.rds
 SRX7129192	SAMN13262720	0c34828c-31c4-467e-a3fc-79aed780e716.loom	HumanBrainSubstantiaNigra	brain	normal	cortex	SRX7129192_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	brain/HumanBrainSubstantiaNigra	SRX7129192_filtered_sce.rds
 Control_CO28_NS	Control_CO28	d24b2758-62f6-48ed-b6fa-61322dd83ecf.loom	Oligodendrocyte_MS	brain	normal	NA	Control_CO28_NS_sce.rds	s3://sc-data-integration/human_cell_atlas_data/sce	brain/Oligodendrocyte_MS	Control_CO28_NS_filtered_sce.rds
