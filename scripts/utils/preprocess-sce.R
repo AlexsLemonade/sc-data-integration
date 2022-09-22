@@ -137,7 +137,7 @@ if(is.null(opt$repeat_filtering) && all(file.exists(filtered_sce_files))) {
   }
   
   # make sure that unfiltered files exist if filtering must be performed 
-  unfiltered_sce_files <- file.path(opt$unfiltered_sce_dir, 
+unfiltered_sce_files <- file.path(opt$unfiltered_sce_dir, 
                                     library_metadata_df$folder_structure, 
                                     library_metadata_df$unfiltered_sce_filename)
   
@@ -172,7 +172,6 @@ if(is.null(opt$repeat_filtering) && all(file.exists(filtered_sce_files))) {
   purrr::walk2(.x = unfiltered_sce_files,
                .y = filtered_sce_files,
                read_and_filter_sce) 
-  
 }
 
 # Update metadata --------------------------------------------------------------

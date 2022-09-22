@@ -9,11 +9,10 @@
 
 # Option descriptions: 
 # 
-# --library_file: The path to the file listing all libraries that should be included 
-#   in the conversion from hdf5 to SCE. This file must contain the 
-#   `library_biomaterial_id`, `sample_biomaterial_id`, and `scpca_project_id` column
+# --library_file: The path to the file listing all libraries whose SCE files should be copied.
+#    This file must contain the `library_biomaterial_id`, `sample_biomaterial_id`, and `scpca_project_id` column
 # --filtered_sce_dir: Path to the folder where all filtered SCE files should be stored locally 
-# --scpca_nf_outs_bucket: Bucket on S3 where all outputs from scpca-nf can be found
+# --scpca_nf_bucket: Bucket on S3 where all outputs from scpca-nf can be found
 
 #load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
@@ -37,13 +36,13 @@ option_list <- list(
     opt_str = c("--filtered_sce_dir"),
     type = "character",
     default = file.path(project_root, "data", "scpca", "filtered_sce"),
-    help = "path to folder where all hdf5 files should be stored"
+    help = "path to folder where all sce files should be stored"
   ),
   make_option(
-    opt_str = c("--scpca_nf_outs_bucket"),
+    opt_str = c("--scpca_nf_bucket"),
     type = "character",
     default = "s3://nextflow-ccdl-results/scpca-prod/publish",
-    help = "Bucket on s3 where hdf5 data is stored"
+    help = "Bucket on s3 where sce data is stored"
   )
 )
 
@@ -88,7 +87,7 @@ if(length(missing_sce_files) > 0){
   aws_includes <- paste("--include '", "*", missing_sce_files, "'", sep = '', collapse = ' ')
   
   # build one sync call to copy all missing hdf5 files 
-  sync_call <- paste('aws s3 cp', opt$scpca_nf_outs_bucket, opt$filtered_sce_dir, 
+  sync_call <- paste('aws s3 cp', opt$scpca_nf_bucket, opt$filtered_sce_dir, 
                      '--exclude "*"', aws_includes, '--recursive', sep = " ")
   
   system(sync_call, ignore.stdout = TRUE)
