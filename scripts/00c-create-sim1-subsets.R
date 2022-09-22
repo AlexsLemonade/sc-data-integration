@@ -58,7 +58,7 @@ opt <- parse_args(OptionParser(option_list = option_list))
 total_sim1_batches <- 6 # there are 6 batches in sim1
 
 # Ensure `sim1` files are present. There should be 6 batches.
-sim1_filenames <- list.files(opt$sce_dir, pattern = "^sim1", full.names=TRUE)
+sim1_filenames <- list.files(opt$sce_dir, pattern = "^sim1_", full.names=TRUE)
 
 check_sim_files <- function(filename) {
   # Helper function for checking presence of properly-named sim SCE files
@@ -116,7 +116,7 @@ sim1c_retain_celltypes <- tibble::tribble(
 
 
 # Create filenames for sim1a, b, and c
-sim1a_filenames <- stringr::str_replace_all(sim1_filenames, "sim1_", "sim1a_")
+sim1a_filenames <- stringr::str_replace_all(sim1_filenames[-3], "sim1_", "sim1a_") # 1a does not use batch 3
 sim1b_filenames <- stringr::str_replace_all(sim1_filenames, "sim1_", "sim1b_")
 sim1c_filenames <- stringr::str_replace_all(sim1_filenames, "sim1_", "sim1c_")
 all_filenames <- basename( c(sim1a_filenames, sim1b_filenames, sim1c_filenames) )
@@ -179,7 +179,7 @@ if (is.null(opt$overwrite)) {
 }
 
 # Subset and export all SCE objects for each set of files that need to be created
-purrr::walk2(sim1_filenames, missing_sim1a, subset_export_sce, sim1a_retain_celltypes)
+purrr::walk2(sim1_filenames[-3], missing_sim1a, subset_export_sce, sim1a_retain_celltypes) # no batch 3 in sim1a
 purrr::walk2(sim1_filenames, missing_sim1b, subset_export_sce, sim1b_retain_celltypes)
 purrr::walk2(sim1_filenames, missing_sim1c, subset_export_sce, sim1c_retain_celltypes)
 
