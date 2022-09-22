@@ -14,14 +14,14 @@ set -euo pipefail
 #  --downstream_repo "path to scpca-downstream-analyses repo"
 
 # Other parameters include:
-# --processed_library_df: path to the file listing all libraries that should be
+# --processed_library_df: Full path to the file listing all libraries that should be
 #   included in processing.
-# --unfiltered_sce_dir: path to folder where all unfiltered sce objects are located
-# --filtered_sce_dir: path to folder where all filtered sce objects are to be stored
-# --downstream_metadata_file: Path to write metadata file to be used to run
+# --unfiltered_sce_dir: Full path to folder where all unfiltered sce objects are located
+# --filtered_sce_dir: Full path to folder where all filtered sce objects are to be stored
+# --downstream_metadata_file: Full path to write metadata file to be used to run
 #   scpca-downstream-analyses
-# --results_dir: Path to save results from running scpca-downstream-analyses
-# --mito_file: Path to file with list of mitochondrial genes to use.
+# --results_dir: Full path to save results from running scpca-downstream-analyses
+# --mito_file: Full path to file with list of mitochondrial genes to use.
 #   If not specified, the mitochondrial file for Ensembl-104 present in
 #   scpca-downstream-analyses will be used
 # --repeat_filtering: An option to repeat the filtering of empty droplets if filtering files already exist.
