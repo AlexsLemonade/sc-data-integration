@@ -83,7 +83,6 @@ sim1a_retain_celltypes <- tibble::tribble(
   ~batch, ~celltypes,
   1, c(1, 2, 4),
   2, c(1, 2, 4),
-  3, c(1, 2, 4),
   4, c(1, 2, 4),
   5, c(1, 2, 4),
   6, c(1, 2, 4),
