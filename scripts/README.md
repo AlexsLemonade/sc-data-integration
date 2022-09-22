@@ -115,14 +115,14 @@ This file is the default file that is used in running `01-run-downstream-analyse
 `pandoc` must be version 1.12.3 or higher, which can be checked using the `pandoc -v` command.
 
 ```sh
-bash 01-run-downstream-analyses.sh --downstream_repo <path to location of scpca-downstream-repo>
+bash 01-run-downstream-analyses.sh --downstream_repo <full path to location of scpca-downstream-repo>
 ```
 
 If desired, an S3 bucket link can be provided to ensure that the results from `scpca-downstream-analyses` are copied to S3 for other Data Lab staff members to use.
 
 ```sh
 bash 01-run-downstream-analyses.sh \
-  --downstream_repo <path to location of scpca-downstream-repo> \
+  --downstream_repo <full path to location of scpca-downstream-repo> \
   --s3_bucket "s3://sc-data-integration/human_cell_atlas_results"
 ```
 
@@ -131,9 +131,33 @@ To overwrite existing filtered files, use `--repeat_filtering yes` at the comman
 
 ```sh
 bash 01-run-downstream-analyses.sh \
-  --downstream_repo <path to location of scpca-downstream-repo> \
+  --downstream_repo <full path to location of scpca-downstream-repo> \
   --repeat_filtering yes
 ```
+
+## Preparing ScPCA test datasets for integration
+
+We have provided a select subset of ScPCA projects and libraries to use for testing the data integration workflow.
+The list of libraries used can be found in `sample-info/scpca-processed-libraries.tsv` and the list of projects can be found in `sample-info/scpca-project-metadata.tsv`.
+
+The `_filtered.rds` files for the libraries being integrated can be obtained by using the `00d-obtain-scpca-sce.R` script.
+Running this script with the default arguments will copy over the SCE objects stored in files named as `<library_id>_filtered.rds` to the local `data/scpca/filtered_sce` folder.
+
+After copying over the files from S3 to your local `data` directory, the core workflow from `scpca-downstream-analyses` will need to be run to obtain the normalized and processed SCE files needed as input for the integration workflow.
+
+This can be done using the following command and by providing the full paths to each of the input metadata files and directories:
+
+```
+bash 01-run-downstream-analyses.sh \
+  --downstream_repo <full path to location of scpca-downstream-repo> \
+  --processed_library_df <full path to sample-info/scpca-processed-libraries.tsv> \
+  --filtered_sce_dir <full path to data/scpca/filtered_sce> \
+  --results_dir <full path to results/scpca/scpca-downstream-analyses> \
+  --mito_file <full path to scpca-downstream-repo/reference-files/Homo.sapiens.GRCh38.104.mitogenes.txt>
+  --downstream_metadata_file <full path to sample-info/scpca-downstream-metadata.tsv> \
+```
+
+**Note* You should not use the `--repeat_filtering` option here because there will not be any unfiltered SCE files to use to perform filtering so the workflow will report an error.
 
 ### Generating the mitochondrial gene list
 

@@ -7,6 +7,7 @@
 #' @param plot_colors Vector of colors to use for labeling cells. Must be
 #'   equivalent to the number of categories present in the cell_label_column.
 #' @param plot_title Title to use for the plot
+#' @param seed Random seed to set prior to shuffling SCE object
 #'
 #' @return ggplot2 object containing UMAP
 #'
@@ -14,7 +15,10 @@ plot_umap_panel <- function(sce,
                             cell_label_column,
                             umap_name,
                             plot_colors,
-                            plot_title = NULL){
+                            plot_title = NULL, 
+                            seed = NULL){
+  
+  set.seed(seed)
 
   # check that plot_colors is equal to the number of categories present in the cell label column
   color_categories <- unique(colData(sce)[,cell_label_column])
@@ -22,9 +26,13 @@ plot_umap_panel <- function(sce,
     stop("Number of colors provided must be equal to the number of categories used to classify cells in
          the specified cell_label_column.")
   }
+  
+  # randomly shuffle cells prior to plotting
+  col_order <- sample(ncol(sce))
+  shuffled_sce <- sce[,col_order]
 
   # create umap and label with provided cell label column
-  umap <- scater::plotReducedDim(sce,
+  umap <- scater::plotReducedDim(shuffled_sce,
                                  dimred = umap_name,
                                  colour_by = cell_label_column,
                                  point_size = 0.1,
@@ -32,8 +40,11 @@ plot_umap_panel <- function(sce,
     scale_color_manual(values = plot_colors) +
     # relabel legend and resize dots
     guides(color = guide_legend(title = cell_label_column,
-                                override.aes = list(size = 1)))+
-    theme(text = element_text(size = 14)) +
+                                override.aes = list(size = 3),
+                                label.theme = element_text(size = 16))) +
+    theme(legend.position = "none") +
+    theme(text = element_text(size = 14),
+          legend.title = element_text(size = 16)) +
     ggtitle(plot_title)
 
   return(umap)
@@ -53,6 +64,7 @@ plot_umap_panel <- function(sce,
 #'   If the `cell_label_column == celltype` and contains more than the specified `max_celltypes`
 #'   then only the top N cell types, where N is `max_celltypes`, will be labeled in the UMAP and all other cells will be
 #'   labeled with "other". Default is 5.
+#' @param seed Random seed to use for randomizing plotting in UMAPs
 #'
 #' @return Combined ggplot containing a UMAP for both the unintegrated and integrated dataset
 #'   with cells colored by the specified `cell_label_column`
@@ -61,8 +73,11 @@ plot_integration_umap <- function(sce,
                                   integration_method,
                                   group_name,
                                   cell_label_column,
-                                  max_celltypes = 5) {
+                                  max_celltypes = 5, 
+                                  seed = NULL) {
 
+  set.seed(seed)
+  
   # check that column to label cells by is present in colData
   if(!cell_label_column %in% colnames(colData(sce))){
     stop("Provided cell_label_column should be present in the SCE object.")
@@ -70,6 +85,10 @@ plot_integration_umap <- function(sce,
 
   # if using celltype, we only want to label the top `max_celltypes`
   if(cell_label_column == "celltype"){
+    
+    # make sure that NA is actually set to NA, specifically a problem for python methods 
+    colData(sce)[[cell_label_column]][which(colData(sce)[[cell_label_column]] == "NA")] <- NA_character_
+    
     # only need to relabel if > `max_celltypes` exist
     num_celltypes <- length(unique(colData(sce)[,cell_label_column]))
     if(num_celltypes > max_celltypes){
@@ -114,7 +133,8 @@ plot_integration_umap <- function(sce,
                           cell_label_column,
                           umap_name = umap_name,
                           plot_colors,
-                          plot_title = integration_method)
+                          plot_title = integration_method,
+                          seed = seed)
 
   return(umap)
 }
