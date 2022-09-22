@@ -75,6 +75,12 @@ combine_sce_objects <- function(sce_list = list(),
   # Now, loop over SCEs to subset each to the array of `shared_genes`
   #  At the same time, we also update the rowData column names to be unique across SCEs
   for (i in 1:length(sce_list)){
+    
+    # remove any alternative experiments before merging for now
+    alt_names <- altExpNames(sce_list[[i]])
+    if(!is.null(alt_names)){
+      altExp(sce_list[[i]]) <- NULL
+    }
 
     # Find library name
     library_name <- names(sce_list)[i]
