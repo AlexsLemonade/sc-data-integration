@@ -15,7 +15,7 @@
 # 
 # --library_file: The path to the file listing all libraries that should be included 
 #   in the conversion from loom to SCE. This file must contain the 
-#   `library_biomaterial_id` column
+#   `library_biomaterial_id` and `folder_structure` columns
 # --unfiltered_sce_dir: Path to the folder where all unfiltered SCE objects 
 #   are saved locally 
 # --filtered_sce_dir: Path to the folder where all filtered SCE objects should be
@@ -91,36 +91,6 @@ library_metadata_df <- readr::read_tsv(opt$library_file)
 library_id <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
 
-unfiltered_sce_files <- file.path(opt$unfiltered_sce_dir, 
-                                  library_metadata_df$sce_unfiltered_files_folder, 
-                                  library_metadata_df$unfiltered_sce_filename)
-
-# check that unfiltered sce files exist 
-# for any files that don't exist, report the library ID 
-file_check <- file.exists(unfiltered_sce_files)
-if(any(!file_check)){
-  missing_libraries <- paste(library_id[which(!file_check)], 
-                             collapse = ",")
-  stop(
-    glue::glue(
-      "Missing unfiltered SCE file for {missing_libraries}.
-      Make sure that you have run `scripts/00-obtain-sce.R` 
-      to make a local copy of SCE objects present on S3 or
-      convert the loom file to SCE if necessary."
-    )
-  )
-}
-
-# create output folders for each tissue group/project for sce results 
-# save in the same nested folder structure as the unfiltered SCE files
-# first grab folders from the metadata and then combine with the path to the filtered_sce_dir
-filtered_sce_output_folders <- unique(library_metadata_df$sce_unfiltered_files_folder)
-filtered_sce_output_folders <- file.path(opt$filtered_sce_dir, filtered_sce_output_folders)
-for (folder in 1:length(filtered_sce_output_folders)){
-  if(!dir.exists(filtered_sce_output_folders[folder])){
-    dir.create(filtered_sce_output_folders[folder], recursive = TRUE)
-  }
-}
 
 # Function to filter SCE objects -----------------------------------------------
 
@@ -147,12 +117,11 @@ read_and_filter_sce <- function(unfiltered_sce_file,
 
 # add filename for filtered sce file to library metadata
 library_metadata_df <- library_metadata_df %>%
-  dplyr::mutate(filtered_sce_filename = paste0(library_biomaterial_id, "_filtered_sce.rds"))
+  dplyr::mutate(filtered_sce_filename = paste0(library_biomaterial_id, "_filtered.rds"))
 
 # build paths to filtered sce files
 filtered_sce_files <- file.path(opt$filtered_sce_dir,
-                                library_metadata_df$tissue_group,
-                                library_metadata_df$project_name,
+                                library_metadata_df$folder_structure,
                                 library_metadata_df$filtered_sce_filename)
 
 # check that filtered file exists and only filter if files don't exist
@@ -166,11 +135,43 @@ if(is.null(opt$repeat_filtering) && all(file.exists(filtered_sce_files))) {
     warning("Filtered `SingleCellExperiment` objects are being regenerated.
             The `--repeat_filtering` flag was used so files will be overwritten.")
   }
+  
+  # make sure that unfiltered files exist if filtering must be performed 
+unfiltered_sce_files <- file.path(opt$unfiltered_sce_dir, 
+                                    library_metadata_df$folder_structure, 
+                                    library_metadata_df$unfiltered_sce_filename)
+  
+  # check that unfiltered sce files exist 
+  # for any files that don't exist, report the library ID 
+  file_check <- file.exists(unfiltered_sce_files)
+  if(any(!file_check)){
+    missing_libraries <- paste(library_id[which(!file_check)], 
+                               collapse = ",")
+    stop(
+      glue::glue(
+        "Missing unfiltered SCE file for {missing_libraries}.
+      Make sure that you have run `scripts/00-obtain-sce.R` 
+      to make a local copy of SCE objects present on S3 or
+      convert the loom file to SCE if necessary."
+      )
+    )
+  }
+  
+  # create output folders for each folder combination for sce results 
+  # save in the same nested folder structure as the unfiltered SCE files
+  # first grab folders from the metadata and then combine with the path to the filtered_sce_dir
+  filtered_sce_output_folders <- unique(library_metadata_df$folder_structure)
+  filtered_sce_output_folders <- file.path(opt$filtered_sce_dir, filtered_sce_output_folders)
+  for (folder in 1:length(filtered_sce_output_folders)){
+    if(!dir.exists(filtered_sce_output_folders[folder])){
+      dir.create(filtered_sce_output_folders[folder], recursive = TRUE)
+    }
+  }
+  
   # apply function to read in unfiltered sce, filter sce, and save filtered sce
   purrr::walk2(.x = unfiltered_sce_files,
                .y = filtered_sce_files,
                read_and_filter_sce) 
-
 }
 
 # Update metadata --------------------------------------------------------------
