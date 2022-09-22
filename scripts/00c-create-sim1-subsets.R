@@ -144,9 +144,7 @@ subset_export_sce <- function(input_sce_file, output_sce_file, celltypes_df) {
   sce <- readr::read_rds(input_sce_file)
   
   # grab the batch index
-  batch_index <- stringr::str_split(basename(input_sce_file), "_") %>% 
-    magrittr::extract2(1) %>% 
-    magrittr::extract(2) %>% 
+  batch_index <- stringr::word(basename(input_sce_file), 2,sep = "_") %>%
     stringr::str_replace("Batch", "") %>%
     as.numeric()
   
