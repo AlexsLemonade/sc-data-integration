@@ -1,3 +1,6 @@
 project_name	files_directory
-sim1	s3://sc-data-integratin/scib_simulated_data/sce
-sim2	s3://sc-data-integratin/scib_simulated_data/sce
+sim1	s3://sc-data-integration/scib_simulated_data/sce
+sim2	s3://sc-data-integration/scib_simulated_data/sce
+sim1a	s3://sc-data-integration/scib_simulated_data/sce
+sim1b	s3://sc-data-integration/scib_simulated_data/sce
+sim1c	s3://sc-data-integration/scib_simulated_data/sce
