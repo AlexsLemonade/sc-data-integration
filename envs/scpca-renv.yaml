@@ -4,6 +4,7 @@ channels:
   - bioconda
   - defaults
 dependencies:
+  - cmake
   - geos
   - pandoc=2.18
   - pkg-config
