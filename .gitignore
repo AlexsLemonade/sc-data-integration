@@ -1,20 +1,21 @@
 .DS_Store
 
-# ignore data directory 
+# ignore data directory
 data/
 .Rproj.user
 
-# ignore gtf files 
+# ignore gtf files
 *.gtf*
 
-# ignore results files
+# ignore logs & results files
+logs/
 results/
 
-# ignore snakemake outputs 
+# ignore snakemake outputs
 .snakemake/
 .snakemake_timestamp
 
-# metadata files for downstream analyses 
+# metadata files for downstream analyses
 sample-info/*-downstream-metadata.tsv
 
 # Python
@@ -23,7 +24,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 
-# rendered html files 
+# rendered html files
 analysis_templates/*.html
 
 
