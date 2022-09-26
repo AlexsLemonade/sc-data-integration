@@ -10,7 +10,7 @@
 # Option descriptions: 
 # 
 # --library_file: The path to the file listing all libraries whose SCE files should be copied.
-#    This file must contain the `library_biomaterial_id`, `sample_biomaterial_id`, and `scpca_project_id` column
+#    This file must contain the `library_biomaterial_id`, `sample_biomaterial_id`, and `project_name` column
 # --filtered_sce_dir: Path to the folder where all filtered SCE files should be stored locally 
 # --scpca_nf_bucket: Bucket on S3 where all outputs from scpca-nf can be found
 
@@ -67,7 +67,7 @@ library_metadata_df <- readr::read_tsv(opt$library_file)
 # construct path to filtered RDS files on S3 to copy to local filtered SCE folder 
 s3_filtered_sce_files <- library_metadata_df %>%
   dplyr::mutate(sce_filename = paste0(library_biomaterial_id, "_filtered.rds"),
-                filtered_file_path = file.path(scpca_project_id,
+                filtered_file_path = file.path(project_name,
                                                sample_biomaterial_id,
                                                sce_filename)) %>%
   dplyr::pull(filtered_file_path)
