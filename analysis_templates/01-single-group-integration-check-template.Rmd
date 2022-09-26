@@ -3,6 +3,7 @@ params:
   group_name: "sim1"
   merged_sce_dir: "../results/scib_simulated/merged_sce"
   integrated_sce_dir: "../results/scib_simulated/integrated_sce"
+  integration_methods: !r as.vector(c("fastmnn", "harmony", "cca", "rpca"))
   batch_column: "batch"
   celltype_column: "celltype"
   num_pcs: 20
@@ -86,8 +87,16 @@ integrated_sce_files <- list.files(params$integrated_sce_dir,
                                    full.names = TRUE)
 
 # extract integration methods for project from list of possible methods based on files that exist
-expected_methods <- c("fastmnn", "scvi", "harmony", "scanorama", "cca", "rpca")
+expected_methods <- params$integration_methods %>%
+  stringr::str_split(pattern = " ") %>%
+  unlist() %>%
+  # if seurat methods are included remove seurat prefix 
+  stringr::str_remove("seurat-")
+
 expected_methods_check <- paste(expected_methods, collapse = "|")
+
+# subset integrated sce files so that they only contain the expected methods and no extraneous files from other methods
+integrated_sce_files <- integrated_sce_files[grep(expected_methods_check, integrated_sce_files)]
 integration_methods <- stringr::str_extract(integrated_sce_files, expected_methods_check)
 
 # check to make sure all integration methods are accounted for and have an associated file
