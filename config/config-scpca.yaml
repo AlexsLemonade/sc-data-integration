@@ -1,0 +1,13 @@
+# Config file with relevant parameters updated for running scpca data
+#  through the Snakefile
+
+## data specific params
+processed_tsv: "sample-info/scpca-processed-libraries.tsv"
+sce_dir: "results/scpca/scpca-downstream-analyses"
+results_dir: "results/scpca"
+pepfile: "sample-info/scpca-project-pep.yaml"
+
+# cell type information parameters
+add_celltype: false
+
+grouping_var: "scpca_project_id"
