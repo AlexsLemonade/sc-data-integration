@@ -1,12 +1,11 @@
 configfile: "config/config.yaml"
 pepfile: config['pepfile']
-INTEGRATION_METHODS = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scvi"]
 
 rule target:
     input:
         expand(os.path.join(config['results_dir'], "integrated_sce/{project}_integrated_{integration_methods}_sce.rds"),
                project = pep.sample_table["project_name"],
-               integration_methods = INTEGRATION_METHODS),
+               integration_methods = config["integration_methods"]),
         expand(os.path.join(config['results_dir'], "analysis_reports/{project}_integration_report.html"),
                project = pep.sample_table["project_name"])
 
@@ -183,7 +182,7 @@ rule generate_report:
     input:
         merged_sce_dir = rules.merge_sces.output,
         integrated_sce_files = expand("{{basedir}}/integrated_sce/{{project}}_integrated_{integration_method}_sce.rds",
-                                      integration_method = INTEGRATION_METHODS)
+                                      integration_method = config["integration_methods"])
     output:
         "{basedir}/analysis_reports/{project}_integration_report.html"
     params:
@@ -197,5 +196,6 @@ rule generate_report:
                             output_dir = dirname('{output}'), \
                             params = list(group_name = '{wildcards.project}', \
                                           merged_sce_dir = '{workflow.basedir}/{input.merged_sce_dir}', \
-                                          integrated_sce_dir = '{workflow.basedir}/{params.integrated_sce_dir}'))"
+                                          integrated_sce_dir = '{workflow.basedir}/{params.integrated_sce_dir}', \
+                                          integration_methods = '{config[integration_methods]}'))"
         """
