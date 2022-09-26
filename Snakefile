@@ -75,7 +75,7 @@ rule integrate_fastmnn:
     output:
         "{basedir}/integrated_sce/{project}_integrated_fastmnn_sce.rds"
     log:
-        "logs/{basedir}/integrate_fastmnn-{project}.log"
+        "logs/{basedir}/{project}/integrate_fastmnn.log"
     params:
         merged_sce_file = "{project}_merged_sce.rds",
     shell:
@@ -98,7 +98,7 @@ rule integrate_harmony:
     output:
         "{basedir}/integrated_sce/{project}_integrated_harmony_sce.rds"
     log:
-        "logs/{basedir}/integrate_harmony-{project}.log"
+        "logs/{basedir}/{project}/integrate_harmony.log"
     params:
         merged_sce_file = "{project}_merged_sce.rds",
     shell:
@@ -121,7 +121,7 @@ rule integrate_seurat:
     output:
         "{basedir}/integrated_sce/{project}_integrated_seurat-{method}_sce.rds"
     log:
-        "logs/{basedir}/integrate_seurat-{method}-{project}.log"
+        "logs/{basedir}/{project}/integrate_seurat-{method}.log"
     wildcard_constraints:
         method = "cca|rpca"
     params:
@@ -146,7 +146,7 @@ rule integrate_scanorama:
     output:
         temp("{basedir}/integrated_anndata/{project}_integrated_scanorama.h5")
     log:
-        "logs/{basedir}/integrate_scanorama-{project}.log"
+        "logs/{basedir}/{project}/integrate_scanorama.log"
     params:
         merged_anndata_file = "{project}_anndata.h5",
     shell:
@@ -167,7 +167,7 @@ rule integrate_scvi:
     output:
         temp("{basedir}/integrated_anndata/{project}_integrated_scvi.h5")
     log:
-        "logs/{basedir}/integrate_scvi-{project}.log"
+        "logs/{basedir}/{project}/integrate_scvi.log"
     params:
         merged_anndata_file = "{project}_anndata.h5",
     shell:
@@ -190,7 +190,7 @@ rule convert_anndata_sce:
     output:
         "{basedir}/integrated_sce/{project}_integrated_{method}_sce.rds"
     log:
-        "logs/{basedir}/convert_anndata_sce-{method}-{project}.log"
+        "logs/{basedir}/{project}/convert_anndata_sce-{method}.log"
     shell:
         """
         Rscript scripts/04-post-process-anndata.R \
@@ -212,7 +212,7 @@ rule generate_report:
     output:
         "{basedir}/analysis_reports/{project}_integration_report.html"
     log:
-        "logs/{basedir}/generate_report-{project}.log"
+        "logs/{basedir}/{project}/generate_report.log"
     params:
         integrated_sce_dir = "{basedir}/integrated_sce"
     shell:
