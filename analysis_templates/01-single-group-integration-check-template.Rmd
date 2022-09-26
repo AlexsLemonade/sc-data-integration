@@ -59,7 +59,7 @@ source(file.path(utils_dir, "plotting-functions.R"))
 
 # source functions for calculating integration metrics
 source(file.path(utils_dir, "calculate-batch-ARI.R"))
-source(file.path(utils_dir, "calculate-batch-ASW.R"))
+source(file.path(utils_dir, "calculate-batch-silhouette-width.R"))
 source(file.path(utils_dir, "calculate-iLISI.R"))
 source(file.path(utils_dir, "calculate-kBET.R"))
 source(file.path(utils_dir, "calculate-pca-regression.R"))
@@ -283,23 +283,23 @@ Therefore, a well-integrated dataset would show lower batch ASW values compared 
 
 ```{r}
 # calculate batch ASW for unintegrated and integrated SCE separately
-batch_asw_unintegrated <- calculate_batch_asw(merged_sce,
-                                              seed = params$seed,
-                                              num_pcs = params$num_pcs,
-                                              unintegrated=TRUE)
+batch_silhouette_unintegrated <- calculate_batch_silhouette_width(merged_sce,
+                                                                  seed = params$seed,
+                                                                  num_pcs = params$num_pcs,
+                                                                  unintegrated=TRUE)
 
-batch_asw_integrated_list <- integration_methods %>%
-  purrr::imap(~ calculate_batch_asw(integrated_sce = sce_list[[.x]],
-                                    seed = params$seed,
-                                    num_pcs = params$num_pcs,
-                                    integration_method = .x))
+batch_silhouette_integrated_list <- integration_methods %>%
+  purrr::imap(~ calculate_batch_silhouette_width(integrated_sce = sce_list[[.x]],
+                                                 seed = params$seed,
+                                                 num_pcs = params$num_pcs,
+                                                 integration_method = .x))
 
 # create combined DF
-batch_asw_df <- dplyr::bind_rows(batch_asw_unintegrated, batch_asw_integrated_list)
+batch_silhouette_df <- dplyr::bind_rows(batch_silhouette_unintegrated, batch_silhouette_integrated_list)
 ```
 
 ```{r}
-plot_batch_asw(batch_asw_df, seed = params$seed)
+plot_batch_asw(batch_silhouette_df, seed = params$seed)
 ```
 
 ### kBET
