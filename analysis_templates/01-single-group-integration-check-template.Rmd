@@ -88,6 +88,7 @@ integrated_sce_files <- list.files(params$integrated_sce_dir,
 
 # extract integration methods for project from list of possible methods based on files that exist
 expected_methods <- params$integration_methods %>%
+  # if reading param from snakefile list need to split into a comma separated vector 
   stringr::str_split(pattern = " ") %>%
   unlist() %>%
   # if seurat methods are included remove seurat prefix 
