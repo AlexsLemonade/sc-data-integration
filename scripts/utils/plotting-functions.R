@@ -237,7 +237,8 @@ plot_kbet <- function(kbet_df){
 #'
 #' @param asw_df Data frame containing batch ASW values calculated on both
 #'  integrated and unintegrated SCEs. Expected columns are at least
-#'  `rep`, `batch_asw`, `asw_cluster`, `cell_name`, and `integration_method`
+#'  `rep`, `silhouette_width`, `silhouette_cluster`, `cell_name`, 
+#'  and `integration_method`.
 #' @param seed for sina plot reproducibility
 #' @return ggplot object
 plot_batch_asw <- function(asw_df,
@@ -262,9 +263,10 @@ plot_batch_asw <- function(asw_df,
     dplyr::mutate(library_id = stringr::word(cell_name, -1, sep = "-")) %>%
     dplyr::group_by(rep, integration_method_factor, library_id) %>%
     dplyr::summarize(
-      mean_batch_asw = mean(batch_asw)
+      # Use absolute value: https://github.com/AlexsLemonade/sc-data-integration/issues/149
+      mean_batch_asw = mean(abs(silhouette_width))
     ) %>%
-    dplyr::ungroup() %>%
+    dplyr::ungroup() %>% 
     ggplot() +
     aes(x = integration_method_factor,
         color = library_id,
