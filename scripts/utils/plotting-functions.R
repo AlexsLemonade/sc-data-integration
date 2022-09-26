@@ -237,7 +237,8 @@ plot_kbet <- function(kbet_df){
 #'
 #' @param asw_df Data frame containing batch ASW values calculated on both
 #'  integrated and unintegrated SCEs. Expected columns are at least
-#'  `rep`, `batch_asw`, `asw_cluster`, `cell_name`, and `integration_method`
+#'  `rep`, `silhouette_width`, `silhouette_cluster`, `cell_name`, 
+#'  and `integration_method`.
 #' @param seed for sina plot reproducibility
 #' @return ggplot object
 plot_batch_asw <- function(asw_df,
@@ -247,9 +248,9 @@ plot_batch_asw <- function(asw_df,
   set.seed(seed)
 
   # Check that all expected columns are present in dataframe
-  expected_columns <- c("integration_method", "rep", "batch_asw", "cell_name", "asw_cluster")
+  expected_columns <- c("integration_method", "rep", "silhouette_width", "cell_name", "silhouette_cluster")
   if(!all(expected_columns%in% colnames(asw_df))){
-    stop("Required columns are missing from input dataframe, make sure that `calculate_batch_asw` has been run successfully.")
+    stop("Required columns are missing from input dataframe, make sure that `calculate_batch_silhouette_width` has been run successfully.")
   }
 
   # Set integration method order
@@ -262,9 +263,10 @@ plot_batch_asw <- function(asw_df,
     dplyr::mutate(library_id = stringr::word(cell_name, -1, sep = "-")) %>%
     dplyr::group_by(rep, integration_method_factor, library_id) %>%
     dplyr::summarize(
-      mean_batch_asw = mean(batch_asw)
+      # Use absolute value: https://github.com/AlexsLemonade/sc-data-integration/issues/149
+      mean_batch_asw = mean(abs(silhouette_width))
     ) %>%
-    dplyr::ungroup() %>%
+    dplyr::ungroup() %>% 
     ggplot() +
     aes(x = integration_method_factor,
         color = library_id,
