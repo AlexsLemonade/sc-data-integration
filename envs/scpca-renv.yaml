@@ -9,3 +9,4 @@ dependencies:
   - pkg-config
   - openssl
   - r-base=4.2.1
+  - cmake
