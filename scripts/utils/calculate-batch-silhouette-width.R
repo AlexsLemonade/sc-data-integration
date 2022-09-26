@@ -4,12 +4,12 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
 })
 
-#' Function to calculate batch ASW scores from an integrated SCE object
+#' Function to calculate batch silhouette width scores from an integrated SCE object
 #'
 #' This function uses a similar approach as used in this paper:
 #' https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
 #' Data is subsampled to 80% of cells. A given number of PCs (default 20) are
-#' used for distance calculations to obtain ASW scores.
+#' used for distance calculations to obtain silhouette widths.
 #' This procedure is repeated 20x.
 #'
 #' @param integrated_sce The integrated SCE object
@@ -21,15 +21,15 @@ suppressPackageStartupMessages({
 #'   integrated (`TRUE`).
 #'   
 #' @return Tibble with six columns: `rep`, representing the given downsampling replicate;
-#'   `batch_asw`, the calculated silhouette width for the given `rep`; `asw_cluster`, 
-#'   the assigned cluster for the cell during silhouette calculation; `asw_other`, 
+#'   `silhouette_width`, the calculated silhouette width for the given `rep`; `silhouette_cluster`, 
+#'   the assigned cluster for the cell during silhouette calculation; `other_cluster`, 
 #'   the other assigned for the cell during silhouette calculation; 
 #'   `integration_method`, the given integration method
-calculate_batch_asw <- function(integrated_sce,
-                                num_pcs = 20,
-                                seed = NULL,
-                                integration_method = NULL, 
-                                unintegrated = FALSE) {
+calculate_batch_silhouette_width <- function(integrated_sce,
+                                             num_pcs = 20,
+                                             seed = NULL,
+                                             integration_method = NULL, 
+                                             unintegrated = FALSE) {
 
   # Set the seed for subsampling 
   set.seed(seed)
@@ -57,12 +57,12 @@ calculate_batch_asw <- function(integrated_sce,
   nreps <- 20              # number of times to repeat sub-sampling procedure
 
   # perform calculations
-  all_batch_asw <- tibble::tibble(
+  all_batch_silhouette <- tibble::tibble(
     rep         = as.numeric(),
     cell_name   = as.character(),
-    batch_asw   = as.numeric(),
-    asw_cluster = as.numeric(),
-    asw_other   = as.numeric()
+    silhouette_width   = as.numeric(),
+    silhouette_cluster = as.numeric(),
+    other_cluster   = as.numeric()
   )
   for (i in 1:nreps) {
 
@@ -70,22 +70,22 @@ calculate_batch_asw <- function(integrated_sce,
     downsampled <- downsample_pcs_for_metrics(all_pcs, frac_cells, num_pcs)
 
     # Calculate batch ASW and add into final tibble
-    batch_asw <- bluster::approxSilhouette(downsampled$pcs, downsampled$batch_labels) %>%
+    batch_silhouette <- bluster::approxSilhouette(downsampled$pcs, downsampled$batch_labels) %>%
       tibble::as_tibble(rownames = "cell_name") %>%
       dplyr::mutate(rep = i) %>%
       dplyr::select(rep, 
                     cell_name, 
-                    batch_asw = width, 
-                    asw_cluster = cluster, 
-                    asw_other = other)
+                    silhouette_width = width, 
+                    silhouette_cluster = cluster, 
+                    other_cluster = other)
     
-    all_batch_asw <- dplyr::bind_rows(all_batch_asw, batch_asw)
+    all_batch_silhouette <- dplyr::bind_rows(all_batch_silhouette, batch_silhouette)
   }
     
   # Add integration method into tibble
-  all_batch_asw <- dplyr::mutate(all_batch_asw, integration_method = integration_method)
+  all_batch_silhouette <- dplyr::mutate(all_batch_silhouette, integration_method = integration_method)
 
-  # Return tibble with batch ASW results which can further be summarized downstream
-  return(all_batch_asw)
+  # Return tibble with batch silhouette width results which can further be summarized downstream
+  return(all_batch_silhouette)
 
 }
