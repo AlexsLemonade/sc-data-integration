@@ -1,4 +1,4 @@
-configfile: "config.yaml"
+configfile: "config/config.yaml"
 pepfile: config['pepfile']
 INTEGRATION_METHODS = ["fastmnn", "harmony", "seurat-cca", "seurat-rpca", "scanorama", "scvi"]
 
