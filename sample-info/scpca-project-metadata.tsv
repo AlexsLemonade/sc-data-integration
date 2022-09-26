@@ -1,4 +1,4 @@
-scpca_project_id	submitter	files_directory
+project_name	submitter	files_directory
 SCPCP000001	green_mulcahy_levy	s3://nextflow-ccdl-results/scpca-prod/publish/SCPCP000001
 SCPCP000006	murphy_chen	s3://nextflow-ccdl-results/scpca-prod/publish/SCPCP000006
 SCPCP000007	gawad	s3://nextflow-ccdl-results/scpca-prod/publish/SCPCP000007
