@@ -56,6 +56,9 @@ repeat_filtering="no"
 s3_bucket=""
 cores=2
 
+# Set an "NA" default for downstream_repo
+downstream_repo=""
+
 # grab variables from command line
 while [ $# -gt 0 ]; do
     if [[ $1 == *'--'* ]]; then
@@ -64,6 +67,13 @@ while [ $# -gt 0 ]; do
     fi
     shift
 done
+
+# Check that downstream_repo path exists
+if [[ ! -d $downstream_repo ]]; then
+  echo "You must provide a full path for '--downstream_repo'.
+        Double check you have provided the correct path."
+  exit 1
+fi
 
 # create flag for repeat_filtering
 if [[ $repeat_filtering == "yes" ]]; then
