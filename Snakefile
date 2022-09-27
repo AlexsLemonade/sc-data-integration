@@ -14,10 +14,11 @@ rule target:
 rule build_renv:
     input: workflow.source_path("renv.lock")
     output: "renv/.snakemake_timestamp"
+    log: "logs/build_renv.log"
     conda: "envs/scpca-renv.yaml"
     shell:
         """
-        Rscript -e "renv::restore(lockfile = '{input}')"
+        Rscript -e "renv::restore(lockfile = '{input}')" &> {log}
         date -u -Iseconds  > {output}
         """
 
@@ -28,6 +29,8 @@ rule merge_sces:
         sce_dir = config["sce_dir"]
     output:
         directory(os.path.join(config["results_dir"], "merged_sce"))
+    log:
+        "logs/merge_sce.log"
     shell:
         """
         Rscript scripts/02-prepare-merged-sce.R \
@@ -38,7 +41,8 @@ rule merge_sces:
           --grouping_var {config[grouping_var]} \
           --merged_sce_dir "{output}" \
           --num_hvg {config[num_hvg]} \
-          --subset_hvg
+          --subset_hvg \
+          &> {log}
         """
 
 rule convert_sce_anndata:
@@ -48,13 +52,16 @@ rule convert_sce_anndata:
         merged_sce_dir = "{basedir}/merged_sce"
     output:
         directory("{basedir}/merged_anndata")
+    log:
+        "logs/{basedir}/convert_sce_anndata.log"
     shell:
         """
         Rscript scripts/02a-convert-sce-to-anndata.R \
           --library_file "{input.processed_tsv}" \
           --merged_sce_dir "{input.merged_sce_dir}" \
           --grouping_var {config[grouping_var]} \
-          --anndata_output_dir "{output}"
+          --anndata_output_dir "{output}" \
+          &> {log}
         """
 
 
@@ -66,6 +73,8 @@ rule integrate_fastmnn:
         merged_sce_dir = "{basedir}/merged_sce"
     output:
         "{basedir}/integrated_sce/{project}_integrated_fastmnn_sce.rds"
+    log:
+        "logs/{basedir}/{project}/integrate_fastmnn.log"
     params:
         merged_sce_file = "{project}_merged_sce.rds",
     shell:
@@ -75,7 +84,8 @@ rule integrate_fastmnn:
           --output_sce_file "{output}" \
           --method fastMNN \
           --seed {config[seed]} \
-          --corrected_only
+          --corrected_only \
+          &> {log}
         """
 
 rule integrate_harmony:
@@ -86,6 +96,8 @@ rule integrate_harmony:
         merged_sce_dir = "{basedir}/merged_sce"
     output:
         "{basedir}/integrated_sce/{project}_integrated_harmony_sce.rds"
+    log:
+        "logs/{basedir}/{project}/integrate_harmony.log"
     params:
         merged_sce_file = "{project}_merged_sce.rds",
     shell:
@@ -95,7 +107,8 @@ rule integrate_harmony:
           --output_sce_file "{output}" \
           --method harmony \
           --seed {config[seed]} \
-          --corrected_only
+          --corrected_only \
+          &> {log}
         """
 
 rule integrate_seurat:
@@ -106,6 +119,8 @@ rule integrate_seurat:
         merged_sce_dir = "{basedir}/merged_sce"
     output:
         "{basedir}/integrated_sce/{project}_integrated_seurat-{method}_sce.rds"
+    log:
+        "logs/{basedir}/{project}/integrate_seurat-{method}.log"
     wildcard_constraints:
         method = "cca|rpca"
     params:
@@ -119,7 +134,8 @@ rule integrate_seurat:
           --method seurat \
           --seurat_reduction_method {wildcards.method} \
           --num_genes {params.num_genes} \
-          --corrected_only
+          --corrected_only \
+          &> {log}
         """
 
 rule integrate_scanorama:
@@ -128,6 +144,8 @@ rule integrate_scanorama:
         merged_anndata_dir = "{basedir}/merged_anndata"
     output:
         temp("{basedir}/integrated_anndata/{project}_integrated_scanorama.h5")
+    log:
+        "logs/{basedir}/{project}/integrate_scanorama.log"
     params:
         merged_anndata_file = "{project}_anndata.h5",
     shell:
@@ -137,7 +155,8 @@ rule integrate_scanorama:
           --output_anndata "{output}" \
           --seed {config[seed]} \
           --use_hvg \
-          --corrected_only
+          --corrected_only \
+          &> {log}
         """
 
 rule integrate_scvi:
@@ -146,6 +165,8 @@ rule integrate_scvi:
         merged_anndata_dir = "{basedir}/merged_anndata"
     output:
         temp("{basedir}/integrated_anndata/{project}_integrated_scvi.h5")
+    log:
+        "logs/{basedir}/{project}/integrate_scvi.log"
     params:
         merged_anndata_file = "{project}_anndata.h5",
     shell:
@@ -157,23 +178,27 @@ rule integrate_scvi:
           --num_latent {config[num_latent]} \
           --seed {config[seed]} \
           --use_hvg \
-          --corrected_only
+          --corrected_only \
+          &> {log}
         """
 
-rule convert_anndata:
+rule convert_anndata_sce:
     conda: "envs/scpca-renv.yaml"
     input:
         "{basedir}/integrated_anndata/{project}_integrated_{method}.h5"
     output:
         "{basedir}/integrated_sce/{project}_integrated_{method}_sce.rds"
+    log:
+        "logs/{basedir}/{project}/convert_anndata_sce-{method}.log"
     shell:
         """
         Rscript scripts/04-post-process-anndata.R \
-            --input_anndata_file "{input}" \
-            --output_sce_file "{output}" \
-            --method "{wildcards.method}" \
-            --seed {config[seed]} \
-            --corrected_only
+          --input_anndata_file "{input}" \
+          --output_sce_file "{output}" \
+          --method "{wildcards.method}" \
+          --seed {config[seed]} \
+          --corrected_only \
+          &> {log}
         """
 
 
@@ -185,6 +210,8 @@ rule generate_report:
                                       integration_method = config["integration_methods"])
     output:
         "{basedir}/analysis_reports/{project}_integration_report.html"
+    log:
+        "logs/{basedir}/{project}/generate_report.log"
     params:
         integrated_sce_dir = "{basedir}/integrated_sce"
     shell:
@@ -197,5 +224,6 @@ rule generate_report:
                             params = list(group_name = '{wildcards.project}', \
                                           merged_sce_dir = '{workflow.basedir}/{input.merged_sce_dir}', \
                                           integrated_sce_dir = '{workflow.basedir}/{params.integrated_sce_dir}', \
-                                          integration_methods = '{config[integration_methods]}'))"
+                                          integration_methods = '{config[integration_methods]}'))" \
+        &> {log}
         """
