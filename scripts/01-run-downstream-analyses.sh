@@ -68,19 +68,6 @@ while [ $# -gt 0 ]; do
     shift
 done
 
-# Check that downstream_repo path exists, and that it contains the Snakefile
-if [[ ! -d $downstream_repo ]]; then
-  echo "You must provide a full path for '--downstream_repo'.
-        Double check you have provided the correct path."
-  exit 1
-  # check for Snakefile in downstream repo
-  if [[ ! -f ${downstream_repo}/Snakefile ]]; then
-    echo "The path provided for '--downstream_repo' is missing a Snakefile.
-          Double check you have provided the correct path."
-    exit 1
-  fi
-fi
-
 # create flag for repeat_filtering
 if [[ $repeat_filtering == "yes" ]]; then
   repeat_filtering_flag="--repeat_filtering"
@@ -96,6 +83,12 @@ Rscript --no-site-file ${script_dir}/utils/preprocess-sce.R \
   --output_metadata $downstream_metadata_file \
   $repeat_filtering_flag
 
+# check for Snakefile in downstream repo
+if [[ ! -f ${downstream_repo}/Snakefile ]]; then
+  echo "The path provided for '--downstream_repo' is missing a Snakefile.
+        Double check you have provided the correct path."
+  exit 1
+fi
 
 # run downstream analysis workflow from scpca-downstream-analyses
 cd $downstream_repo
