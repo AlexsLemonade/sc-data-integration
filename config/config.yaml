@@ -12,6 +12,7 @@ celltype_file: "sample-info/hca-celltype-info.tsv"
 seed: 2022
 num_hvg: 5000
 grouping_var: "project_name"
+integration_methods: ["fastmnn", "harmony", "seurat-cca", "seurat-rpca"]
 
 # params for scvi only
 # what columns in the coldata should be used as covariates in integration

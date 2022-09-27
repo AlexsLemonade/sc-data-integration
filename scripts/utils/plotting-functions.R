@@ -166,9 +166,9 @@ set_integration_order <- function(metrics_df,
   }
 
   # check that all labels provided in the `integration_order` argument are in the integration_method column
-  if (!all(integration_order  %in% unique(metrics_df$integration_method))){
-    stop("Check that all labels provied in `integration_order` are present in the `integration_method` column of the dataframe.")
-  }
+  # if they are not present remove other integration methods from the order
+  integration_methods_keep <- integration_order  %in% unique(metrics_df$integration_method)
+  integration_order <- integration_order[integration_methods_keep]
 
   # reorder based on specified order
   updated_metrics_df <- metrics_df %>%
