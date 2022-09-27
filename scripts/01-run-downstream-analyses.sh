@@ -68,12 +68,26 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+# check for Snakefile in downstream repo
+if [[ ! -n $downstream_repo ]]; then
+  echo "The argument '--downstream_repo' is required.
+  Please provide a path to the scpca-downstream-analyses repository."
+  exit 1
+fi
+
+if [[ ! -f ${downstream_repo}/Snakefile ]]; then
+  echo "The path provided for '--downstream_repo' is missing a Snakefile.
+  Double check you have provided the correct path."
+  exit 1
+fi
+
 # create flag for repeat_filtering
 if [[ $repeat_filtering == "yes" ]]; then
   repeat_filtering_flag="--repeat_filtering"
 else
   repeat_filtering_flag=""
 fi
+
 
 # run Rscript to generate metadata file
 Rscript --no-site-file ${script_dir}/utils/preprocess-sce.R \
@@ -83,12 +97,6 @@ Rscript --no-site-file ${script_dir}/utils/preprocess-sce.R \
   --output_metadata $downstream_metadata_file \
   $repeat_filtering_flag
 
-# check for Snakefile in downstream repo
-if [[ ! -f ${downstream_repo}/Snakefile ]]; then
-  echo "The path provided for '--downstream_repo' is missing a Snakefile.
-        Double check you have provided the correct path."
-  exit 1
-fi
 
 # run downstream analysis workflow from scpca-downstream-analyses
 cd $downstream_repo
