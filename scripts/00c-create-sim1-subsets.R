@@ -24,12 +24,6 @@ suppressPackageStartupMessages({
 # Set up optparse options
 option_list <- list(
   make_option(
-    opt_str = c("-l", "--library_file"),
-    type = "character",
-    default = file.path(project_root, "sample-info", "scib-simulated-processed-libraries.tsv"),
-    help = "path to metadata file listing all libraries that are to be converted"
-  ),
-  make_option(
     opt_str = c("--sce_dir"),
     type = "character",
     default = file.path(project_root, "data", "scib_simulated", "sce"),
@@ -41,13 +35,13 @@ option_list <- list(
     default = "s3://sc-data-integration/scib_simulated_data/sce",
     help = "Bucket on s3 where SCE objects are stored"
   ),
-  make_option(
+  optparse::make_option(
     c("-c", "--copy_s3"),
     action = "store_true",
     help = "indicates whether or not to copy existing SCE file from S3 first. 
     To copy files use `--copy_s3`"
   ),
-  make_option(
+  optparse::make_option(
     c("-o", "--overwrite"),
     action = "store_true",
     help = "indicates whether or not to redo sim1 subsetting and 
@@ -63,12 +57,8 @@ opt <- parse_args(OptionParser(option_list = option_list))
 # File set up ------------------------------------------------------------------
 total_sim1_batches <- 6 # there are 6 batches in sim1
 
-# Define path to sim1 files
-sim1_dir <- file.path(opt$sce_dir, "sim1")
-
-
 # Ensure `sim1` files are present. There should be 6 batches.
-sim1_filenames <- list.files(sim1_dir, pattern = "^sim1_", full.names=TRUE)
+sim1_filenames <- list.files(opt$sce_dir, pattern = "^sim1_", full.names=TRUE)
 
 check_sim_files <- function(filename) {
   # Helper function for checking presence of properly-named sim SCE files
@@ -126,22 +116,19 @@ sim1c_retain_celltypes <- tibble::tribble(
 
 
 # Create filenames for sim1a, b, and c
-sim1a_filepaths <- stringr::str_replace_all(sim1_filenames[-3], "sim1", "sim1a") # 1a does not use batch 3
-sim1b_filepaths <- stringr::str_replace_all(sim1_filenames, "sim1", "sim1b")
-sim1c_filepaths <- stringr::str_replace_all(sim1_filenames, "sim1", "sim1c")
-all_filepaths <- c(sim1a_filenames, sim1b_filenames, sim1c_filenames)
-all_filenames <- basename( all_filepaths )
+sim1a_filenames <- stringr::str_replace_all(sim1_filenames[-3], "sim1_", "sim1a_") # 1a does not use batch 3
+sim1b_filenames <- stringr::str_replace_all(sim1_filenames, "sim1_", "sim1b_")
+sim1c_filenames <- stringr::str_replace_all(sim1_filenames, "sim1_", "sim1c_")
+all_filenames <- basename( c(sim1a_filenames, sim1b_filenames, sim1c_filenames) )
 
-
-# REVIEWERS!
-#if(!is.null(opt$copy_s3)){
-#  # copy over any existing SCEs
-#  aws_includes <- paste("--include '", all_filenames, "'", sep = '', collapse = ' ')
-#  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_dir,
-#                     '--exclude "*"', aws_includes, sep = " ")
-#  system(sync_call, ignore.stdout = TRUE)
-#  
-#}
+if(!is.null(opt$copy_s3)){
+  # copy over any existing SCEs
+  aws_includes <- paste("--include '", all_filenames, "'", sep = '', collapse = ' ')
+  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_dir,
+                     '--exclude "*"', aws_includes, sep = " ")
+  system(sync_call, ignore.stdout = TRUE)
+  
+}
 
 
 
@@ -181,14 +168,14 @@ subset_export_sce <- function(input_sce_file, output_sce_file, celltypes_df) {
 # If we are overwriting, then we want to run all filenames
 if (is.null(opt$overwrite)) {
   # Missing files only
-  missing_sim1a <- sim1a_filepaths[!file.exists(sim1a_filepaths)]
-  missing_sim1b <- sim1b_filepaths[!file.exists(sim1b_filepaths)]
-  missing_sim1c <- sim1c_filepaths[!file.exists(sim1c_filepaths)]
+  missing_sim1a <- sim1a_filenames[!file.exists(sim1a_filenames)]
+  missing_sim1b <- sim1b_filenames[!file.exists(sim1b_filenames)]
+  missing_sim1c <- sim1c_filenames[!file.exists(sim1c_filenames)]
 } else {
   # All files
-  missing_sim1a <- sim1a_filepaths
-  missing_sim1b <- sim1b_filepaths
-  missing_sim1c <- sim1c_filepaths
+  missing_sim1a <- sim1a_filenames
+  missing_sim1b <- sim1b_filenames
+  missing_sim1c <- sim1c_filenames
 }
 
 # Subset and export all SCE objects for each set of files that need to be created
@@ -197,11 +184,10 @@ purrr::walk2(sim1_filenames, missing_sim1b, subset_export_sce, sim1b_retain_cell
 purrr::walk2(sim1_filenames, missing_sim1c, subset_export_sce, sim1c_retain_celltypes)
 
 
-# REVIEWERS, help!
 # Copy back to S3
-#all_written_files <- c(missing_sim1a, missing_sim1b, missing_sim1c)
-#aws_includes <- paste("--include '", all_written_files, "'", sep = '', collapse = ' ')
-#sync_call <- paste('aws s3 sync', opt$sce_dir, opt$s3_sce_bucket, 
-#                       '--exclude "*"', aws_includes, sep = " ")
-#system(sync_call, ignore.stdout = TRUE)
+all_written_files <- c(missing_sim1a, missing_sim1b, missing_sim1c)
+aws_includes <- paste("--include '", all_written_files, "'", sep = '', collapse = ' ')
+sync_call <- paste('aws s3 sync', opt$sce_dir, opt$s3_sce_bucket, 
+                       '--exclude "*"', aws_includes, sep = " ")
+system(sync_call, ignore.stdout = TRUE)
 
