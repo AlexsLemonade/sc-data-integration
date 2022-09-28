@@ -1,11 +1,28 @@
-library_biomaterial_id	sample_biomaterial_id	hdf5_filename	project_name
-sim1_Batch1	sim1_Batch1	sim1_1_norm.h5ad	sim1
-sim1_Batch2	sim1_Batch2	sim1_1_norm.h5ad	sim1
-sim1_Batch3	sim1_Batch3	sim1_1_norm.h5ad	sim1
-sim1_Batch4	sim1_Batch4	sim1_1_norm.h5ad	sim1
-sim1_Batch5	sim1_Batch5	sim1_1_norm.h5ad	sim1
-sim1_Batch6	sim1_Batch6	sim1_1_norm.h5ad	sim1
-sim2_Batch1	sim2_Batch1	sim2_norm.h5ad	sim2
-sim2_Batch2	sim2_Batch2	sim2_norm.h5ad	sim2
-sim2_Batch3	sim2_Batch3	sim2_norm.h5ad	sim2
-sim2_Batch4	sim2_Batch4	sim2_norm.h5ad	sim2
+library_biomaterial_id	sample_biomaterial_id	hdf5_filename	folder_structure	unfiltered_sce_filename	filtered_sce_filename
+sim1_Batch1	sim1_Batch1	sim1_1_norm.h5ad	sim1	sim1_Batch1_sce.rds	sim1_Batch1_filtered.rds
+sim1_Batch2	sim1_Batch2	sim1_1_norm.h5ad	sim1	sim1_Batch2_sce.rds	sim1_Batch2_filtered.rds
+sim1_Batch3	sim1_Batch3	sim1_1_norm.h5ad	sim1	sim1_Batch3_sce.rds	sim1_Batch3_filtered.rds
+sim1_Batch4	sim1_Batch4	sim1_1_norm.h5ad	sim1	sim1_Batch4_sce.rds	sim1_Batch4_filtered.rds
+sim1_Batch5	sim1_Batch5	sim1_1_norm.h5ad	sim1	sim1_Batch5_sce.rds	sim1_Batch5_filtered.rds
+sim1_Batch6	sim1_Batch6	sim1_1_norm.h5ad	sim1	sim1_Batch6_sce.rds	sim1_Batch6_filtered.rds
+sim2_Batch1	sim2_Batch1	sim2_norm.h5ad	sim2	sim2_Batch1_sce.rds	sim2_Batch1_filtered.rds
+sim2_Batch2	sim2_Batch2	sim2_norm.h5ad	sim2	sim2_Batch2_sce.rds	sim2_Batch2_filtered.rds
+sim2_Batch3	sim2_Batch3	sim2_norm.h5ad	sim2	sim2_Batch3_sce.rds	sim2_Batch3_filtered.rds
+sim2_Batch4	sim2_Batch4	sim2_norm.h5ad	sim2	sim2_Batch4_sce.rds	sim2_Batch4_filtered.rds
+sim1a_Batch1	sim1a_Batch1	NA	sim1a	sim1a_Batch1_sce.rds	sim1a_Batch1_filtered.rds
+sim1a_Batch2	sim1a_Batch2	NA	sim1a	sim1a_Batch2_sce.rds	sim1a_Batch2_filtered.rds
+sim1a_Batch4	sim1a_Batch4	NA	sim1a	sim1a_Batch4_sce.rds	sim1a_Batch4_filtered.rds
+sim1a_Batch5	sim1a_Batch5	NA	sim1a	sim1a_Batch5_sce.rds	sim1a_Batch5_filtered.rds
+sim1a_Batch6	sim1a_Batch6	NA	sim1a	sim1a_Batch6_sce.rds	sim1a_Batch6_filtered.rds
+sim1b_Batch1	sim1b_Batch1	NA	sim1b	sim1b_Batch1_sce.rds	sim1b_Batch1_filtered.rds
+sim1b_Batch2	sim1b_Batch2	NA	sim1b	sim1b_Batch2_sce.rds	sim1b_Batch2_filtered.rds
+sim1b_Batch3	sim1b_Batch3	NA	sim1b	sim1b_Batch3_sce.rds	sim1b_Batch3_filtered.rds
+sim1b_Batch4	sim1b_Batch4	NA	sim1b	sim1b_Batch4_sce.rds	sim1b_Batch4_filtered.rds
+sim1b_Batch5	sim1b_Batch5	NA	sim1b	sim1b_Batch5_sce.rds	sim1b_Batch5_filtered.rds
+sim1b_Batch6	sim1b_Batch6	NA	sim1b	sim1b_Batch6_sce.rds	sim1b_Batch6_filtered.rds
+sim1c_Batch1	sim1c_Batch1	NA	sim1c	sim1c_Batch1_sce.rds	sim1c_Batch1_filtered.rds
+sim1c_Batch2	sim1c_Batch2	NA	sim1c	sim1c_Batch2_sce.rds	sim1c_Batch2_filtered.rds
+sim1c_Batch3	sim1c_Batch3	NA	sim1c	sim1c_Batch3_sce.rds	sim1c_Batch3_filtered.rds
+sim1c_Batch4	sim1c_Batch4	NA	sim1c	sim1c_Batch4_sce.rds	sim1c_Batch4_filtered.rds
+sim1c_Batch5	sim1c_Batch5	NA	sim1c	sim1c_Batch5_sce.rds	sim1c_Batch5_filtered.rds
+sim1c_Batch6	sim1c_Batch6	NA	sim1c	sim1c_Batch6_sce.rds	sim1c_Batch6_filtered.rds
