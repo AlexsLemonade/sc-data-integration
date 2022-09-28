@@ -100,7 +100,7 @@ if(!file.exists(opt$library_file)){
   stop("--library_file provided does not exist.")
 }
 
-# create directories if they don't exist 
+# create H5 directory if it doesn't exist 
 if(!dir.exists(opt$h5_dir)){
   dir.create(opt$h5_dir, recursive = TRUE)
 }
@@ -118,10 +118,25 @@ library_id <- library_metadata_df %>%
 
 # get a metadata with just libraries to be processed
 # add file info for sce filepaths
+# we ONLY want to consider files whose `hdf5_filename` is not NA
 library_metadata_df <- library_metadata_df %>%
-  # first make filename for sce file
+  dplyr::filter(!(is.na(hdf5_filename))) %>%
+  # make filename for sce file
   dplyr::mutate(local_sce_file = paste0(library_biomaterial_id, "_sce.rds"),
-                local_sce_path = file.path(opt$sce_output_dir, local_sce_file))
+                local_sce_path = file.path(opt$sce_output_dir, 
+                                           # subdirectory for given simulation
+                                           folder_structure, 
+                                           local_sce_file))
+
+# Create SCE directories if they don't exist
+local_sce_subpaths <- file.path(opt$sce_output_dir, unique(library_metadata_df$folder_structure))
+make_paths <- function(path) {
+  # Helper function to make a bunch of paths
+  if(!dir.exists(path)){
+    dir.create(path, recursive = TRUE)
+  }
+}
+purrr::walk(local_sce_subpaths, make_paths)
 
 
 # Functions for converting hdf5 files -------------------------------------------
@@ -292,11 +307,13 @@ if(length(missing_sce_files) != 0){
                                         sce_file_list = .y, 
                                         h5_group_column = opt$h5_group_column))
   
-  # sync sce output to S3 
-  all_sce_files <- unique(library_metadata_df$local_sce_file)
-  aws_includes <- paste("--include '", all_sce_files, "'", sep = '', collapse = ' ')
-  sync_call <- paste('aws s3 sync', opt$sce_output_dir, opt$s3_sce_bucket, 
-                     '--exclude "*"', aws_includes, sep = " ")
-  system(sync_call, ignore.stdout = TRUE)
+  # NOTE TO REVIEWERS: THIS NEEDS HELP
+  # sync sce output to S3 for each sim directory
+  #all_sce_files <- file.path(unique(library_metadata_df$folder_structure),
+  #                      library_metadata_df$local_sce_file)
+  #aws_includes <- paste("--include '", all_sce_files, "'", sep = '', collapse = ' ')
+  #sync_call <- paste('aws s3 sync', opt$sce_output_dir, opt$s3_sce_bucket, 
+  #                   '--exclude "*"', aws_includes, sep = " ")
+  #system(sync_call, ignore.stdout = TRUE)
   
 }
