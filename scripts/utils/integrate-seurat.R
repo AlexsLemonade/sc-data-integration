@@ -109,11 +109,22 @@ integrate_seurat <- function(seurat_list,
                                             reduction = reduction_method,
                                             dims = integration_dims)
   
+  # create a table of anchors found across datasets 
+  anchor_table <- table(anchors@anchors[,c("dataset1", "dataset2")])
+  # get the minimum number of anchors, taking the second lowest as the lowest will always be 0 across the diagonal
+  min_anchors <- unique(sort(anchor_table))[2]
+  
+  if(min_anchors < 100){
+    k_weight <- min_anchors
+  } else {
+    k_weight <- 100
+  }
   
   integrated_object <- Seurat::IntegrateData(anchorset = anchors,
                                              normalization.method = "SCT",
                                              features.to.integrate = shared_genes,
                                              dims = integration_dims,
+                                             k.weight = k_weight,
                                              ...)
   
   # set idents as the batch column
