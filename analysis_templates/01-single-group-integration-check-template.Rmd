@@ -83,7 +83,8 @@ if(!file.exists(merged_sce_path)){
 ```{r}
 # find all integrated SCE files for given project
 integrated_sce_files <- list.files(params$integrated_sce_dir,
-                                   pattern = params$group_name,
+                                   # search for groupname followed by underscore so you remove any matches that have similar group names
+                                   pattern = paste0(params$group_name, "_"),
                                    full.names = TRUE)
 
 # extract integration methods for project from list of possible methods based on files that exist

@@ -83,7 +83,8 @@ To prepare simulation data for use in the pipeline, there are two scripts which 
 The script saves additional RDS files containing SCE objects for each batch in each of the three subsetted simulations.
 These versions of `sim1` were designed to have different schematics of celltypes across batches in order to explore how celltype presence overlap (or lack of overlap) among different bacthes influences integration.
 
-
+**Note:**Simulated datasets can then be run directly through the integration workflow and do not need to be processed with `01-run-downstream-analyses.sh`.
+The integration workflow can be run using the `config/config-scib_simulated.yaml` file which is configured to run all the simulated datasets and assumes that SCE objects are stored in the `data/scib_simulated/sce` directory. 
 
 ## Running HCA test datasets through `scpca-downstream-analyses`
 
