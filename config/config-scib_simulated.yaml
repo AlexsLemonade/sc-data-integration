@@ -3,7 +3,7 @@
 
 ## data specific params
 processed_tsv: "sample-info/scib-simulated-processed-libraries.tsv"
-sce_dir: "results/scib_simulated/scpca-downstream-analyses"
+sce_dir: "data/scib_simulated/sce"
 results_dir: "results/scib_simulated"
 pepfile: "sample-info/scib-simulated-project-pep.yaml"
 

@@ -36,6 +36,8 @@
 #   This argument is ignored if the provided method is not `seurat`. Default:30.
 # --seurat_umap_dims: Number of dimensions Seurat should use during UMAP.
 #   This argument is ignored if the provided method is not `seurat`. Default:30.
+# --seurat_anchor_threshold: Minimum threshold for number of neighbors to consider 
+#   when weighting anchors during integration. Default: 100.
 # --corrected_only: Flag to specify that only corrected gene expression values should
 #   be returned in the integrated SCE object. Default usage of this script will
 #   return all data.
@@ -158,6 +160,12 @@ option_list <- list(
     type = "numeric",
     default = 30,
     help = "Number of dimensions for Seurat to use during UMAP calculation."
+  ),
+  make_option(
+    opt_str = c("--seurat_anchor_threshold"),
+    type = "numeric",
+    default = 100,
+    help = "Minimum threshold for number of neighbors to consider when weighting anchors during integration."
   ),
   make_option(
     opt_str = c("--corrected_only"),
@@ -284,7 +292,8 @@ if (integration_method == "seurat") {
     batch_column = opt$batch_column,
     num_genes = opt$seurat_num_genes,
     integration_dims = 1:opt$seurat_integration_dims,
-    umap_dims = 1:opt$seurat_umap_dims
+    umap_dims = 1:opt$seurat_umap_dims,
+    anchor_threshold = opt$seurat_anchor_threshold
   )
   
   # Converted the integrated seurat object into an SCE object
