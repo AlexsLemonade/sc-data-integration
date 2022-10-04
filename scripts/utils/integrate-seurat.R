@@ -52,6 +52,8 @@ prepare_seurat_list <- function(combined_sce,
 #' implementing the runUMAP() function. Default is 1:30, same as implemented
 #' in the single cell integration vignette found at 
 #' https://www.singlecellcourse.org/scrna-seq-dataset-integration.html#seurat-v3-3-vs-5-10k-pbmc
+#' @param anchor_threshold Minimum threshold for number of neighbors to consider when weighting 
+#' anchors during integration
 #' @param ... Allows for any additional parameters that a user may want to pass
 #' to the Seurat::IntegrateData() function
 #'
@@ -64,6 +66,7 @@ integrate_seurat <- function(seurat_list,
                              batch_column = "batch",
                              integration_dims = 1:30,
                              umap_dims = 1:30,
+                             anchor_threshold = 100
                              ...){
   
   # check that all objects contain the `SCT` assay as default assay
@@ -114,10 +117,10 @@ integrate_seurat <- function(seurat_list,
   # get the minimum number of anchors, taking the second lowest as the lowest will always be 0 across the diagonal
   min_anchors <- unique(sort(anchor_table))[2]
   
-  if(min_anchors < 100){
+  if(min_anchors < anchor_threshold){
     k_weight <- min_anchors
   } else {
-    k_weight <- 100
+    k_weight <- anchor_threshold
   }
   
   integrated_object <- Seurat::IntegrateData(anchorset = anchors,
