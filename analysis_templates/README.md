@@ -32,5 +32,5 @@ The following metrics will be calculated in the notebook:
 
 Note that we no longer include [kBET](https://github.com/theislab/kBET) as a metric because it is highly sensitive to bias present in the data.
 Testing of kBET revealed that in almost all scenarios the observed rejection rate was close to 1 indicating batch effect was present in the data.
-In addition, we not longer include PC batch variance and scaled PC regression, derived from the [manuscript introducing kBET](https://doi.org/10.1038/s41592-018-0254-1) because these two metrics, which should roughly track one another qualititively, proved to be rather different.
+In addition, we no longer include PC batch variance and scaled PC regression, derived from the [manuscript introducing kBET](https://doi.org/10.1038/s41592-018-0254-1) because these two metrics, which should roughly track one another qualititively, proved to be rather different.
 In addition, although these metrics (particularly the scaled PC regression), were developed to be less sensitive than kBET, our testing suggested it was still highly sensitive to the presence of _any_ batch effect.
