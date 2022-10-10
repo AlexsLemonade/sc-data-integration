@@ -66,7 +66,7 @@ integrate_seurat <- function(seurat_list,
                              batch_column = "batch",
                              integration_dims = 1:30,
                              umap_dims = 1:30,
-                             anchor_threshold = 100
+                             anchor_threshold = 100,
                              ...){
   
   # check that all objects contain the `SCT` assay as default assay
