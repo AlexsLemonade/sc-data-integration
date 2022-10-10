@@ -1,8 +1,8 @@
 ---
 params:
-  group_name: "sim1"
-  merged_sce_dir: "../results/scib_simulated/merged_sce"
-  integrated_sce_dir: "../results/scib_simulated/integrated_sce"
+  group_name: "MultipleSclerosisLineageDiversity"
+  merged_sce_dir: "../results/human_cell_atlas/merged_sce"
+  integrated_sce_dir: "../results/human_cell_atlas/integrated_sce"
   integration_methods: !r as.vector(c("fastmnn", "harmony", "cca", "rpca"))
   batch_column: "batch"
   celltype_column: "celltype"
@@ -61,7 +61,7 @@ source(file.path(utils_dir, "plotting-functions.R"))
 # source functions for calculating integration metrics
 source(file.path(utils_dir, "calculate-batch-ARI.R"))
 source(file.path(utils_dir, "calculate-batch-silhouette-width.R"))
-source(file.path(utils_dir, "calculate-iLISI.R"))
+source(file.path(utils_dir, "calculate-LISI.R"))
 source(file.path(utils_dir, "calculate-kBET.R"))
 source(file.path(utils_dir, "calculate-pca-regression.R"))
 ```
@@ -217,6 +217,16 @@ if(params$celltype_column %in% coldata_names){
 merged_sce <- sce_list$unintegrated
 ```
 
+```{r}
+# Calculate the percentage of cells with cell type information for reporting
+percent_present <- round( sum(!(is.na(merged_sce$celltype))) / length(merged_sce$celltype), 3) * 100
+```
+
+
+**Caution:** Only `r percent_present`% of cells in these libraries have cell type annotations. 
+Cells without annotations are not considered in calculations or visualizations that assess cell type mixing.
+
+
 
 ### iLISI
 
@@ -228,12 +238,12 @@ Therefore, we would expect that well integrated datasets to be close to 1 indica
 
 ```{r}
 # calculate ilisi for unintegrated and integrated SCE separately
-ilisi_unintegrated <- calculate_ilisi(merged_sce,
-                                      params$batch_column,
-                                      unintegrated=TRUE)
+ilisi_unintegrated <- calculate_lisi(merged_sce,
+                                     params$batch_column,
+                                     unintegrated=TRUE)
 
 ilisi_integrated_list <- integration_methods %>%
-  purrr::imap(~ calculate_ilisi(integrated_sce = sce_list[[.x]],
+  purrr::imap(~ calculate_lisi(integrated_sce = sce_list[[.x]],
                                 params$batch_column,
                                 integration_method = .x))
 
@@ -243,8 +253,40 @@ ilisi_df <- dplyr::bind_rows(ilisi_unintegrated, ilisi_integrated_list)
 
 
 ```{r fig.height=5, fig.width=5}
-plot_ilisi(ilisi_df)
+plot_lisi(ilisi_df, lisi_type = "iLISI")
 ```
+
+### cLISI
+
+Complementary to iLISI, the cLISI (_cell type_ local inverse Simpson's index) metric can be used to measure the local distribution of cell types in the integrated dataset, as defined in [Korsunksky et al.](https://doi.org/10.1038/s41592-019-0619-0). 
+The cLISI score can be interpreted as describing how many cell types are represented within a local neighborhood. 
+The range of cLISI scores will be from 1 to the number of cell types, however we have normalized the score following the same method utilized by the `scIB` benchmarking tools: (clisi - 1)/(num cell types -1)
+Therefore, we would expect that well integrated datasets to be close to 0 indicating low mixing of cell types, while poorly integrated datasets would be close to 1 indicating high mixing of cell types.
+
+
+
+
+```{r}
+# calculate clisi for unintegrated and integrated SCE separately
+clisi_unintegrated <- calculate_lisi(merged_sce,
+                                     batch_column = params$celltype,
+                                     unintegrated=TRUE)
+
+clisi_integrated_list <- integration_methods %>%
+  purrr::imap(~ calculate_lisi(integrated_sce = sce_list[[.x]],
+                                batch_column = params$celltype, 
+                                integration_method = .x))
+
+# create combined DF 
+clisi_df <- dplyr::bind_rows(clisi_unintegrated, clisi_integrated_list)
+```
+
+
+
+```{r fig.height=5, fig.width=5}
+plot_lisi(clisi_df, lisi_type = "cLISI")
+```
+
 
 ### Batch ARI
 

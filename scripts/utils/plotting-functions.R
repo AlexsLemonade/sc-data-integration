@@ -183,56 +183,6 @@ set_integration_order <- function(metrics_df,
 
 
 
-#' Plot kBET rejection rate across integration methods
-#'
-#' @param kbet_df Dataframe containing the calculated kBET rejection rates with the following columns:
-#'   "integration_method", "kbet_stat", and "kbet_stat_type"
-#'
-#' @return A ggplot object containing a violin plot of kBET rejection rates across integration methods
-
-plot_kbet <- function(kbet_df){
-
-  # check that all expected columns are present in dataframe
-  if(!all(c("integration_method", "kbet_stat", "kbet_stat_type") %in% colnames(kbet_df))){
-    stop("Required columns are missing from input dataframe, make sure that `calculate_kbet` has been run successfully.")
-  }
-
-  # set order of integration methods on axes
-  kbet_df_updated <- set_integration_order(kbet_df)
-
-  # sina plot inside violin plot with rejection rate on y axis and integration method on x axis
-  ggplot(kbet_df_updated, aes(x = integration_method_factor, y = kbet_stat, color = kbet_stat_type)) +
-    geom_violin(position = "dodge") +
-    ggforce::geom_sina(size = 0.2, alpha = 0.5,
-                position = position_dodge(width = 0.9)) +
-    # add median point to plot
-    stat_summary(
-      aes(group = kbet_stat_type),
-      color = "black",
-      fun = "median",
-      fun.min = function(x) {
-        quantile(x, 0.25)
-      },
-      fun.max = function(x) {
-        quantile(x, 0.75)
-      },
-      geom = "pointrange",
-      position = position_dodge(width = 0.9),
-      size = 0.2
-    ) +
-    labs(
-      x = "Integration method",
-      y = "kBet rejection rate",
-      color = ""
-    ) +
-    scale_color_discrete(labels = c("Expected", "Observed"))
-
-}
-
-
-
-
-
 #' Function to plot batch average silhouette width (ASW) metric
 #'
 #' @param asw_df Data frame containing batch ASW values calculated on both
@@ -373,6 +323,126 @@ plot_batch_ari <- function(batch_ari_df,
 
 
 
+
+
+#' Plot LISI score across each cell in an integrated dataset
+#'
+#' @param lisi_df Dataframe containing the calculated lisi (either iLISI or cLISI) scores for each cell
+#'   The dataframe must contain the following columns: 
+#'   "integration_method", "lisi_score", and "batch_identity" (contains either batch or cell type information)
+#' @param lisi_type Either "iLISI" or "cLISI" indicating the score type
+#'
+#' @return A gggplot object containing both a boxplot and density plot of the given lisi score 
+#'  across integration methods
+
+plot_lisi <- function(lisi_df, lisi_type = "iLISI"){
+  
+  # check that all expected columns are present in dataframe 
+  if(!all(c("integration_method", "lisi_score", "batch_identity") %in% colnames(lisi_df))){
+    stop("Required columns are missing from input dataframe, make sure that `calculate_lisi` has been run successfully.")
+  }
+  
+  # check score type
+  if (!lisi_type %in% c("cLISI", "iLISI")) {
+    stop("Either `cLISI` or `iLISI` must be specified as the lisi_type.")
+  }
+  
+  # Perform score normalization using either the number of batches or cell types depending on the score type
+  if (lisi_type == "iLISI") {
+    num_batches <- length(unique(lisi_df$batch_identity))
+    # normalize following the scIB method
+    # https://github.com/theislab/scib/blob/067eb1aee7044f5ce0652fa363ec8deab0e9668d/scib/metrics/lisi.py#L98-L100
+    lisi_df_updated <- lisi_df %>%
+      dplyr::mutate(lisi_score_norm = (lisi_score-1)/(num_batches - 1))
+  } else {
+    num_cell_types <- length(unique(lisi_df$batch_identity))
+    # normalize following the scIB method
+    # https://github.com/theislab/scib/blob/067eb1aee7044f5ce0652fa363ec8deab0e9668d/scib/metrics/lisi.py#L157-L159    
+    lisi_df_updated <- lisi_df %>%
+      dplyr::mutate(lisi_score_norm = (num_cell_types - lisi_score)/(num_cell_types - 1))
+    
+  }
+  
+  # order by median ilisi score ensuring that unintegrated will be first regardless
+  lisi_df_updated <- lisi_df_updated %>%
+    set_integration_order() %>%
+    dplyr::mutate(integration_method_factor = forcats::fct_reorder(integration_method_factor, lisi_score, .fun = median),
+                 integration_method_factor = forcats::fct_relevel(integration_method_factor, "unintegrated")
+  )
+  
+  lisi_boxplot <- ggplot(lisi_df_updated, aes(y = lisi_score_norm, x = integration_method_factor)) +
+    geom_boxplot(outlier.size = 0.25) +
+    labs(
+      x = "Integration method",
+      y = lisi_type
+    )
+  
+  lisi_density <- ggplot(lisi_df_updated, aes(x = lisi_score_norm, color = integration_method_factor)) +
+    geom_density() +
+    labs(
+      color = "Integration method",
+      x = lisi_type
+    ) +
+    ggokabeito::scale_color_okabe_ito()
+  
+  # create a combined boxplot and density plot
+  lisi_plots <- cowplot::plot_grid(lisi_boxplot, lisi_density, ncol = 1)
+  
+  return(lisi_plots)
+  
+}
+
+
+
+
+#' Plot kBET rejection rate across integration methods
+#'
+#' @param kbet_df Dataframe containing the calculated kBET rejection rates with the following columns:
+#'   "integration_method", "kbet_stat", and "kbet_stat_type"
+#'
+#' @return A ggplot object containing a violin plot of kBET rejection rates across integration methods
+
+plot_kbet <- function(kbet_df){
+  
+  # check that all expected columns are present in dataframe
+  if(!all(c("integration_method", "kbet_stat", "kbet_stat_type") %in% colnames(kbet_df))){
+    stop("Required columns are missing from input dataframe, make sure that `calculate_kbet` has been run successfully.")
+  }
+  
+  # set order of integration methods on axes
+  kbet_df_updated <- set_integration_order(kbet_df)
+  
+  # sina plot inside violin plot with rejection rate on y axis and integration method on x axis
+  ggplot(kbet_df_updated, aes(x = integration_method_factor, y = kbet_stat, color = kbet_stat_type)) +
+    geom_violin(position = "dodge") +
+    ggforce::geom_sina(size = 0.2, alpha = 0.5,
+                       position = position_dodge(width = 0.9)) +
+    # add median point to plot
+    stat_summary(
+      aes(group = kbet_stat_type),
+      color = "black",
+      fun = "median",
+      fun.min = function(x) {
+        quantile(x, 0.25)
+      },
+      fun.max = function(x) {
+        quantile(x, 0.75)
+      },
+      geom = "pointrange",
+      position = position_dodge(width = 0.9),
+      size = 0.2
+    ) +
+    labs(
+      x = "Integration method",
+      y = "kBet rejection rate",
+      color = ""
+    ) +
+    scale_color_discrete(labels = c("Expected", "Observed"))
+  
+}
+
+
+
 #' Function to plot PCA regression metric
 #'
 #' @param pca_df Data frame containing pca regression metrics calculated on both
@@ -383,17 +453,17 @@ plot_batch_ari <- function(batch_ari_df,
 #' @return A faceted plot showing PCA regression metrics across integration methods
 plot_pca_regression <- function(pca_df,
                                 seed = seed) {
-
+  
   # Set seed if given
   set.seed(seed)
-
-
+  
+  
   # Check that all expected columns are present in dataframe
   expected_columns <- c("integration_method", "rep", "pc_batch_variance", "pc_regression_scaled")
   if(!all(expected_columns%in% colnames(pca_df))){
     stop("Required columns are missing from input dataframe, make sure that `calculate_pca_regression()` has been run successfully.")
   }
-
+  
   # Set up for plotting
   pca_df_updated <- pca_df %>%
     tidyr::pivot_longer(dplyr::starts_with("pc_"),
@@ -404,7 +474,7 @@ plot_pca_regression <- function(pca_df,
       "PC scaled regression"
     )) %>%
     set_integration_order()
-
+  
   pca_reg_plot <- ggplot(pca_df_updated) +
     aes(x = integration_method_factor,
         y = value) +
@@ -429,57 +499,6 @@ plot_pca_regression <- function(pca_df,
       x = "Integration method",
       y = "Metric value"
     )
-
+  
   return(pca_reg_plot)
-}
-
-
-#' Plot iLISI score across each cell in an integrated dataset
-#'
-#' @param ilisi_df Dataframe containing the calculated ilisi scores for each cell
-#'   The dataframe must contain the following columns: 
-#'   "integration_method", "ilisi_score", and "library"
-#'
-#' @return A gggplot object containing both a boxplot and density plot of the ilisi score 
-#'  across integration methods
-
-plot_ilisi <- function(ilisi_df){
-  
-  # check that all expected columns are present in dataframe 
-  if(!all(c("integration_method", "ilisi_score", "library") %in% colnames(ilisi_df))){
-    stop("Required columns are missing from input dataframe, make sure that `calculate_ilisi` has been run successfully.")
-  }
-  
-  # define number of batches for normalization 
-  num_batches <- length(unique(ilisi_df$library))
-  
-  # set order of integration methods on axes
-  ilisi_df_updated <- set_integration_order(ilisi_df) %>%
-    # normalize following scIB method
-    # https://github.com/theislab/scib/blob/067eb1aee7044f5ce0652fa363ec8deab0e9668d/scib/metrics/lisi.py#L98-L100
-    dplyr::mutate(ilisi_score_norm = (ilisi_score-1)/(num_batches - 1),
-                  # order by median ilisi score ensuring that unintegrated will be first regardless
-                  integration_method_factor = forcats::fct_reorder(integration_method_factor, ilisi_score, .fun = median),
-                  integration_method_factor = forcats::fct_relevel(integration_method_factor, "unintegrated"))
-  
-  ilisi_boxplot <- ggplot(ilisi_df_updated, aes(y = ilisi_score_norm, x = integration_method_factor)) +
-    geom_boxplot(outlier.size = 0.25) +
-    labs(
-      x = "Integration method",
-      y = "iLISI"
-    )
-  
-  ilisi_density <- ggplot(ilisi_df_updated, aes(x = ilisi_score_norm, color = integration_method_factor)) +
-    geom_density() +
-    labs(
-      color = "Integration method",
-      x = "iLISI"
-    ) +
-    ggokabeito::scale_color_okabe_ito()
-  
-  # create a combined boxplot and density plot
-  ilisi_plots <- cowplot::plot_grid(ilisi_boxplot, ilisi_density, ncol = 1)
-  
-  return(ilisi_plots)
-  
 }
