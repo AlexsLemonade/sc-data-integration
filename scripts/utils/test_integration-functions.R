@@ -110,7 +110,7 @@ cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "c
 
 # Test score calculation
 integrated_sce <- readRDS("results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_harmony_sce.rds")
-lisi <- calculate_ilisi(integrated_sce, "batch", "harmony")
+lisi <- calculate_lisi(integrated_sce, "batch", "harmony")
 batch_ari <- calculate_batch_ari(integrated_sce, integration_method = "harmony")
 batch_silhouette <- calculate_batch_silhouette_width(integrated_sce, integration_method = "harmony")
 kbet <- calculate_kbet(integrated_sce, "batch", "harmony", seed = 2022,
@@ -127,4 +127,4 @@ calculate_kbet(combined_sce, "batch", unintegrated=TRUE, seed = 2022,
                k0_fraction_range = 0.01) 
 calculate_batch_asw(combined_sce, unintegrated=TRUE)
 calculate_batch_ari(combined_sce, unintegrated=TRUE)
-calculate_ilisi(combined_sce, unintegrated=TRUE)
+calculate_lisi(combined_sce, unintegrated=TRUE)
