@@ -25,10 +25,10 @@ source(
 #' @return Tibble with five columns with one row per cell. Columns are `lisi_score`, 
 #'   `cell_name` (combined barcode and library), `cell_barcode`, `library` and 
 #'   `integration_method`
-calculate_ilisi <- function(integrated_sce,
-                            batch_column = "batch", 
-                            integration_method = NULL, 
-                            unintegrated = FALSE) {
+calculate_lisi <- function(integrated_sce,
+                           batch_column = "batch", 
+                           integration_method = NULL, 
+                           unintegrated = FALSE) {
   
   # Settings depending on whether data is integrated or not
   if (unintegrated){
