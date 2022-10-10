@@ -13,8 +13,6 @@ params:
   k0_fraction_min: 0.05
   k0_fraction_max: 0.25
   k0_fraction_increment: 0.05
-  num_regression_pcs: 50
-  sig_threshold:  0.05
   seed: 2022
   date: !r Sys.Date()
 
