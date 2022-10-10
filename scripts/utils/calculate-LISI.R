@@ -23,8 +23,8 @@ source(
 #'   integrated (`TRUE`).
 #'   
 #' @return Tibble with five columns with one row per cell. Columns are `lisi_score`, 
-#'   `cell_name` (combined barcode and library), `cell_barcode`, `library` and 
-#'   `integration_method`
+#'   `cell_name` (combined barcode and library), `cell_barcode`, `library`, `batch_identity`
+#'   either a batch or cell type), and `integration_method`
 calculate_lisi <- function(integrated_sce,
                            batch_column = "batch", 
                            integration_method = NULL, 
@@ -77,13 +77,16 @@ calculate_lisi <- function(integrated_sce,
     dplyr::rename(lisi_score = batch) %>%
     # Add in the cell, library ID, and integration method for retained cells
     dplyr::mutate(cell_name = colnames(integrated_sce)[retain_indices],
+                  batch_identity = batch_df$batch,
                   integration_method = integration_method) %>%
     # split cell into cell_barcode and library
     tidyr::separate(cell_name, 
                     into = c("cell_barcode", "library"), 
                     sep = "-", 
                     # keep the original cell!
-                    remove = FALSE) 
+                    remove = FALSE) %>%
+    # remove library, which is now covered in `batch_identity`
+    dplyr::select(-library)
 
   
   # Return the tibble
