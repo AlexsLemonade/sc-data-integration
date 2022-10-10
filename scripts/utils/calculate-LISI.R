@@ -62,7 +62,7 @@ calculate_lisi <- function(integrated_sce,
                                     "batch") %>% 
     tibble::as_tibble() %>%
     # Rename the result column to `lisi_score`
-    dplyr::rename(ilisi_score = batch) %>%
+    dplyr::rename(lisi_score = batch) %>%
     # Add in the cell, library ID, and integration method
     dplyr::mutate(cell_name = colnames(integrated_sce),
                   integration_method = integration_method) %>%
