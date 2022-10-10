@@ -22,8 +22,6 @@ The following are a list of parameters in the template notebook that can be used
 - `ari_k_min`: For calculating the batch ARI, min number of centers to use for clustering by k-means, default is 5
 - `ari_k_max`: For calculating the batch ARI, max number of centers to use for clustering by k-means, default is 25
 - `ari_k_increment`: For calculating the batch ARI, increment to increase the number of centers to use for clustering by k-means, e.g. for the default `ari_k_increment` of 5 with default `ari_k_min` and `ari_k_max`, a sequence will be created of `c(5, 10, 15, 20, 25)`
-- `num_regression_pcs`: For performing PCA regression for batch effect, the number of PCs to use, default is 50
-- `sig_threshold`: For performing PCA regression for batch effect, threshold for considering a corrected P-value from PC~batch regression as significant, default is 0.05
 
 The following metrics will be calculated in the notebook:
 
@@ -34,3 +32,5 @@ The following metrics will be calculated in the notebook:
 
 Note that we no longer include [kBET](https://github.com/theislab/kBET) as a metric because it is highly sensitive to bias present in the data.
 Testing of kBET revealed that in almost all scenarios the observed rejection rate was close to 1 indicating batch effect was present in the data.
+In addition, we no longer include PC batch variance and scaled PC regression, derived from the [manuscript introducing kBET](https://doi.org/10.1038/s41592-018-0254-1) because these two metrics, which should roughly track one another qualititively, proved to be rather different.
+In addition, although these metrics (particularly the scaled PC regression), were developed to be less sensitive than kBET, our testing suggested it was still highly sensitive to the presence of _any_ batch effect.
