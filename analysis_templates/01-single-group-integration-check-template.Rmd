@@ -13,8 +13,6 @@ params:
   k0_fraction_min: 0.05
   k0_fraction_max: 0.25
   k0_fraction_increment: 0.05
-  num_regression_pcs: 50
-  sig_threshold:  0.05
   seed: 2022
   date: !r Sys.Date()
 
@@ -62,8 +60,6 @@ source(file.path(utils_dir, "plotting-functions.R"))
 source(file.path(utils_dir, "calculate-batch-ARI.R"))
 source(file.path(utils_dir, "calculate-batch-silhouette-width.R"))
 source(file.path(utils_dir, "calculate-LISI.R"))
-source(file.path(utils_dir, "calculate-kBET.R"))
-source(file.path(utils_dir, "calculate-pca-regression.R"))
 ```
 
 
@@ -264,8 +260,6 @@ The range of cLISI scores will be from 1 to the number of cell types, however we
 Therefore, we would expect that well integrated datasets to be close to 0 indicating low mixing of cell types, while poorly integrated datasets would be close to 1 indicating high mixing of cell types.
 
 
-
-
 ```{r}
 # calculate clisi for unintegrated and integrated SCE separately
 clisi_unintegrated <- calculate_lisi(merged_sce,
@@ -280,7 +274,6 @@ clisi_integrated_list <- integration_methods %>%
 # create combined DF 
 clisi_df <- dplyr::bind_rows(clisi_unintegrated, clisi_integrated_list)
 ```
-
 
 
 ```{r fig.height=5, fig.width=5}
@@ -370,39 +363,6 @@ batch_silhouette_df <- dplyr::bind_rows(batch_silhouette_unintegrated, batch_sil
 
 ```{r}
 plot_batch_asw(batch_silhouette_df, seed = params$seed)
-```
-
-### PCA Regression
-
-Below we look at two measures, PC batch variance and scaled PC regression, as derived in the [kBET manuscript](https://doi.org/10.1038/s41592-018-0254-1) (see the _Methods_ section **Principal component regression**.)
-These measures can be used to assess the contribution of batches to overall variance, which we expect to be lower after successful integration, and these measures are less sensitive to bias compared to the kBET metric itself.
-According to the linked manuscript, the PC batch variance approximates the "total contribution of the batch effect to the variance in the data."
-As this measure may become increasingly difficult to interpret as data dimensionality increases, the additional measure, scaled PC regression, is the "sum of explained variance of all PCs" that are significantly correlated to batches, and it represents a more robust "proxy for the batch effect."
-We calculate these values via downsampling to 80% of cells across 20 replicates, and results for each replicate are shown in plots below.
-
-```{r, warning=FALSE}
-# calculate PCA regression for unintegrated and integrated SCE separately
-pca_unintegrated <- calculate_pca_regression(merged_sce,
-                                             batch_column = params$batch_column,
-                                             num_pcs = params$num_regression_pcs,
-                                             significance_threshold = params$sig_threshold,
-                                             seed = params$seed,
-                                             unintegrated=TRUE)
-
-pca_integrated_list <- integration_methods %>%
-  purrr::imap(~ calculate_pca_regression(integrated_sce = sce_list[[.x]],
-                                         batch_column = params$batch_column,
-                                         num_pcs = params$num_regression_pcs,
-                                         significance_threshold = params$sig_threshold,
-                                         seed = params$seed,
-                                         integration_method = .x))
-
-# create combined DF
-pca_df <- dplyr::bind_rows(pca_unintegrated, pca_integrated_list)
-```
-
-```{r, fig.height = 4, fig.width = 6}
-plot_pca_regression(pca_df, seed = params$seed)
 ```
 
 ## Session Info
