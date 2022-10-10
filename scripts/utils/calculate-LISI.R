@@ -53,6 +53,18 @@ calculate_lisi <- function(integrated_sce,
   batch_df <- data.frame(batch = colData(integrated_sce)[,batch_column])
   
   
+  # We need to _remove columns_ (cells) with unknown batch_column. 
+  # This will usually mean removing NA cell types in the context of cLISI calculations
+  retain_indices <- which(!is.na(batch_df$batch))
+  batch_df <- dplyr::slice(batch_df, retain_indices)
+  pcs <- pcs[retain_indices,]
+  
+  # check dimensions still match:
+  if (nrow(pcs) != nrow(batch_df)) {
+    stop("Incompatable PC and batch information dimensions after removing NAs.")
+  }
+  
+  
   # `lisi_result` is a tibble with per-cell scores, the score roughly means:
   #   "how many different categories are represented in the local neighborhood of the given cell?"
   lisi_result <- lisi::compute_lisi(pcs, 
@@ -63,8 +75,8 @@ calculate_lisi <- function(integrated_sce,
     tibble::as_tibble() %>%
     # Rename the result column to `lisi_score`
     dplyr::rename(lisi_score = batch) %>%
-    # Add in the cell, library ID, and integration method
-    dplyr::mutate(cell_name = colnames(integrated_sce),
+    # Add in the cell, library ID, and integration method for retained cells
+    dplyr::mutate(cell_name = colnames(integrated_sce)[retain_indices],
                   integration_method = integration_method) %>%
     # split cell into cell_barcode and library
     tidyr::separate(cell_name, 
