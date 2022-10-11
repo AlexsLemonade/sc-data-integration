@@ -6,7 +6,7 @@ source(file.path(util_dir, "integrate-harmony.R"))
 source(file.path(util_dir, "integrate-fastMNN.R"))
 source(file.path(util_dir, "integrate-seurat.R"))
 source(file.path(util_dir, "calculate-LISI.R"))
-source(file.path(util_dir, "calculate-batch-ARI.R"))
+source(file.path(util_dir, "calculate-ARI.R"))
 source(file.path(util_dir, "calculate-batch-silhouette-width.R"))
 source(file.path(util_dir, "calculate-kBET.R"))
 source(file.path(util_dir, "calculate-pca-regression.R"))
@@ -111,7 +111,10 @@ cca_seurat_integrated_obj <- integrate_seurat(seurat_list, reduction_method = "c
 # Test score calculation
 integrated_sce <- readRDS("results/human_cell_atlas/integrated_sce/1M_Immune_Cells_integrated_harmony_sce.rds")
 lisi <- calculate_lisi(integrated_sce, "batch", "harmony")
-batch_ari <- calculate_batch_ari(integrated_sce, integration_method = "harmony")
+
+batch_ari <- calculate_ari(integrated_sce, integration_method = "harmony")
+celltype_ari <- calculate_ari(integrated_sce, integration_method = "harmony", batch_column = "celltype")
+
 batch_silhouette <- calculate_batch_silhouette_width(integrated_sce, integration_method = "harmony")
 kbet <- calculate_kbet(integrated_sce, "batch", "harmony", seed = 2022,
                        # A full kBET run takes about 3 minutes; go faster for tests with only a small n=1 k0_fraction_range
