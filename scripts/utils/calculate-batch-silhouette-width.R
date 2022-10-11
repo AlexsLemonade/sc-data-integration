@@ -19,6 +19,8 @@ suppressPackageStartupMessages({
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
 #' @param unintegrated Indicates whether the provided data is integrated (`FALSE`; default) or
 #'   integrated (`TRUE`).
+#' @param batch_column The variable in `integrated_sce` indicating the grouping of interest.
+#'  Generally this is either batches or cell types. Default is "batch".
 #'   
 #' @return Tibble with six columns: `rep`, representing the given downsampling replicate;
 #'   `silhouette_width`, the calculated silhouette width for the given `rep`; `silhouette_cluster`, 
@@ -29,7 +31,8 @@ calculate_batch_silhouette_width <- function(integrated_sce,
                                              num_pcs = 20,
                                              seed = NULL,
                                              integration_method = NULL, 
-                                             unintegrated = FALSE) {
+                                             unintegrated = FALSE, 
+                                             batch_column = "batch") {
 
   # Set the seed for subsampling 
   set.seed(seed)
@@ -52,40 +55,47 @@ calculate_batch_silhouette_width <- function(integrated_sce,
   # Pull out the PCs or analogous reduction
   all_pcs <- reducedDim(integrated_sce, reduced_dim_name)
   
+  # We need to _remove columns_ (cells) with unknown batch_column. 
+  # This will usually mean removing NA cell types in the context of celltype ARI calculations
+  batches <- colData(integrated_sce)[,batch_column]
+  retain_indices <- which(!is.na(batches))
+  batches <- batches[retain_indices]
+  all_pcs <- all_pcs[retain_indices,]
+  
+  # Set PC rownames to be the batches for obtaining downsampled labels
+  rownames(all_pcs) <- batches
+  
   # Set up parameters
   frac_cells <- 0.8        # fraction of cells to downsample to
   nreps <- 20              # number of times to repeat sub-sampling procedure
 
   # perform calculations
-  all_batch_silhouette <- tibble::tibble(
-    rep         = as.numeric(),
-    cell_name   = as.character(),
+  all_silhouette <- tibble::tibble(
+    rep                = as.numeric(),
     silhouette_width   = as.numeric(),
-    silhouette_cluster = as.numeric(),
-    other_cluster   = as.numeric()
+    silhouette_cluster = as.character(),
+    other_cluster      = as.character()
   )
   for (i in 1:nreps) {
-
     # Downsample PCs
     downsampled <- downsample_pcs_for_metrics(all_pcs, frac_cells, num_pcs)
 
     # Calculate batch ASW and add into final tibble
-    batch_silhouette <- bluster::approxSilhouette(downsampled$pcs, downsampled$batch_labels) %>%
-      tibble::as_tibble(rownames = "cell_name") %>%
+    rep_silhouette <- bluster::approxSilhouette(downsampled$pcs, downsampled$batch_labels) %>%
+      tibble::as_tibble() %>%
       dplyr::mutate(rep = i) %>%
       dplyr::select(rep, 
-                    cell_name, 
                     silhouette_width = width, 
                     silhouette_cluster = cluster, 
                     other_cluster = other)
     
-    all_batch_silhouette <- dplyr::bind_rows(all_batch_silhouette, batch_silhouette)
+    all_silhouette <- dplyr::bind_rows(all_silhouette, rep_silhouette)
   }
     
   # Add integration method into tibble
-  all_batch_silhouette <- dplyr::mutate(all_batch_silhouette, integration_method = integration_method)
+  all_silhouette <- dplyr::mutate(all_silhouette, integration_method = integration_method)
 
-  # Return tibble with batch silhouette width results which can further be summarized downstream
-  return(all_batch_silhouette)
+  # Return tibble with silhouette width results which can further be summarized downstream
+  return(all_silhouette)
 
 }
