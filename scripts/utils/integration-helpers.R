@@ -444,19 +444,11 @@ downsample_pcs_for_metrics <- function(integrated_pcs, frac_cells, num_pcs) {
   # Extract PCs for downsample, considering only the top `num_pcs`
   downsampled_integrated_pcs <- integrated_pcs[downsampled_indices,1:num_pcs]
   
-  # Obtain batch labels as integer values
-  downsampled_batch_labels <- stringr::word(
-    rownames(downsampled_integrated_pcs),
-    2,
-    sep = "-"
-  ) %>%
-    as.factor() %>%
-    as.numeric()
   
   return (
     list(
       pcs = downsampled_integrated_pcs,
-      batch_labels = downsampled_batch_labels
+      batch_labels = rownames(downsampled_integrated_pcs)
     )
   )
   
