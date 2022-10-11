@@ -60,6 +60,7 @@ source(file.path(utils_dir, "plotting-functions.R"))
 source(file.path(utils_dir, "calculate-batch-ARI.R"))
 source(file.path(utils_dir, "calculate-batch-silhouette-width.R"))
 source(file.path(utils_dir, "calculate-LISI.R"))
+source(file.path(utils_dir, "run-metrics.R"))
 ```
 
 
@@ -110,12 +111,6 @@ sce_list <- purrr::map(all_sce_files, readr::read_rds) %>%
   set_names(c("unintegrated", integration_methods))
 ```
 
-
-```{r}
-# separate out merged sce for calculation of metrics and 
-#  convenient calculation of celltype information
-merged_sce <- sce_list$unintegrated
-```
 
 
 ```{r sce-checks}
@@ -168,7 +163,7 @@ if(params$celltype_column %in% coldata_names){
   
   # Calculate percentage of cells for which this information is known
   #  and print informative message
-  celltypes <- colData(merged_sce)[[params$celltype_column]]
+  celltypes <- colData(sce_list$unintegrated)[[params$celltype_column]]
   percent_present <- round( sum(!(is.na(celltypes))) / length(celltypes), 3) * 100
 
   if (percent_present < 100) {
@@ -240,25 +235,15 @@ The range of iLISI scores will be from 1 to the number of batches, however we ha
 Therefore, we would expect that well integrated datasets to be close to 1 indicating high mixing of batches, while poorly integrated datasets would be close to 0 indicating poor mixing.
 
 
-```{r}
-# calculate ilisi for unintegrated and integrated SCE separately
-ilisi_unintegrated <- calculate_lisi(merged_sce,
-                                     params$batch_column,
-                                     unintegrated=TRUE)
-
-ilisi_integrated_list <- integration_methods %>%
-  purrr::imap(~ calculate_lisi(integrated_sce = sce_list[[.x]],
-                                params$batch_column,
-                                integration_method = .x))
-
-# create combined DF
-ilisi_df <- dplyr::bind_rows(ilisi_unintegrated, ilisi_integrated_list)
-```
-
-
 ```{r fig.height=5, fig.width=5}
-plot_lisi(ilisi_df, lisi_type = "iLISI")
+
+ilisi_results <- run_lisi(sce_list, params$batch_column, "iLISI")
+
+# Plot results:
+print(ilisi_results$lisi_plot)
 ```
+
+
 
 ### cLISI
 
@@ -270,26 +255,14 @@ Therefore, we would expect that well integrated datasets to be close to 0 indica
 
 ```{r, fig.height=5, fig.width=5}
 if (celltypes_present) {
-  
-  # calculate clisi for unintegrated and integrated SCE separately
-  clisi_unintegrated <- calculate_lisi(merged_sce,
-                                       batch_column = params$celltype,
-                                       unintegrated=TRUE)
-  
-  clisi_integrated_list <- integration_methods %>%
-    purrr::imap(~ calculate_lisi(integrated_sce = sce_list[[.x]],
-                                  batch_column = params$celltype, 
-                                  integration_method = .x))
-  
-  # create combined DF 
-  clisi_df <- dplyr::bind_rows(clisi_unintegrated, clisi_integrated_list)
-  
-  # Visualize cLISI results
-  plot_lisi(clisi_df, lisi_type = "cLISI")
+
+  clisi_results <- run_lisi(sce_list, params$celltype, "cLISI")
+
+  # Plot results:
+  print(clisi_results$lisi_plot)
 }
 ```
-
-
+  
 ### Batch ARI
 
 The below plots look at the batch adjusted rand index (ARI) for each integration method.
@@ -317,7 +290,7 @@ k_range <- seq(params$ari_k_min,
 
 ```{r, warning=FALSE}
 # calculate batch ARI for unintegrated and integrated SCE separately
-batch_ari_unintegrated <- calculate_batch_ari(merged_sce,
+batch_ari_unintegrated <- calculate_batch_ari(sce_list$unintegrated,
                                               seed = params$seed,
                                               k_range = k_range,
                                               num_pcs = params$num_pcs,
@@ -355,7 +328,7 @@ Therefore, a well-integrated dataset would show lower batch ASW values compared 
 
 ```{r}
 # calculate batch ASW for unintegrated and integrated SCE separately
-batch_silhouette_unintegrated <- calculate_batch_silhouette_width(merged_sce,
+batch_silhouette_unintegrated <- calculate_batch_silhouette_width(sce_list$unintegrated,
                                                                   seed = params$seed,
                                                                   num_pcs = params$num_pcs,
                                                                   unintegrated=TRUE)
