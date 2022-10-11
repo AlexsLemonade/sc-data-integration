@@ -348,18 +348,17 @@ plot_lisi <- function(lisi_df, lisi_type = "iLISI"){
   }
   
   # Perform score normalization using either the number of batches or cell types depending on the score type
+num_batches <- length(unique(lisi_df$batch_identity))
   if (lisi_type == "iLISI") {
-    num_batches <- length(unique(lisi_df$batch_identity))
     # normalize following the scIB method
     # https://github.com/theislab/scib/blob/067eb1aee7044f5ce0652fa363ec8deab0e9668d/scib/metrics/lisi.py#L98-L100
     lisi_df_updated <- lisi_df %>%
       dplyr::mutate(lisi_score_norm = (lisi_score-1)/(num_batches - 1))
   } else {
-    num_cell_types <- length(unique(lisi_df$batch_identity))
     # normalize following the scIB method
     # https://github.com/theislab/scib/blob/067eb1aee7044f5ce0652fa363ec8deab0e9668d/scib/metrics/lisi.py#L157-L159    
     lisi_df_updated <- lisi_df %>%
-      dplyr::mutate(lisi_score_norm = (num_cell_types - lisi_score)/(num_cell_types - 1))
+      dplyr::mutate(lisi_score_norm = (num_batches - lisi_score)/(num_batches - 1))
     
   }
   
