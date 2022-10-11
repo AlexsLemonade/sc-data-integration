@@ -4,7 +4,7 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
 })
 
-#' Function to calculate batch silhouette width scores from an integrated SCE object
+#' Function to calculate silhouette width scores from an integrated SCE object
 #'
 #' This function uses a similar approach as used in this paper:
 #' https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
