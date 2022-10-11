@@ -58,7 +58,7 @@ source(file.path(utils_dir, "plotting-functions.R"))
 
 # source functions for calculating integration metrics
 source(file.path(utils_dir, "calculate-ARI.R"))
-source(file.path(utils_dir, "calculate-batch-silhouette-width.R"))
+source(file.path(utils_dir, "calculate-silhouette-width.R"))
 source(file.path(utils_dir, "calculate-LISI.R"))
 source(file.path(utils_dir, "run-metrics.R"))
 ```
@@ -333,26 +333,42 @@ Batch silhouette width is calculated across 20 replicates of downsampling, and t
 The batch silhouette width therefore measures to what extent a given data point adheres to its batch group, which is not desired after integration.
 Therefore, a well-integrated dataset would show lower batch ASW values compared to an unintegrated or poorly-integrated dataset, because batches should not primarily determine clustering after successful integration.
 
-```{r}
-# calculate batch ASW for unintegrated and integrated SCE separately
-batch_silhouette_unintegrated <- calculate_batch_silhouette_width(sce_list$unintegrated,
-                                                                  seed = params$seed,
-                                                                  num_pcs = params$num_pcs,
-                                                                  unintegrated=TRUE)
 
-batch_silhouette_integrated_list <- integration_methods %>%
-  purrr::imap(~ calculate_batch_silhouette_width(integrated_sce = sce_list[[.x]],
-                                                 seed = params$seed,
-                                                 num_pcs = params$num_pcs,
-                                                 integration_method = .x))
+```{r fig.height=5, fig.width=7}
+asw_results <- run_asw(sce_list, params$batch_column, params$seed, by_group = TRUE, group_label = "Batch")
 
-# create combined DF
-batch_silhouette_df <- dplyr::bind_rows(batch_silhouette_unintegrated, batch_silhouette_integrated_list)
+# Plot results:
+print(asw_results$asw_plot)
 ```
 
-```{r}
-plot_batch_asw(batch_silhouette_df, seed = params$seed)
+
+### Cell type ASW
+
+Below we look at the cell type average silhouette width (ASW) across integration methods.
+Calculations follow the same procedure as for batch ASW, except they evaluate the cell type rather than the batch grouping.
+A well-integrated dataset would show higher cell type ASW values compared to an unintegrated or poorly-integrated dataset, because cell types _should_ primarily determine clustering after successful integration.
+
+
+Here results are not separated by cell type:
+
+```{r fig.height=5, fig.width=5}
+aws_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = FALSE)
+
+# Plot results:
+print(aws_results$asw_plot)
 ```
+
+
+
+Here results _are_ separated by cell type:
+
+```{r fig.height=5, fig.width=7}
+aws_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = TRUE, group_label = "Cell type")
+
+# Plot results:
+print(aws_results$asw_plot)
+```
+
 
 ## Session Info
 
