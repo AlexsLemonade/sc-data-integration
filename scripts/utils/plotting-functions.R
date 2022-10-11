@@ -183,16 +183,20 @@ set_integration_order <- function(metrics_df,
 
 
 
-#' Function to plot batch average silhouette width (ASW) metric
+#' Function to plot average silhouette width (ASW) metric
 #'
-#' @param asw_df Data frame containing batch ASW values calculated on both
+#' @param asw_df Data frame containing silhouette width values calculated on both
 #'  integrated and unintegrated SCEs. Expected columns are at least
-#'  `rep`, `silhouette_width`, `silhouette_cluster`, `cell_name`, 
-#'  and `integration_method`.
+#'  `rep`, `silhouette_width`, `silhouette_cluster`, and `integration_method`.
 #' @param seed for sina plot reproducibility
+#' @param by_group Whether to take the average and color by the true group
+#' @param group_label Label to include in plot for grouping, if by_group is TRUE
+#' 
 #' @return ggplot object
-plot_batch_asw <- function(asw_df,
-                           seed = seed) {
+plot_asw <- function(asw_df,
+                     seed = seed, 
+                     by_group, 
+                     group_label) {
 
   # Set seed if given
   set.seed(seed)
@@ -207,43 +211,73 @@ plot_batch_asw <- function(asw_df,
   asw_df_updated <- set_integration_order(asw_df)
 
 
-  # Make the sina plot
-  asw_plot <- asw_df_updated %>%
-    # Extract library name into its own column
-    dplyr::mutate(library_id = stringr::word(cell_name, -1, sep = "-")) %>%
-    dplyr::group_by(rep, integration_method_factor, library_id) %>%
-    dplyr::summarize(
-      # Use absolute value: https://github.com/AlexsLemonade/sc-data-integration/issues/149
-      mean_batch_asw = mean(abs(silhouette_width))
-    ) %>%
-    dplyr::ungroup() %>% 
-    ggplot() +
-    aes(x = integration_method_factor,
-        color = library_id,
-        y = mean_batch_asw) +
-    ggforce::geom_sina(size = 0.8, alpha = 0.7,
-                       position = position_dodge(width = 0.5)) +
-    # add median/IQR pointrange to plot
-    stat_summary(
-      aes(group = library_id),
-      color = "black",
-      fun = "median",
-      fun.min = function(x) {
-        quantile(x, 0.25)
-      },
-      fun.max = function(x) {
-        quantile(x, 0.75)
-      },
-      geom = "pointrange",
-      position = position_dodge(width = 0.5),
-      size = 0.2
-    ) +
+  # Prepare and plot data WITHOUT color groups
+  if (!by_group) {
+    asw_plot <- asw_df_updated %>%
+      dplyr::group_by(rep, integration_method_factor) %>%
+      dplyr::summarize(
+        # Use absolute value: https://github.com/AlexsLemonade/sc-data-integration/issues/149
+        asw = mean(abs(silhouette_width))
+      ) %>%
+      dplyr::ungroup() %>%
+      ggplot() +
+      aes(x = integration_method_factor,
+          y = asw) +
+      ggforce::geom_sina(size = 0.8, alpha = 0.7,
+                         position = position_dodge(width = 0.5)) +
+      # add median/IQR pointrange to plot
+      stat_summary(
+        color = "red",
+        fun = "median",
+        fun.min = function(x) {
+          quantile(x, 0.25)
+        },
+        fun.max = function(x) {
+          quantile(x, 0.75)
+        },
+        geom = "pointrange",
+        size = 0.3
+      )
+  } else { 
+    # WITH color
+    asw_plot <- asw_df_updated %>%
+      # the `silhouette_cluster` column contains the true identity; rename for ease
+      dplyr::group_by(rep, integration_method_factor, silhouette_cluster) %>%
+      dplyr::summarize(
+        # Use absolute value: https://github.com/AlexsLemonade/sc-data-integration/issues/149
+        asw = mean(abs(silhouette_width))
+      ) %>%
+      dplyr::ungroup() %>%
+      ggplot() +
+      aes(x = integration_method_factor,
+          y = asw, 
+          color = silhouette_cluster) +
+      ggforce::geom_sina(size = 1, alpha = 0.7,
+                         position = position_dodge(width = 0.5)) +
+      # add median/IQR pointrange to plot
+      stat_summary(
+        aes(group = silhouette_cluster),
+        color = "black",
+        fun = "median",
+        fun.min = function(x) {
+          quantile(x, 0.25)
+        },
+        fun.max = function(x) {
+          quantile(x, 0.75)
+        },
+        geom = "pointrange",
+        position = position_dodge(width = 0.5),
+        size = 0.2
+      ) +
+      ggokabeito::scale_color_okabe_ito(name = group_label) 
+    }
+
+  # Add shared labeling
+  asw_plot <- asw_plot + 
     labs(
       x = "Integration method",
-      y = "Batch average silhouette width",
-      color = "Batch"
+      y = "Average silhouette width"
     )
-
 
   # return the plot
   return(asw_plot)
