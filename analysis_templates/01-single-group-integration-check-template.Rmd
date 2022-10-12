@@ -327,16 +327,18 @@ If datasets are well integrated we would expect the cell type ARI to be close to
 
 
 ```{r, warning=FALSE}
-# Calculate cell type ARI, using previously-defined k_range
-celltype_ari <- run_ari(sce_list, params$celltype_column, k_range, params$seed)
-```
-
-```{r}
-# Visualize results, faceted across k
-plot(celltype_ari$ari_plot_k)
-
-# Visualize results, faceted across integration_method
-plot(celltype_ari$ari_plot_integration_method)
+if (celltypes_present) {
+  # Calculate cell type ARI, using previously-defined k_range
+  celltype_ari <- run_ari(sce_list, params$celltype_column, k_range, params$seed)
+  
+  # Visualize results, faceted across k
+  plot(celltype_ari$ari_plot_k)
+  
+  # Visualize results, faceted across integration_method
+  plot(celltype_ari$ari_plot_integration_method)
+} else {
+  warning("No cell types are present, so cell type ARI will not be evaluated.")
+}
 ```
 
 
@@ -364,25 +366,21 @@ Below we look at the cell type average silhouette width (ASW) across integration
 Calculations follow the same procedure as for batch ASW, except they evaluate the cell type rather than the batch grouping.
 A well-integrated dataset would show higher cell type ASW values compared to an unintegrated or poorly-integrated dataset, because cell types _should_ primarily determine clustering after successful integration.
 
-
-Here results are not separated by cell type:
-
-```{r fig.height=5, fig.width=5}
-aws_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = FALSE)
-
-# Plot results:
-print(aws_results$asw_plot)
-```
+Results below (if present) are shown first for all cell types together, and then shown separated by cell type.
 
 
-
-Here results _are_ separated by cell type:
-
-```{r fig.height=5, fig.width=7}
-aws_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = TRUE, group_label = "Cell type")
-
-# Plot results:
-print(aws_results$asw_plot)
+```{r, fig.height=5, fig.width=7}
+if (celltypes_present) {
+  # Not separated
+  aws_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = FALSE)
+  print(aws_results$asw_plot)
+  
+  # Separated
+  aws_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = TRUE, group_label = "Cell type")
+  print(aws_results$asw_plot)
+} else {
+  warning("No cell types are present, so cell type ASW will not be evaluated.")
+}
 ```
 
 
