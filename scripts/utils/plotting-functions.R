@@ -189,14 +189,14 @@ set_integration_order <- function(metrics_df,
 #'  integrated and unintegrated SCEs. Expected columns are at least
 #'  `rep`, `silhouette_width`, `silhouette_cluster`, and `integration_method`.
 #' @param seed for sina plot reproducibility
-#' @param by_group Whether to take the average and color by the true group
-#' @param group_label Label to include in plot for grouping, if by_group is TRUE
+#' @param by_batch Whether to take the average and color by the batch
+#' @param batch_label Label to include in plot for batch, if by_batch is TRUE
 #' 
 #' @return ggplot object
 plot_asw <- function(asw_df,
                      seed = seed, 
-                     by_group, 
-                     group_label) {
+                     by_batch, 
+                     batch_label) {
 
   # Set seed if given
   set.seed(seed)
@@ -211,8 +211,8 @@ plot_asw <- function(asw_df,
   asw_df_updated <- set_integration_order(asw_df)
 
 
-  # Prepare and plot data WITHOUT color groups
-  if (!by_group) {
+  # Prepare and plot data WITHOUT coloring batches
+  if (by_batch) {
     asw_plot <- asw_df_updated %>%
       dplyr::group_by(rep, integration_method_factor) %>%
       dplyr::summarize(
@@ -269,7 +269,7 @@ plot_asw <- function(asw_df,
         position = position_dodge(width = 0.5),
         size = 0.2
       ) +
-      ggokabeito::scale_color_okabe_ito(name = group_label) 
+      ggokabeito::scale_color_okabe_ito(name = batch_label) 
     }
 
   # Add shared labeling

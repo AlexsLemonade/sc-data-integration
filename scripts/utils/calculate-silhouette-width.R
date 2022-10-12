@@ -52,18 +52,10 @@ calculate_silhouette_width <- function(integrated_sce,
     reduced_dim_name <- get_reduced_dim_name(integration_method)
   }
   
-  # Pull out the PCs or analogous reduction
-  all_pcs <- reducedDim(integrated_sce, reduced_dim_name)
-  
-  # We need to _remove columns_ (cells) with unknown batch_column. 
-  # This will usually mean removing NA cell types in the context of celltype ARI calculations
-  batches <- colData(integrated_sce)[,batch_column]
-  retain_indices <- which(!is.na(batches))
-  batches <- batches[retain_indices]
-  all_pcs <- all_pcs[retain_indices,]
-  
-  # Set PC rownames to be the batches for obtaining downsampled labels
-  rownames(all_pcs) <- batches
+  # Pull out the PCs or analogous reduction, and remove batch NAs along the way
+  pcs <- reducedDim(integrated_sce, reduced_dim_name)
+  # we do not need the indices here, so just save the pcs directly
+  final_pcs <- remove_batch_nas_from_pcs(pcs, colData(integrated_sce)[,batch_column])[["pcs"]]
   
   # Set up parameters
   frac_cells <- 0.8        # fraction of cells to downsample to
@@ -78,7 +70,7 @@ calculate_silhouette_width <- function(integrated_sce,
   )
   for (i in 1:nreps) {
     # Downsample PCs
-    downsampled <- downsample_pcs_for_metrics(all_pcs, frac_cells, num_pcs)
+    downsampled <- downsample_pcs_for_metrics(final_pcs, frac_cells, num_pcs)
 
     # Calculate batch ASW and add into final tibble
     rep_silhouette <- bluster::approxSilhouette(downsampled$pcs, downsampled$batch_labels) %>%

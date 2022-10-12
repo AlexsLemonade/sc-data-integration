@@ -90,13 +90,13 @@ run_ari <- function(sce_list, batch_column, k_range, seed) {
 #' @param merged_sce The list of SCE objects to analyze
 #' @param batch_column The grouping column of interest
 #' @param seed Random seed for silhouette width calculation
-#' @param by_group Logical for whether calculations should be on a per-group basis.
+#' @param by_batch Logical for whether calculations should be on a per-batch basis.
 #'   Default is `TRUE`.
-#' @param group_label Label to include in plot. Default is "Batch"
+#' @param batch_label Label to include in plot. Default is "Batch"
 #' 
 #'
 #' @return Data frame and ggplot object of ARI results
-run_asw <- function(sce_list, batch_column, seed, by_group = TRUE, group_label = "Batch") {
+run_asw <- function(sce_list, batch_column, seed, by_batch = TRUE, batch_label = "Batch") {
     
   # calculate for unintegrated SCE
   asw_unintegrated <- calculate_silhouette_width(sce_list$unintegrated,
@@ -115,7 +115,7 @@ run_asw <- function(sce_list, batch_column, seed, by_group = TRUE, group_label =
   asw_df <- dplyr::bind_rows(asw_unintegrated, asw_integrated_list)
   
   # Visualize results
-  asw_plot <- plot_asw(asw_df, seed, by_group, group_label)
+  asw_plot <- plot_asw(asw_df, seed, by_batch, batch_label)
   
   # Return df and plot
   return(
@@ -125,4 +125,4 @@ run_asw <- function(sce_list, batch_column, seed, by_group = TRUE, group_label =
     )
   )
 }
-newline
+
