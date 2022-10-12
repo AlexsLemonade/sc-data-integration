@@ -211,35 +211,8 @@ plot_asw <- function(asw_df,
   asw_df_updated <- set_integration_order(asw_df)
 
 
-  # Prepare and plot data WITHOUT coloring batches
+  # Prepare and plot data by batch
   if (by_batch) {
-    asw_plot <- asw_df_updated %>%
-      dplyr::group_by(rep, integration_method_factor) %>%
-      dplyr::summarize(
-        # Use absolute value: https://github.com/AlexsLemonade/sc-data-integration/issues/149
-        asw = mean(abs(silhouette_width))
-      ) %>%
-      dplyr::ungroup() %>%
-      ggplot() +
-      aes(x = integration_method_factor,
-          y = asw) +
-      ggforce::geom_sina(size = 0.8, alpha = 0.7,
-                         position = position_dodge(width = 0.5)) +
-      # add median/IQR pointrange to plot
-      stat_summary(
-        color = "red",
-        fun = "median",
-        fun.min = function(x) {
-          quantile(x, 0.25)
-        },
-        fun.max = function(x) {
-          quantile(x, 0.75)
-        },
-        geom = "pointrange",
-        size = 0.3
-      )
-  } else { 
-    # WITH color
     asw_plot <- asw_df_updated %>%
       # the `silhouette_cluster` column contains the true identity; rename for ease
       dplyr::group_by(rep, integration_method_factor, silhouette_cluster) %>%
@@ -270,6 +243,33 @@ plot_asw <- function(asw_df,
         size = 0.2
       ) +
       ggokabeito::scale_color_okabe_ito(name = batch_label) 
+  } else { 
+    # or without batch grouping/coloring
+    asw_plot <- asw_df_updated %>%
+      dplyr::group_by(rep, integration_method_factor) %>%
+      dplyr::summarize(
+        # Use absolute value: https://github.com/AlexsLemonade/sc-data-integration/issues/149
+        asw = mean(abs(silhouette_width))
+      ) %>%
+      dplyr::ungroup() %>%
+      ggplot() +
+      aes(x = integration_method_factor,
+          y = asw) +
+      ggforce::geom_sina(size = 0.8, alpha = 0.7,
+                         position = position_dodge(width = 0.5)) +
+      # add median/IQR pointrange to plot
+      stat_summary(
+        color = "red",
+        fun = "median",
+        fun.min = function(x) {
+          quantile(x, 0.25)
+        },
+        fun.max = function(x) {
+          quantile(x, 0.75)
+        },
+        geom = "pointrange",
+        size = 0.3
+      )
     }
 
   # Add shared labeling
