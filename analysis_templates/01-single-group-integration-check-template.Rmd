@@ -363,7 +363,7 @@ print(asw_results$asw_plot)
 ### Cell type ASW
 
 Below we look at the cell type average silhouette width (ASW) across integration methods.
-Calculations follow the same procedure as for batch ASW, except they evaluate the cell type rather than the batch grouping.
+Calculations follow the same procedure as for batch ASW, except they evaluate the silhouette width across cell types rather than across batches.
 A well-integrated dataset would show higher cell type ASW values compared to an unintegrated or poorly-integrated dataset, because cell types _should_ primarily determine clustering after successful integration.
 
 Results below (if present) are shown first for all cell types together, and then shown separated by cell type.
@@ -372,12 +372,12 @@ Results below (if present) are shown first for all cell types together, and then
 ```{r, fig.height=5, fig.width=7}
 if (celltypes_present) {
   # Not separated
-  aws_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = FALSE)
-  print(aws_results$asw_plot)
+  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = FALSE)
+  print(asw_results$asw_plot)
   
   # Separated
-  aws_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = TRUE, group_label = "Cell type")
-  print(aws_results$asw_plot)
+  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = TRUE, group_label = "Cell type")
+  print(asw_results$asw_plot)
 } else {
   warning("No cell types are present, so cell type ASW will not be evaluated.")
 }
