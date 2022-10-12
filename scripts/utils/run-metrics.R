@@ -125,3 +125,4 @@ run_asw <- function(sce_list, batch_column, seed, by_group = TRUE, group_label =
     )
   )
 }
+newline
