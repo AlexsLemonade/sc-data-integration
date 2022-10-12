@@ -1,8 +1,8 @@
 ---
 params:
-  group_name: "sim1"
-  merged_sce_dir: "../results/scib_simulated/merged_sce"
-  integrated_sce_dir: "../results/scib_simulated/integrated_sce"
+  group_name: "1M_Immune_Cells"
+  merged_sce_dir: "../results/human_cell_atlas/merged_sce"
+  integrated_sce_dir: "../results/human_cell_atlas/integrated_sce"
   integration_methods: !r as.vector(c("fastmnn", "harmony", "cca", "rpca"))
   batch_column: "batch"
   celltype_column: "celltype"
@@ -113,7 +113,7 @@ sce_list <- purrr::map(all_sce_files, readr::read_rds) %>%
 
 
 
-```{r sce-checks}
+```{r sce-checks, results='asis'}
 
 # check that batch column is found in colData of both merged and integrated sce objects
 # first find all the column names of the coldata found in common
@@ -167,16 +167,16 @@ if(params$celltype_column %in% coldata_names){
   percent_present <- round( sum(!(is.na(celltypes))) / length(celltypes), 3) * 100
 
   if (percent_present < 100) {
-    glue::glue(
-      "Only {percent_present}% of cells in these libraries have cell type annotations. 
+    glue::glue("
+      Only {percent_present}% of cells in these libraries have cell type annotations. 
 Cells without annotations are not considered in calculations or visualizations that assess cell type mixing.
-      "
+  "
     ) 
   }
 } else {
   celltypes_present <- FALSE
   glue::glue(
-      "No celltype information found for this dataset. Cannot make UMAPs annotated with celltype or evaluate celltype mixing."
+      "No cell type information found for this dataset. Cannot make UMAPs annotated with cell type or evaluate cell type mixing."
   )
 }
   
@@ -202,6 +202,9 @@ batch_umaps <- names(sce_list) %>%
                     nrow = 4) 
 ```
 
+
+
+
 ```{r celltype-umaps, fig.width=15, fig.height=20, warning=FALSE, message=FALSE}
 # only print out celltype UMAP plot if celltype information is provided
 if(celltypes_present){
@@ -221,7 +224,9 @@ if(celltypes_present){
                     legend.grob = celltype_legend, 
                     ncol = 2, 
                     nrow = 4) 
-} 
+} else {
+  glue::glue("No cell types present so no cell types UMAP will be shown.")
+}
 ```
 
 ## Integration metrics
@@ -260,6 +265,8 @@ if (celltypes_present) {
 
   # Plot results:
   print(clisi_results$lisi_plot)
+} else {
+  glue::glue("No cell types present so no cell types UMAP will be shown.")
 }
 ```
   
