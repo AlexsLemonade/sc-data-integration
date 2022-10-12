@@ -353,7 +353,7 @@ Therefore, a well-integrated dataset would show lower batch ASW values compared 
 
 
 ```{r fig.height=5, fig.width=7}
-asw_results <- run_asw(sce_list, params$batch_column, params$seed, by_group = TRUE, group_label = "Batch")
+asw_results <- run_asw(sce_list, params$batch_column, params$seed) # defaults are fine: group by batch and label as `Batch`
 
 # Plot results:
 print(asw_results$asw_plot)
@@ -372,11 +372,11 @@ Results below (if present) are shown first for all cell types together, and then
 ```{r, fig.height=5, fig.width=7}
 if (celltypes_present) {
   # Not separated
-  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = FALSE)
+  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = FALSE)
   print(asw_results$asw_plot)
   
   # Separated
-  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_group = TRUE, group_label = "Cell type")
+  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = TRUE, batch_label = "Cell type")
   print(asw_results$asw_plot)
 } else {
   warning("No cell types are present, so cell type ASW will not be evaluated.")

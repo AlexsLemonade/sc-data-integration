@@ -51,25 +51,11 @@ calculate_ari <- function(integrated_sce,
     reduced_dim_name <- get_reduced_dim_name(integration_method)
   }
   
-  # Pull out the PCs or analogous reduction
-  all_pcs <- reducedDim(integrated_sce, reduced_dim_name)
+  # Pull out the PCs or analogous reduction, and remove batch NAs along the way
+  pcs <- reducedDim(integrated_sce, reduced_dim_name)
+  # we do not need the indices here, so just save the pcs directly
+  final_pcs <- remove_batch_nas_from_pcs(pcs, colData(integrated_sce)[,batch_column])[["pcs"]]
 
-  
-  # We need to _remove columns_ (cells) with unknown batch_column. 
-  # This will usually mean removing NA cell types in the context of celltype ARI calculations
-  batches <- colData(integrated_sce)[,batch_column]
-  retain_indices <- which(!is.na(batches))
-  batches <- batches[retain_indices]
-  all_pcs <- all_pcs[retain_indices,]
-  
-  # check dimensions still match:
-  if (nrow(all_pcs) != length(batches)) {
-    stop("Incompatable PC and batch information dimensions after removing NAs.")
-  }
-  
-  # Set PC rownames to be the batches for obtaining downsampled labels
-  rownames(all_pcs) <- batches
-  
   # Set up parameters
   frac_cells <- 0.8        # fraction of cells to downsample to
   nreps <- 20              # number of times to repeat sub-sampling procedure
@@ -79,7 +65,7 @@ calculate_ari <- function(integrated_sce,
   for (i in 1:nreps) {
 
     # Downsample PCs
-    downsampled <- downsample_pcs_for_metrics(all_pcs, frac_cells, num_pcs)
+    downsampled <- downsample_pcs_for_metrics(final_pcs, frac_cells, num_pcs)
 
     for (k in k_range) {
 

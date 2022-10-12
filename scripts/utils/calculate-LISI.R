@@ -45,29 +45,19 @@ calculate_lisi <- function(integrated_sce,
     reduced_dim_name <- get_reduced_dim_name(integration_method)
   }
 
-  # Pull out the PCs or analogous reduction
-  pcs <- reducedDim(integrated_sce, reduced_dim_name)
+  # Pull out the PCs or analogous reduction, while removing NA batches
+  pcs <- reducedDim(integrated_sce, reduced_dim_name) 
+  pcs_indices <-  remove_batch_nas_from_pcs(pcs, colData(integrated_sce)[,batch_column])
+  final_pcs <- pcs_indices[["pcs"]]
+  retained_indices <- pcs_indices[["indices"]] # used when saving the cell name
+
   
-  # Create data frame with batch information to provide to `compute_lisi()`
-  # Here, `batch` will refer to whatever the specified batch_column was, even if cell types
-  batch_df <- data.frame(batch = colData(integrated_sce)[,batch_column])
-  
-  
-  # We need to _remove columns_ (cells) with unknown batch_column. 
-  # This will usually mean removing NA cell types in the context of cLISI calculations
-  retain_indices <- which(!is.na(batch_df$batch))
-  batch_df <- dplyr::slice(batch_df, retain_indices)
-  pcs <- pcs[retain_indices,]
-  
-  # check dimensions still match:
-  if (nrow(pcs) != nrow(batch_df)) {
-    stop("Incompatable PC and batch information dimensions after removing NAs.")
-  }
-  
+  # Create batch_df from non-NA batches, used as input to lisi::compute_lisi()
+  batch_df <- data.frame(batch = rownames(final_pcs))
   
   # `lisi_result` is a tibble with per-cell scores, the score roughly means:
   #   "how many different categories are represented in the local neighborhood of the given cell?"
-  lisi_result <- lisi::compute_lisi(pcs, 
+  lisi_result <- lisi::compute_lisi(final_pcs, 
                                     # define the batches
                                     batch_df, 
                                     # which variables in `batch_df` to compute lisi for
@@ -76,7 +66,7 @@ calculate_lisi <- function(integrated_sce,
     # Rename the result column to `lisi_score`
     dplyr::rename(lisi_score = batch) %>%
     # Add in the cell, library ID, and integration method for retained cells
-    dplyr::mutate(cell_name = colnames(integrated_sce)[retain_indices],
+    dplyr::mutate(cell_name = colnames(integrated_sce)[retained_indices],
                   batch_identity = batch_df$batch,
                   integration_method = integration_method) %>%
     # split cell into cell_barcode and library
