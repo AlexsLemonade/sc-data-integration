@@ -52,7 +52,7 @@ run_ari <- function(sce_list, batch_column, k_range, seed) {
   
   # calculate for unintegrated SCE
   ari_unintegrated <- calculate_ari(sce_list$unintegrated,
-                                    batch_column = params$batch_column,
+                                    batch_column = batch_column,
                                     unintegrated=TRUE, 
                                     k_range = k_range, 
                                     seed = params$seed)
@@ -60,7 +60,7 @@ run_ari <- function(sce_list, batch_column, k_range, seed) {
   # calculate for integrated SCEs
   ari_integrated_list <- integration_methods %>%
     purrr::imap(~ calculate_ari(integrated_sce = sce_list[[.x]],
-                                batch_column = params$batch_column, 
+                                batch_column = batch_column, 
                                 integration_method = .x,
                                 k_range = k_range, 
                                 seed = params$seed))
