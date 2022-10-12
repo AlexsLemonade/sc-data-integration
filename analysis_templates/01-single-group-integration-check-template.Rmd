@@ -59,7 +59,17 @@ source(file.path(utils_dir, "plotting-functions.R"))
 # source functions for calculating integration metrics
 source(file.path(utils_dir, "calculate-batch-ARI.R"))
 source(file.path(utils_dir, "calculate-batch-silhouette-width.R"))
-source(file.path(utils_dir, "calculate-iLISI.R"))
+source(file.path(utils_dir, "calculate-LISI.R"))
+source(file.path(utils_dir, "run-metrics.R"))
+
+# Set up hook for printing warnings
+knitr::knit_hooks$set(
+   warning = function(x, options) {
+     paste('\n\n<div class="alert alert-warning">',
+           gsub('##', '\n', gsub('^##\ Warning:', '**Warning**', x)),
+           '</div>', sep = '\n')
+   }
+)
 ```
 
 
@@ -154,7 +164,32 @@ if(!is.null(missing_umap)){
        Missing UMAP embeddings from SCE object. Make sure that UMAP embeddings are present and labeled with {missing_umap}.
       "))
 }
+
+# Check whether celltype information is available
+if(params$celltype_column %in% coldata_names){
+  # Set variable to TRUE
+  celltypes_present <- TRUE
+  
+  # Calculate percentage of cells for which this information is known
+  #  and print informative message
+  celltypes <- colData(sce_list$unintegrated)[[params$celltype_column]]
+  percent_present <- round( sum(!(is.na(celltypes))) / length(celltypes), 3) * 100
+
+  if (percent_present < 100) {
+    warning(
+      glue::glue("
+        Only {percent_present}% of cells in these libraries have cell type annotations. 
+        Cells without annotations are not considered in calculations or visualizations that assess cell type mixing.
+      ")
+    )
+  }
+} else {
+  celltypes_present <- FALSE
+  warning("No cell type information found for this dataset. Cannot make UMAPs annotated with cell type or evaluate cell type mixing.")
+}
+  
 ```
+
 
 ## UMAPs
 
@@ -176,9 +211,12 @@ batch_umaps <- names(sce_list) %>%
                     nrow = 4) 
 ```
 
+
+
+
 ```{r celltype-umaps, fig.width=15, fig.height=20, warning=FALSE, message=FALSE}
 # only print out celltype UMAP plot if celltype information is provided
-if(params$celltype_column %in% coldata_names){
+if(celltypes_present){
  # create umap plots labeling by celltype column
   celltype_umaps <- names(sce_list) %>%
     purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
@@ -196,22 +234,11 @@ if(params$celltype_column %in% coldata_names){
                     ncol = 2, 
                     nrow = 4) 
 } else {
-  glue::glue("
-    <div class=\"alert alert-warning\">
-    
-    No celltype information found for this dataset.
-    
-    </div>
-  ")
+  warning("No cell types are present, so no cell type-annotated UMAPs will be shown.")
 }
 ```
 
 ## Integration metrics
-
-```{r}
-# separate out merged sce for calculation of metrics
-merged_sce <- sce_list$unintegrated
-```
 
 
 ### iLISI
@@ -222,26 +249,36 @@ The range of iLISI scores will be from 1 to the number of batches, however we ha
 Therefore, we would expect that well integrated datasets to be close to 1 indicating high mixing of batches, while poorly integrated datasets would be close to 0 indicating poor mixing.
 
 
-```{r}
-# calculate ilisi for unintegrated and integrated SCE separately
-ilisi_unintegrated <- calculate_ilisi(merged_sce,
-                                      params$batch_column,
-                                      unintegrated=TRUE)
-
-ilisi_integrated_list <- integration_methods %>%
-  purrr::imap(~ calculate_ilisi(integrated_sce = sce_list[[.x]],
-                                params$batch_column,
-                                integration_method = .x))
-
-# create combined DF
-ilisi_df <- dplyr::bind_rows(ilisi_unintegrated, ilisi_integrated_list)
-```
-
-
 ```{r fig.height=5, fig.width=5}
-plot_ilisi(ilisi_df)
+
+ilisi_results <- run_lisi(sce_list, params$batch_column, "iLISI")
+
+# Plot results:
+print(ilisi_results$lisi_plot)
 ```
 
+
+
+### cLISI
+
+Complementary to iLISI, the cLISI (_cell type_ local inverse Simpson's index) metric can be used to measure the local distribution of cell types in the integrated dataset, as defined in [Korsunksky et al.](https://doi.org/10.1038/s41592-019-0619-0). 
+The cLISI score can be interpreted as describing how many cell types are represented within a local neighborhood. 
+The range of cLISI scores will be from 1 to the number of cell types, however we have normalized the score following the same method utilized by the `scIB` benchmarking tools: (num cell types - clisi/(num cell types - 1)
+Therefore, we would expect that well integrated datasets to be close to 0 indicating low mixing of cell types, while poorly integrated datasets would be close to 1 indicating high mixing of cell types.
+
+
+```{r, fig.height=5, fig.width=5}
+if (celltypes_present) {
+
+  clisi_results <- run_lisi(sce_list, params$celltype, "cLISI")
+
+  # Plot results:
+  print(clisi_results$lisi_plot)
+} else {
+  warning("No cell types are present, so cLISI scores will not be evaluated.")
+}
+```
+  
 ### Batch ARI
 
 The below plots look at the batch adjusted rand index (ARI) for each integration method.
@@ -269,7 +306,7 @@ k_range <- seq(params$ari_k_min,
 
 ```{r, warning=FALSE}
 # calculate batch ARI for unintegrated and integrated SCE separately
-batch_ari_unintegrated <- calculate_batch_ari(merged_sce,
+batch_ari_unintegrated <- calculate_batch_ari(sce_list$unintegrated,
                                               seed = params$seed,
                                               k_range = k_range,
                                               num_pcs = params$num_pcs,
@@ -307,7 +344,7 @@ Therefore, a well-integrated dataset would show lower batch ASW values compared 
 
 ```{r}
 # calculate batch ASW for unintegrated and integrated SCE separately
-batch_silhouette_unintegrated <- calculate_batch_silhouette_width(merged_sce,
+batch_silhouette_unintegrated <- calculate_batch_silhouette_width(sce_list$unintegrated,
                                                                   seed = params$seed,
                                                                   num_pcs = params$num_pcs,
                                                                   unintegrated=TRUE)
