@@ -234,7 +234,7 @@ if(celltypes_present){
                     ncol = 2, 
                     nrow = 4) 
 } else {
-  warning("No cell types are present, so no cell type-annotated UMAPs will not be shown.")
+  warning("No cell types are present, so no cell type-annotated UMAPs will be shown.")
 }
 ```
 
