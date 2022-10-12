@@ -1,8 +1,8 @@
 ---
 params:
-  group_name: "1M_Immune_Cells"
-  merged_sce_dir: "../results/human_cell_atlas/merged_sce"
-  integrated_sce_dir: "../results/human_cell_atlas/integrated_sce"
+  group_name: "sim1"
+  merged_sce_dir: "../results/scib_simulated/merged_sce"
+  integrated_sce_dir: "../results/scib_simulated/integrated_sce"
   integration_methods: !r as.vector(c("fastmnn", "harmony", "cca", "rpca"))
   batch_column: "batch"
   celltype_column: "celltype"
