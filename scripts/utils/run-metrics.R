@@ -14,7 +14,7 @@ run_lisi <- function(sce_list, batch_column, lisi_type) {
   # calculate for unintegrated SCE
   lisi_unintegrated <- calculate_lisi(sce_list$unintegrated,
                                       batch_column = batch_column,
-                                       unintegrated=TRUE)
+                                      unintegrated=TRUE)
   
   # calculate for integrated SCEs
   lisi_integrated_list <- integration_methods %>%
@@ -36,9 +36,6 @@ run_lisi <- function(sce_list, batch_column, lisi_type) {
     )
   )
 }
-
-
-
 
 #' Function to calculate and visualize ARI metrics
 #'
