@@ -204,7 +204,7 @@ plot_asw <- function(asw_df,
   # Check that all expected columns are present in dataframe
   expected_columns <- c("integration_method", "rep", "silhouette_width", "silhouette_cluster")
   if(!all(expected_columns%in% colnames(asw_df))){
-    stop("Required columns are missing from input dataframe, make sure that `calculate_batch_silhouette_width` has been run successfully.")
+    stop("Required columns are missing from input dataframe, make sure that `calculate_silhouette_width` has been run successfully.")
   }
 
   # Set integration method order
