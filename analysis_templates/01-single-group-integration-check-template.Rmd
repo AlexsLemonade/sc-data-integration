@@ -61,6 +61,15 @@ source(file.path(utils_dir, "calculate-batch-ARI.R"))
 source(file.path(utils_dir, "calculate-batch-silhouette-width.R"))
 source(file.path(utils_dir, "calculate-LISI.R"))
 source(file.path(utils_dir, "run-metrics.R"))
+
+# Set up hook for printing warnings
+knitr::knit_hooks$set(
+   warning = function(x, options) {
+     paste('\n\n<div class="alert alert-warning">',
+           gsub('##', '\n', gsub('^##\ Warning:', '**Warning**', x)),
+           '</div>', sep = '\n')
+   }
+)
 ```
 
 
@@ -113,7 +122,7 @@ sce_list <- purrr::map(all_sce_files, readr::read_rds) %>%
 
 
 
-```{r sce-checks, results='asis'}
+```{r sce-checks}
 
 # check that batch column is found in colData of both merged and integrated sce objects
 # first find all the column names of the coldata found in common
@@ -167,20 +176,20 @@ if(params$celltype_column %in% coldata_names){
   percent_present <- round( sum(!(is.na(celltypes))) / length(celltypes), 3) * 100
 
   if (percent_present < 100) {
-    glue::glue("
-      Only {percent_present}% of cells in these libraries have cell type annotations. 
-Cells without annotations are not considered in calculations or visualizations that assess cell type mixing.
-  "
-    ) 
+    warning(
+      glue::glue("
+        Only {percent_present}% of cells in these libraries have cell type annotations. 
+        Cells without annotations are not considered in calculations or visualizations that assess cell type mixing.
+      ")
+    )
   }
 } else {
   celltypes_present <- FALSE
-  glue::glue(
-      "No cell type information found for this dataset. Cannot make UMAPs annotated with cell type or evaluate cell type mixing."
-  )
+  warning("No cell type information found for this dataset. Cannot make UMAPs annotated with cell type or evaluate cell type mixing.")
 }
   
 ```
+
 
 ## UMAPs
 
@@ -225,7 +234,7 @@ if(celltypes_present){
                     ncol = 2, 
                     nrow = 4) 
 } else {
-  glue::glue("No cell types present so no cell types UMAP will be shown.")
+  warning("No cell types are present, so no cell type-annotated UMAPs will not be shown.")
 }
 ```
 
@@ -266,7 +275,7 @@ if (celltypes_present) {
   # Plot results:
   print(clisi_results$lisi_plot)
 } else {
-  glue::glue("No cell types present so no cell types UMAP will be shown.")
+  warning("No cell types are present, so cLISI scores will not be evaluated.")
 }
 ```
   
