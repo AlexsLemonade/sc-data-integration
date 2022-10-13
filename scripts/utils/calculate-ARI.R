@@ -3,13 +3,13 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
 })
 
-#' Function to calculate batch ARI scores from an integrated SCE object
+#' Function to calculate ARI scores from an integrated SCE object
 #'
 #' This function uses a similar approach as used in this paper:
 #' https://genomebiology.biomedcentral.com/articles/10.1186/s13059-019-1850-9
 #' Data is subsampled to 80% of cells. K-means clustering is performed on a given
-#' number of PCs (default 20), along a range of k's. BatchARI is then calculated.
-#' This procedure is repeated 20x.
+#' number of PCs (default 20), along a range of k's. ARI (either batch or celltype) 
+#' is then calculated. This procedure is repeated 20x.
 #'
 #' @param integrated_sce The integrated SCE object
 #' @param num_pcs The number of PCs to use during k-means clustering. Default: 20
@@ -19,21 +19,23 @@ suppressPackageStartupMessages({
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
 #' @param unintegrated Indicates whether the provided data is integrated (`FALSE`; default) or
 #'   integrated (`TRUE`).
+#' @param batch_column The variable in `integrated_sce` indicating the grouping of interest.
+#'  Generally this is either batches or cell types. Default is "batch".
 #'   
 #' @return Tibble with four columns: `rep`, representing the given downsampling replicate;
-#'   `k`, the given k for k-means; `batch_ari`, the calculated batch ARI for the given
-#'   combination of `rep` and `k`; `integration_method`, the given integration method
-calculate_batch_ari <- function(integrated_sce,
-                                num_pcs = 20,
-                                seed = NULL,
-                                k_range = seq(5, 25, 5),
-                                integration_method = NULL, 
-                                unintegrated = FALSE) {
-
+#'   `k`, the given k for k-means; `ari`, the calculated ARI for the given
+#'   combination of `rep` and `k`; the `integration_method`, the given integration method
+calculate_ari <- function(integrated_sce,
+                          num_pcs = 20,
+                          seed = NULL,
+                          k_range = seq(5, 25, 5),
+                          integration_method = NULL, 
+                          unintegrated = FALSE, 
+                          batch_column = "batch") {
   # Set the seed for subsampling (_not bootstrap_; without replacement) and k-means
   set.seed(seed)
 
-  
+
   # Settings depending on whether data is integrated or not
   if (unintegrated){
     # In the end, we'll return "unintegrated" in the data frame for integration method
@@ -49,9 +51,11 @@ calculate_batch_ari <- function(integrated_sce,
     reduced_dim_name <- get_reduced_dim_name(integration_method)
   }
   
-  # Pull out the PCs or analogous reduction
-  all_pcs <- reducedDim(integrated_sce, reduced_dim_name)
-  
+  # Pull out the PCs or analogous reduction, and remove batch NAs along the way
+  pcs <- reducedDim(integrated_sce, reduced_dim_name)
+  # we do not need the indices here, so just save the pcs directly
+  final_pcs <- remove_batch_nas_from_pcs(pcs, colData(integrated_sce)[,batch_column])[["pcs"]]
+
   # Set up parameters
   frac_cells <- 0.8        # fraction of cells to downsample to
   nreps <- 20              # number of times to repeat sub-sampling procedure
@@ -61,7 +65,7 @@ calculate_batch_ari <- function(integrated_sce,
   for (i in 1:nreps) {
 
     # Downsample PCs
-    downsampled <- downsample_pcs_for_metrics(all_pcs, frac_cells, num_pcs)
+    downsampled <- downsample_pcs_for_metrics(final_pcs, frac_cells, num_pcs)
 
     for (k in k_range) {
 
@@ -80,7 +84,7 @@ calculate_batch_ari <- function(integrated_sce,
   ari_tibble <- tibble::tibble(
     rep = rep(1:nreps, each=length(k_range)),
     k   = rep(k_range, nreps),
-    batch_ari = all_ari, 
+    ari = all_ari, 
     integration_method = integration_method
   )
 

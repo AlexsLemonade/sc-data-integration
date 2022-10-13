@@ -425,10 +425,9 @@ get_reduced_dim_name <- function(integration_method) {
 
 #' Downsample PCs for use in integration metric calculations 
 #'  
-#' @param integrated_pcs The full set of integrated pcsThe integration method
+#' @param integrated_pcs The full set of integrated pcs
 #' @param frac_cells The fraction of cells to downsample to
 #' @param num_pcs The number of PCs to downsample to
-#' @param integrated_pcs The full set of integrated pcsThe integration method
 #'
 #' @return List with two items: `pcs`, the downsampled PCs; `batch_labels`, the 
 #'  corresponding batch labels as integers for the downsampled PCs
@@ -444,21 +443,44 @@ downsample_pcs_for_metrics <- function(integrated_pcs, frac_cells, num_pcs) {
   # Extract PCs for downsample, considering only the top `num_pcs`
   downsampled_integrated_pcs <- integrated_pcs[downsampled_indices,1:num_pcs]
   
-  # Obtain batch labels as integer values
-  downsampled_batch_labels <- stringr::word(
-    rownames(downsampled_integrated_pcs),
-    2,
-    sep = "-"
-  ) %>%
-    as.factor() %>%
-    as.numeric()
   
   return (
     list(
       pcs = downsampled_integrated_pcs,
-      batch_labels = downsampled_batch_labels
+      batch_labels = rownames(downsampled_integrated_pcs)
     )
   )
   
+}
+
+
+#' Remove NAs batches from PCs for use in integration metric calculations 
+#'  
+#' @param integrated_pcs The full set of integrated pcs
+#' @param batches Vector of cell-wise batch information whose length is the number of 
+#'   rows in `intergated_pcs`
+#' 
+#' @return List with two items: `pcs`: PCs with NA batch cells removed and 
+#'   rownames assigned as batch; `indices`: Which rows were _retained_ 
+remove_batch_nas_from_pcs <- function(integrated_pcs, batches) {
+  
+  retain_indices <- which(!is.na(batches))
+  batches <- batches[retain_indices]
+  integrated_pcs <- integrated_pcs[retain_indices,]
+  
+  # check dimensions still match:
+  if (nrow(integrated_pcs) != length(batches)) {
+    stop("Incompatable PC and batch information dimensions after removing NAs.")
+  }
+  
+  # Set PC rownames to be the batches, for use in obtaining downsampled labels
+  rownames(integrated_pcs) <- batches
+  
+  return(
+    list(
+      pcs = integrated_pcs,
+      indices = retain_indices
+    )
+  )
 }
   
