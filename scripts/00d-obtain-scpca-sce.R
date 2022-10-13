@@ -86,7 +86,7 @@ if(length(missing_sce_files) > 0){
   
   aws_includes <- paste("--include '", "*", missing_sce_files, "'", sep = '', collapse = ' ')
   
-  # build one sync call to copy all missing hdf5 files 
+  # build one sync call to copy all missing sce files 
   sync_call <- paste('aws s3 cp', opt$scpca_nf_bucket, opt$filtered_sce_dir, 
                      '--exclude "*"', aws_includes, '--recursive', sep = " ")
   
