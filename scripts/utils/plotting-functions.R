@@ -183,67 +183,101 @@ set_integration_order <- function(metrics_df,
 
 
 
-#' Function to plot batch average silhouette width (ASW) metric
+#' Function to plot average silhouette width (ASW) metric
 #'
-#' @param asw_df Data frame containing batch ASW values calculated on both
+#' @param asw_df Data frame containing silhouette width values calculated on both
 #'  integrated and unintegrated SCEs. Expected columns are at least
-#'  `rep`, `silhouette_width`, `silhouette_cluster`, `cell_name`, 
-#'  and `integration_method`.
+#'  `rep`, `silhouette_width`, `silhouette_cluster`, and `integration_method`.
 #' @param seed for sina plot reproducibility
+#' @param by_batch Whether to take the average and color by the batch
+#' @param batch_label Label to include in plot for batch, if by_batch is TRUE
+#' 
 #' @return ggplot object
-plot_batch_asw <- function(asw_df,
-                           seed = seed) {
+plot_asw <- function(asw_df,
+                     seed = seed, 
+                     by_batch, 
+                     batch_label) {
 
   # Set seed if given
   set.seed(seed)
 
   # Check that all expected columns are present in dataframe
-  expected_columns <- c("integration_method", "rep", "silhouette_width", "cell_name", "silhouette_cluster")
+  expected_columns <- c("integration_method", "rep", "silhouette_width", "silhouette_cluster")
   if(!all(expected_columns%in% colnames(asw_df))){
-    stop("Required columns are missing from input dataframe, make sure that `calculate_batch_silhouette_width` has been run successfully.")
+    stop("Required columns are missing from input dataframe, make sure that `calculate_silhouette_width` has been run successfully.")
   }
 
   # Set integration method order
   asw_df_updated <- set_integration_order(asw_df)
 
 
-  # Make the sina plot
-  asw_plot <- asw_df_updated %>%
-    # Extract library name into its own column
-    dplyr::mutate(library_id = stringr::word(cell_name, -1, sep = "-")) %>%
-    dplyr::group_by(rep, integration_method_factor, library_id) %>%
-    dplyr::summarize(
-      # Use absolute value: https://github.com/AlexsLemonade/sc-data-integration/issues/149
-      mean_batch_asw = mean(abs(silhouette_width))
-    ) %>%
-    dplyr::ungroup() %>% 
-    ggplot() +
-    aes(x = integration_method_factor,
-        color = library_id,
-        y = mean_batch_asw) +
-    ggforce::geom_sina(size = 0.8, alpha = 0.7,
-                       position = position_dodge(width = 0.5)) +
-    # add median/IQR pointrange to plot
-    stat_summary(
-      aes(group = library_id),
-      color = "black",
-      fun = "median",
-      fun.min = function(x) {
-        quantile(x, 0.25)
-      },
-      fun.max = function(x) {
-        quantile(x, 0.75)
-      },
-      geom = "pointrange",
-      position = position_dodge(width = 0.5),
-      size = 0.2
-    ) +
+  # Prepare and plot data by batch
+  if (by_batch) {
+    asw_plot <- asw_df_updated %>%
+      # the `silhouette_cluster` column contains the true identity; rename for ease
+      dplyr::group_by(rep, integration_method_factor, silhouette_cluster) %>%
+      dplyr::summarize(
+        # Use absolute value: https://github.com/AlexsLemonade/sc-data-integration/issues/149
+        asw = mean(abs(silhouette_width))
+      ) %>%
+      dplyr::ungroup() %>%
+      ggplot() +
+      aes(x = integration_method_factor,
+          y = asw, 
+          color = silhouette_cluster) +
+      ggforce::geom_sina(size = 1, alpha = 0.7,
+                         position = position_dodge(width = 0.5)) +
+      # add median/IQR pointrange to plot
+      stat_summary(
+        aes(group = silhouette_cluster),
+        color = "black",
+        fun = "median",
+        fun.min = function(x) {
+          quantile(x, 0.25)
+        },
+        fun.max = function(x) {
+          quantile(x, 0.75)
+        },
+        geom = "pointrange",
+        position = position_dodge(width = 0.5),
+        size = 0.2
+      ) +
+      ggokabeito::scale_color_okabe_ito(name = batch_label) 
+  } else { 
+    # or without batch grouping/coloring
+    asw_plot <- asw_df_updated %>%
+      dplyr::group_by(rep, integration_method_factor) %>%
+      dplyr::summarize(
+        # Use absolute value: https://github.com/AlexsLemonade/sc-data-integration/issues/149
+        asw = mean(abs(silhouette_width))
+      ) %>%
+      dplyr::ungroup() %>%
+      ggplot() +
+      aes(x = integration_method_factor,
+          y = asw) +
+      ggforce::geom_sina(size = 0.8, alpha = 0.7,
+                         position = position_dodge(width = 0.5)) +
+      # add median/IQR pointrange to plot
+      stat_summary(
+        color = "red",
+        fun = "median",
+        fun.min = function(x) {
+          quantile(x, 0.25)
+        },
+        fun.max = function(x) {
+          quantile(x, 0.75)
+        },
+        geom = "pointrange",
+        size = 0.3
+      )
+    }
+
+  # Add shared labeling
+  asw_plot <- asw_plot + 
     labs(
       x = "Integration method",
-      y = "Batch average silhouette width",
-      color = "Batch"
+      y = "Average silhouette width"
     )
-
 
   # return the plot
   return(asw_plot)
@@ -251,24 +285,24 @@ plot_batch_asw <- function(asw_df,
 }
 
 
-#' Plot batch adjusted rand index (ARI) across integration methods
+#' Plot adjusted rand index (ARI) across integration methods
 #'
-#' @param batch_ari_df Dataframe containing the calculated batch ARI after clustering
-#'   across a range of values used for k (number of centers) in k-means clustering.
-#'   The dataframe must contain the following columns:
-#'   "integration_method", "batch_ari", and "k"
-#'@param facet_group Group to facet plots by, can be one of "integration_method" or
-#'  "k". The group not chosen for faceting will be used for the x-axis
+#' @param ari_df Dataframe containing the calculated ARI, either batch or celltype,
+#'   after clustering across a range of values used for k (number of centers) in 
+#'   k-means clustering. The dataframe must contain the following columns:
+#'   "integration_method", "ari", and "k"
+#' @param facet_group Group to facet plots by, can be one of "integration_method" or
+#'   "k". The group not chosen for faceting will be used for the x-axis
 #'
-#' @return A ggplot object containing a sina plot of batch ARI across integration
+#' @return A ggplot object containing a sina plot of ARI across integration
 #'   methods and values of k tested
 
-plot_batch_ari <- function(batch_ari_df,
-                           facet_group){
+plot_ari <- function(ari_df,
+                     facet_group){
 
   # check that all expected columns are present in dataframe
-  if(!all(c("integration_method", "batch_ari", "k") %in% colnames(batch_ari_df))){
-    stop("Required columns are missing from input dataframe, make sure that `calculate_batch_ari` has been run successfully.")
+  if(!all(c("integration_method", "ari", "k") %in% colnames(ari_df))){
+    stop("Required columns are missing from input dataframe, make sure that `calculate_ari` has been run successfully.")
   }
 
   # check that x axes group and facet group are one of k or integration method factor
@@ -277,13 +311,13 @@ plot_batch_ari <- function(batch_ari_df,
   }
 
   # set order of integration methods on axes
-  batch_ari_updated_df <- set_integration_order(batch_ari_df)
+  ari_updated_df <- set_integration_order(ari_df)
 
   # define x axis, facet group variables, and plot labels
   if (facet_group == "integration_method"){
     facet_group_label <- "integration_method_factor"
     # make sure that x axes is factor if k is used
-    batch_ari_updated_df$k <- as.factor(batch_ari_updated_df$k)
+    ari_updated_df$k <- as.factor(ari_updated_df$k)
     x_axis_group <- rlang::sym("k")
     # set axes label
     x_label <- "Value of k for k-means"
@@ -295,7 +329,7 @@ plot_batch_ari <- function(batch_ari_df,
 
 
   # sina plot with batch ARI on y axis
-  batch_ari_plot <- ggplot(batch_ari_updated_df, aes_string(x_axis_group , y = "batch_ari")) +
+  ari_plot <- ggplot(ari_updated_df, aes_string(x_axis_group , y = "ari")) +
     ggforce::geom_sina(size = 0.3, alpha = 0.5) +
     # facet by desired label
     facet_wrap(as.formula(paste("~", facet_group_label))) +
@@ -314,11 +348,11 @@ plot_batch_ari <- function(batch_ari_df,
     ) +
     labs(
       x = x_label,
-      y = "Batch ARI"
+      y = "ARI"
     ) +
     theme(axis.text.x = element_text(angle = 90))
 
-  return(batch_ari_plot)
+  return(ari_plot)
 }
 
 

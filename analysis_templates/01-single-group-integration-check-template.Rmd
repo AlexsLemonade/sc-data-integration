@@ -57,8 +57,8 @@ source(file.path(utils_dir, "integration-helpers.R"))
 source(file.path(utils_dir, "plotting-functions.R"))
 
 # source functions for calculating integration metrics
-source(file.path(utils_dir, "calculate-batch-ARI.R"))
-source(file.path(utils_dir, "calculate-batch-silhouette-width.R"))
+source(file.path(utils_dir, "calculate-ARI.R"))
+source(file.path(utils_dir, "calculate-silhouette-width.R"))
 source(file.path(utils_dir, "calculate-LISI.R"))
 source(file.path(utils_dir, "run-metrics.R"))
 
@@ -287,7 +287,7 @@ The ARI between clustering results and batch assignments is then calculated and 
 We also calculated batch ARI across a range of k for k-means, the number of centers used for clustering.
 The plots show the batch ARI on the y-axis across each integration method and value of k used for k-means clustering.
 The first plot shows the integration method on the x-axis and plots are faceted by values of k, while the second plot shows each integration method as a separate plot and displays batch ARI across the range of k indicated on the x-axis.
-If datasets are well integrated we would anticipate the batch ARI to be close to 0 and the 1-batch ARI to be close to 1, indicating that batches are well integrated across clustering assignments and low concordance between clusters and batch assignment.
+If datasets are well integrated we would expect the batch ARI to be close to 0 and the 1-batch ARI to be close to 1, indicating that batches are well integrated across clustering assignments with low concordance between clusters and batch assignment.
 
 ```{r}
 # create k range needed for input to ARI function from params
@@ -299,37 +299,46 @@ if(params$ari_k_max < params$ari_k_min){
 
 ## get krange
 k_range <- seq(params$ari_k_min,
-              params$ari_k_max,
-              params$ari_k_increment)
+               params$ari_k_max,
+               params$ari_k_increment)
 ```
+
+```{r, warning=FALSE}
+# Calculate and visualize batch ARI
+batch_ari <- run_ari(sce_list, params$batch_column, k_range, params$seed)
+```
+
+```{r}
+# Visualize results, faceted across k
+plot(batch_ari$ari_plot_k)
+
+# Visualize results, faceted across integration_method
+plot(batch_ari$ari_plot_integration_method)
+```
+
+
+### Cell type ARI
+
+The below plots look at the cell type adjusted rand index (ARI) for each integration method.
+The procedure for this calculation matches that of batch ARI, except cell type labels are used as group assignments rather than batch assignments.
+The plots show the cell type ARI on the y-axis across each integration method and value of k used for k-means clustering.
+The first plot shows the integration method on the x-axis and plots are faceted by values of k, while the second plot shows each integration method as a separate plot and displays cell type ARI across the range of k indicated on the x-axis.
+If datasets are well integrated we would expect the cell type ARI to be close to 1 and the 1-batch ARI to be close to 0, indicating that cell types are well partitioned among clustering assignments with high concordance between clusters and cell type.
 
 
 ```{r, warning=FALSE}
-# calculate batch ARI for unintegrated and integrated SCE separately
-batch_ari_unintegrated <- calculate_batch_ari(sce_list$unintegrated,
-                                              seed = params$seed,
-                                              k_range = k_range,
-                                              num_pcs = params$num_pcs,
-                                              unintegrated=TRUE)
-
-batch_ari_integrated_list <- integration_methods %>%
-  purrr::imap(~ calculate_batch_ari(integrated_sce = sce_list[[.x]],
-                                    seed = params$seed,
-                                    k_range = k_range,
-                                    num_pcs = params$num_pcs,
-                                    integration_method = .x))
-
-# create combined DF
-batch_ari_df <- dplyr::bind_rows(batch_ari_unintegrated, batch_ari_integrated_list)
-```
-
-```{r}
-plot_batch_ari(batch_ari_df,
-               facet_group = "k")
-```
-```{r}
-plot_batch_ari(batch_ari_df,
-               facet_group = "integration_method")
+if (celltypes_present) {
+  # Calculate cell type ARI, using previously-defined k_range
+  celltype_ari <- run_ari(sce_list, params$celltype_column, k_range, params$seed)
+  
+  # Visualize results, faceted across k
+  plot(celltype_ari$ari_plot_k)
+  
+  # Visualize results, faceted across integration_method
+  plot(celltype_ari$ari_plot_integration_method)
+} else {
+  warning("No cell types are present, so cell type ARI will not be evaluated.")
+}
 ```
 
 
@@ -342,26 +351,38 @@ Batch silhouette width is calculated across 20 replicates of downsampling, and t
 The batch silhouette width therefore measures to what extent a given data point adheres to its batch group, which is not desired after integration.
 Therefore, a well-integrated dataset would show lower batch ASW values compared to an unintegrated or poorly-integrated dataset, because batches should not primarily determine clustering after successful integration.
 
-```{r}
-# calculate batch ASW for unintegrated and integrated SCE separately
-batch_silhouette_unintegrated <- calculate_batch_silhouette_width(sce_list$unintegrated,
-                                                                  seed = params$seed,
-                                                                  num_pcs = params$num_pcs,
-                                                                  unintegrated=TRUE)
 
-batch_silhouette_integrated_list <- integration_methods %>%
-  purrr::imap(~ calculate_batch_silhouette_width(integrated_sce = sce_list[[.x]],
-                                                 seed = params$seed,
-                                                 num_pcs = params$num_pcs,
-                                                 integration_method = .x))
+```{r fig.height=5, fig.width=7}
+asw_results <- run_asw(sce_list, params$batch_column, params$seed) # defaults are fine: group by batch and label as `Batch`
 
-# create combined DF
-batch_silhouette_df <- dplyr::bind_rows(batch_silhouette_unintegrated, batch_silhouette_integrated_list)
+# Plot results:
+print(asw_results$asw_plot)
 ```
 
-```{r}
-plot_batch_asw(batch_silhouette_df, seed = params$seed)
+
+### Cell type ASW
+
+Below we look at the cell type average silhouette width (ASW) across integration methods.
+Calculations follow the same procedure as for batch ASW, except they evaluate the silhouette width across cell types rather than across batches.
+A well-integrated dataset would show higher cell type ASW values compared to an unintegrated or poorly-integrated dataset, because cell types _should_ primarily determine clustering after successful integration.
+
+Results below (if present) are shown first for all cell types together, and then shown separated by cell type.
+
+
+```{r, fig.height=5, fig.width=7}
+if (celltypes_present) {
+  # Not separated
+  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = FALSE)
+  print(asw_results$asw_plot)
+  
+  # Separated
+  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = TRUE, batch_label = "Cell type")
+  print(asw_results$asw_plot)
+} else {
+  warning("No cell types are present, so cell type ASW will not be evaluated.")
+}
 ```
+
 
 ## Session Info
 
