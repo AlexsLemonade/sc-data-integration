@@ -14,4 +14,4 @@ add_celltype: false
 continuous_covariates: None
 
 # params for analysis report
-asw_separate_cell_types: TRUE
+asw_separate_celltypes: TRUE
