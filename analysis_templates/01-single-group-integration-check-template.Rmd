@@ -14,6 +14,7 @@ params:
   k0_fraction_max: 0.25
   k0_fraction_increment: 0.05
   seed: 2022
+  asw_separate_cell_types: FALSE
   date: !r Sys.Date()
 
 title: "`r glue::glue('Integration evaluation for {params$group_name}')`"
@@ -70,6 +71,12 @@ knitr::knit_hooks$set(
            '</div>', sep = '\n')
    }
 )
+
+# Ensure logical
+asw_separate_cell_types <- as.logical(toupper(params$asw_separate_cell_types))
+if (!(asw_separate_cell_types) %in% c(TRUE, FALSE)) {
+  stop("\nCould not read the asw_separate_cell_types` parameter.")
+}
 ```
 
 
@@ -375,9 +382,11 @@ if (celltypes_present) {
   asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = FALSE)
   print(asw_results$asw_plot)
   
-  # Separated
-  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = TRUE, batch_label = "Cell type")
-  print(asw_results$asw_plot)
+  # Separated, if specified in params
+  if (asw_separate_cell_types) {
+    asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = TRUE, batch_label = "Cell type")
+    print(asw_results$asw_plot)
+  }
 } else {
   warning("No cell types are present, so cell type ASW will not be evaluated.")
 }
