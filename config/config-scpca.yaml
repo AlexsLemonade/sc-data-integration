@@ -11,6 +11,3 @@ pepfile: "sample-info/scpca-project-pep.yaml"
 add_celltype: false
 
 grouping_var: "scpca_project_id"
-
-# params for analysis report
-asw_separate_cell_types: TRUE
