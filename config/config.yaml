@@ -19,3 +19,6 @@ integration_methods: ["fastmnn", "harmony", "seurat-cca", "seurat-rpca"]
 continuous_covariates: "subsets_mito_percent"
 # how many dimensions to return in the latent space
 num_latent: 20
+
+# params for analysis report
+asw_separate_cell_types: FALSE

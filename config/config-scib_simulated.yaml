@@ -12,3 +12,6 @@ add_celltype: false
 
 # params for scvi only
 continuous_covariates: None
+
+# params for analysis report
+asw_separate_cell_types: TRUE

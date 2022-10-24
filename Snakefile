@@ -224,6 +224,7 @@ rule generate_report:
                             params = list(group_name = '{wildcards.project}', \
                                           merged_sce_dir = '{workflow.basedir}/{input.merged_sce_dir}', \
                                           integrated_sce_dir = '{workflow.basedir}/{params.integrated_sce_dir}', \
-                                          integration_methods = '{config[integration_methods]}'))" \
+                                          integration_methods = '{config[integration_methods]}',
+                                          asw_separate_cell_types = '{config[asw_separate_cell_types]}'))" \
         &> {log}
         """
