@@ -1,3 +1,56 @@
+#' Setup celltype plotting information, including which celltypes to include and
+#'   their colors, as used in UMAPs and ASW plots
+#'
+#' @param celltypes Vector of celltypes in the data taken from an SCE object's metadata,
+#'   meaning each element corresponds to a cell in the same order as the associated SCE
+#' @param max_celltypes Maximum number of cell types to visualize during plotting (default 5).
+#'   If there are more celltypes present than the specified `max_celltypes`, 
+#'   then only the top N cell types, where N is `max_celltypes`, will be selected 
+#'   and given a color
+#' 
+#' @return List of two items: 1) `celltype_plot_names`, a vector of reformatted celltype 
+#'   names to include in plots in order of cells, and 2) `celltype_colors`, a vector 
+#'   of colors to match with unique values in `celltype_names` 
+setup_plot_celltypes <- function(sce, 
+                                 cell_label_column = "celltype",
+                                 max_celltypes = 5) {
+  
+  # how many unique cell types are there?
+  num_celltypes <- length(unique(colData(sce)[,cell_label_column]))
+  
+  # Establish new character column to hold new celltype names for use in plotting
+  coldata_df <- colData(sce) %>%
+    as.data.frame() %>%
+    # make sure that celltype_names is a character vector and not a Factor
+    # this can happen if converting from AnnData and will cause errors later on
+    dplyr::mutate(celltype_names = as.character(celltype))
+  
+  # If too many celltypes, refactor `celltype_names`
+  if(num_celltypes > max_celltypes){
+  
+    # identify top `max_celltypes` cell types based on frequency
+    selected_celltypes <- levels(forcats::fct_infreq(coldata_df[,cell_label_column]))[1:max_celltypes]
+    
+    # if not in top cell types set to "other" for both merged and integrated SCE
+    coldata_df <- coldata_df %>%
+      # first label everything outside of selected celltypes as other then if NA convert back to NA
+      dplyr::mutate(celltype_names = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"),
+                    celltype_names = dplyr::if_else(is.na(celltype), NA_character_, celltype_names))
+  } 
+  # Define final celltype_names and colors
+  celltype_names <- coldata_df$celltype_names
+  num_colors <- length(unique(celltype_names))
+  celltype_colors <- rainbow(num_colors)
+  
+  # Return info
+  return(
+    list(
+      celltype_plot_names  = celltype_names, 
+      celltype_colors = celltype_colors
+    )
+  )
+}
+
 
 #' Create a single UMAP plot colored by a provided column in the sce object
 #'
@@ -59,11 +112,8 @@ plot_umap_panel <- function(sce,
 #' @param integration_method The name of the method that was used for integration
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
 #' @param group_name Name to use to describe all libraries grouped together in integrated object
-#' @param cell_label_column Column to use for labeling cells in UMAP
-#' @param max_celltypes Maximum number of cell types to visualize during plotting.
-#'   If the `cell_label_column == celltype` and contains more than the specified `max_celltypes`
-#'   then only the top N cell types, where N is `max_celltypes`, will be labeled in the UMAP and all other cells will be
-#'   labeled with "other". Default is 5.
+#' @param cell_label_column Column to use for labeling cells in UMAPs
+#' @param plot_colors Optional vector of colors to use in plot.
 #' @param seed Random seed to use for randomizing plotting in UMAPs
 #'
 #' @return Combined ggplot containing a UMAP for both the unintegrated and integrated dataset
@@ -73,7 +123,7 @@ plot_integration_umap <- function(sce,
                                   integration_method,
                                   group_name,
                                   cell_label_column,
-                                  max_celltypes = 5, 
+                                  plot_colors = NULL,
                                   seed = NULL) {
 
   set.seed(seed)
@@ -118,9 +168,15 @@ plot_integration_umap <- function(sce,
       colData(sce) <- DataFrame(coldata_df)
     }
   }
-
-  num_colors <- length(unique(sce[[cell_label_column]]))
-  plot_colors <- rainbow(num_colors)
+  # Define colors if not provided, or if provided check the size
+  if (is.null(plot_colors)) {
+    num_colors <- length(unique(sce[[cell_label_column]]))
+    plot_colors <- rainbow(num_colors)    
+  } else {
+    if (!(length(plot_colors)) == length(unique(sce[[cell_label_column]]))) {
+      stop("The number of provided colors does not match the number of labels.")
+    }
+  }
 
   if(integration_method == "unintegrated"){
     umap_name <- "UMAP"
