@@ -38,6 +38,8 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
 })
 
+source(file.path(project_root, "scripts", "utils", "rms-celltype-helper-functions.R"))
+
 # Set up optparse options
 option_list <- list(
   make_option(
@@ -93,33 +95,6 @@ integrated_sce_file_list <- list(
   integrated_pdx_obj_file
 )
 
-# function that checks that integrated files exist, and grabs coldata  
-grab_integrated_metadata <- function(integrated_file){
-  
-  if(!file.exists(integrated_file)){
-    stop(paste("--rms_seurat_dir must contain integrated seurat object file:", basename(integrated_file)))
-  }
-  
-  # read in integrated object 
-  integrated_seurat_obj <- readr::read_rds(integrated_file)
-  
-  # grab coldata as dataframe 
-  coldata_df <- as.data.frame(integrated_seurat_obj@meta.data) %>%
-    tibble::rownames_to_column("unique_cell_id") %>%
-    dplyr::select(unique_cell_id, # sample id + barcode
-                  orig.ident, # original sample id
-                  Sample,
-                  cell.cluster.ids, # tumor or malignant
-                  SJID, # corresponding submitter ID
-                  annot.clusters) # annotated tumor cell types
-  
-  # remove integrated object to save space 
-  rm(integrated_seurat_obj)
-  
-  return(coldata_df)
-  
-}
-
 # create a combined dataframe with all coldata from integrated objects 
 all_integrated_coldata <- integrated_sce_file_list %>%
   purrr::map(grab_integrated_metadata) %>%
@@ -156,77 +131,6 @@ if(length(missing_sce_files) > 0){
              
              "))
   
-}
-
-# function to read in sce object and seurat object and grab cell type information 
-# export modified sce object 
-
-add_celltype <- function(sce_processed_filepath, 
-                         seurat_filepath, 
-                         library_biomaterial_id, 
-                         submitter_id, 
-                         all_integrated_coldata){
-  
-  # find seurat obj 
-  if(!file.exists(seurat_filepath)){
-    has_seurat <- FALSE
-    glue::glue("
-               No seurat object found for library ID: {library_biomaterial_id} with submitter ID: {submitter_id}.
-               ")
-  } else {
-    has_seurat <- TRUE
-  }
-  
-  # check if submitter_id in SJID column of all_coldata
-  if(submitter_id %in% unique(all_integrated_coldata$SJID)){
-    has_tumor_subtypes <- TRUE
-  } else {
-    # if not in integrated data then no subtypes for tumor cells can be found
-    has_tumor_subtypes <- FALSE
-  }
-  
-  # read in SCE object 
-  sce <- readr::read_rds(sce_processed_filepath)
-  sce_coldata <- as.data.frame(colData(sce)) %>%
-    tibble::rownames_to_column("barcode")
-  
-  if(has_seurat){
-    
-    # read in seurat object 
-    seurat_obj <- readr::read_rds(seurat_filepath)
-    seurat_coldata <- as.data.frame(seurat_obj@meta.data) %>%
-      tibble::rownames_to_column("unique_cell_id") %>%
-      dplyr::select(unique_cell_id,
-                    "celltype" = cell.cluster.ids) %>%
-      dplyr::mutate(barcode = stringr::word(unique_cell_id, -1, sep = "-"))
-    
-    # join with integrated coldata only if tumor subtypes exist 
-    if(has_tumor_subtypes){
-      seurat_coldata <- seurat_coldata %>%
-        dplyr::left_join(all_integrated_coldata) %>%
-        dplyr::mutate(celltype = ifelse(celltype == "Tumor", paste(celltype, annot.clusters, sep = "_"), cell.cluster.ids))
-    }
-    
-    # select only desired columns for joining
-    seurat_coldata <- seurat_coldata %>%
-      dplyr::select(barcode, celltype)
-    
-    # join celltype information from seurat object with coldata from sce object 
-    sce_coldata <- sce_coldata %>%
-      dplyr::left_join(seurat_coldata)
-    
-  } else {
-    # set celltype to NA if no seurat object is found for this submitter ID and therefore no celltype 
-    sce_coldata <- sce_coldata %>%
-      dplyr::mutate(celltype = NA)
-  }
-  # add coldata back to SCE object 
-  colData(sce) <- DataFrame(sce_coldata, row.names = sce_coldata$barcode)
-  
-  # export rds file with annotated celltype 
-  celltype_sce_filepath <- file.path(opt$celltype_sce_dir, paste0(library_biomaterial_id, "_processed_celltype.rds"))
-  readr::write_rds(sce, celltype_sce_filepath)
-
 }
 
 # get celltype data for each entry in library metadata from scpca
