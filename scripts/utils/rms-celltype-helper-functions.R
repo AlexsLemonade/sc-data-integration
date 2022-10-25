@@ -14,11 +14,6 @@ grab_integrated_metadata <- function(integrated_file){
   # read in integrated object 
   integrated_seurat_obj <- readr::read_rds(integrated_file)
   
-  # check that all columns are included as columns in the meta.data
-  if(!metadata_cols %in% colnames(integrated_seurat_obj@meta.data)){
-    stop("metadata_cols must be columns in the meta.data of the seurat object.")
-  }
-  
   # grab coldata as dataframe 
   coldata_df <- as.data.frame(integrated_seurat_obj@meta.data) %>%
     tibble::rownames_to_column("unique_cell_id") %>%
