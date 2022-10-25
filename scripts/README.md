@@ -169,6 +169,7 @@ Prior to performing integration with this dataset, the filtered SCE objects (out
 These processed SCE objects are in the S3 bucket, `s3://sc-data-integration/scpca/scpca-downstream-analyses`.
 
 The following commands are used in this order to generate the SCE objects with added celltype information.
+Note that your system must have >=16GB RAM to run the third script, `add-rms-celltypes.R`.
 
 ```
 # step 1: obtain filtered sce objects from S3 corresponding to SCPCP00005
@@ -183,7 +184,7 @@ bash 01-run-downstream-analyses.sh \
   --mito_file <full path to scpca-downstream-repo/reference-files/Homo.sapiens.GRCh38.104.mitogenes.txt>
   --downstream_metadata_file <full path to sample-info/scpca-downstream-metadata.tsv>
 
-# step 3 add celltype column to metadata
+# step 3: add celltype column to metadata
 Rscript add-rms-celltypes.R
 ```
 
