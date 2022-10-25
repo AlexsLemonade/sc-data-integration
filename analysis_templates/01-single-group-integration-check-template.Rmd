@@ -6,6 +6,7 @@ params:
   integration_methods: !r as.vector(c("fastmnn", "harmony", "cca", "rpca"))
   batch_column: "batch"
   celltype_column: "celltype"
+  max_celltypes: 5
   num_pcs: 20
   ari_k_min: 5
   ari_k_max: 25
@@ -14,7 +15,6 @@ params:
   k0_fraction_max: 0.25
   k0_fraction_increment: 0.05
   seed: 2022
-  asw_separate_celltypes: FALSE
   date: !r Sys.Date()
 
 title: "`r glue::glue('Integration evaluation for {params$group_name}')`"
@@ -71,12 +71,6 @@ knitr::knit_hooks$set(
            '</div>', sep = '\n')
    }
 )
-
-# Ensure logical
-asw_separate_celltypes <- as.logical(toupper(params$asw_separate_celltypes))
-if (!(asw_separate_celltypes) %in% c(TRUE, FALSE)) {
-  stop("\nCould not read the asw_separate_celltypes` parameter.")
-}
 ```
 
 
@@ -192,7 +186,9 @@ if(params$celltype_column %in% coldata_names){
   } 
   
   # Prepare celltypes for inclusion in plots, using the unintegrated SCE
-  celltype_setup <- setup_plot_celltypes(sce_list$unintegrated)
+  celltype_setup <- setup_plot_celltypes(sce_list$unintegrated, 
+                                         cell_label_column = params$celltype_column,
+                                         max_celltypes = params$max_celltypes)
   
   # Define colors as standalone variable:
   celltype_colors <- celltype_setup$celltype_colors
@@ -206,6 +202,16 @@ if(params$celltype_column %in% coldata_names){
   }
   sce_list <- purrr::map(sce_list, add_celltype_names, celltype_setup$celltype_plot_names)
   
+  # Print a warning with information about cell type reduction, if reduced
+  if (!(all(sce_list$unintegrated$celltype == sce_list$unintegrated$celltype_plot_names))) {
+    warning(
+      glue::glue(
+        'There are more cell types in this data than can be displayed in plots.
+        Only the top {params$max_celltypes} cell types are explicitly shown in applicable plots. All remaining cell types are collectively designated as "other".
+        '
+      )
+    )
+  }
 } else {
   celltypes_present <- FALSE
   warning("No cell type information found for this dataset. Cannot make UMAPs annotated with cell type or evaluate cell type mixing.")
@@ -223,6 +229,7 @@ batch_umaps <- names(sce_list) %>%
                                      integration_method = .x,
                                      params$group_name,
                                      cell_label_column = params$batch_column,
+                                     legend_title = "Batches",
                                      seed = params$seed))
 batch_legend <- cowplot::get_legend(batch_umaps[[1]])
   
@@ -246,6 +253,7 @@ if(celltypes_present){
                                        integration_method = .x,
                                        params$group_name,
                                        cell_label_column = "celltype_plot_names", # this column includes plotting celltypes
+                                       legend_title = "Cell types",
                                        seed = params$seed))
   
   celltype_legend <- cowplot::get_legend(celltype_umaps[[1]])
