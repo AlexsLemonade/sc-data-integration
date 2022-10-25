@@ -162,7 +162,7 @@ bash 01-run-downstream-analyses.sh \
 
 ### Preparing SCPCP000005 for data integration
 
-The ScPCA project, `SCPCP000005`, has cell type information available that is already published to be used to evaluate integration.
+The ScPCA project, `SCPCP000005`, has cell type information available that is already published to be used to evaluate integration([Patel _et al_. 2022](https://doi.org/10.1016/j.devcel.2022.04.003)).
 The cell type information can be found in the metadata of the Seurat objects found in the s3 bucket, `s3://sc-data-integration/scpca/rms-dyer-seurat`.
 
 Prior to performing integration with this dataset, the filtered SCE objects (output from `scpca-nf`) are processed through `scpca-downstream-analyses` and then `celltype` is added to the `colData` of the SCE object.
