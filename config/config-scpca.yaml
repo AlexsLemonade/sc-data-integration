@@ -9,5 +9,3 @@ pepfile: "sample-info/scpca-project-pep.yaml"
 
 # cell type information parameters
 add_celltype: false
-
-grouping_var: "scpca_project_id"

@@ -62,6 +62,15 @@ option_list <- list(
     and merging."
   ),
   make_option(
+    opt_str = c("--groups_to_integrate"),
+    type = "character",
+    default = "All",
+    help = "Groups present in `grouping_var` column of metadata file to create merged SCE objects for.
+      Default is 'All' which produces a merged object for each group in the metadata file. 
+      Specify groups by using a comma separated list, e.g. 'group1,group2'"
+  )
+  ,
+  make_option(
     opt_str = c("--add_celltype"),
     action = "store_true",
     default = FALSE,
@@ -133,8 +142,6 @@ if(!file.exists(opt$library_file)){
 
 # read in library metadata and grab unfiltered sce file paths
 library_metadata_df <- readr::read_tsv(opt$library_file)
-library_ids <- library_metadata_df %>%
-  dplyr::pull(library_biomaterial_id)
 
 # check that cell type file exists if using add_celltype option 
 if(opt$add_celltype){
@@ -149,6 +156,31 @@ if(opt$add_celltype){
 if(!opt$grouping_var %in% colnames(library_metadata_df)){
   stop("Must provide a grouping_var that is a column in the library metadata file.")
 }
+
+# define groups to integrate
+groups <- library_metadata_df %>%
+  dplyr::pull(opt$grouping_var) %>%
+  unique()
+
+if(opt$groups_to_integrate == "All"){
+  groups_to_integrate <- groups
+} else {
+  groups_to_integrate <- unlist(stringr::str_split(opt$groups_to_integrate, ","))
+  
+  # check that specified groups are present in grouping_var column 
+  if(!any(groups_to_integrate %in% groups)){
+    stop("Provided `--groups_to_integrate` must also be present in the `--grouping_var` colum of 
+         the library metadata file.")
+  }
+}
+
+# subset metadata file to only contain groups to integrate 
+library_metadata_df <- library_metadata_df %>%
+  dplyr::filter(.data[[opt$grouping_var]] %in% groups_to_integrate)
+
+# grab library ids 
+library_ids <- library_metadata_df %>%
+  dplyr::pull(library_biomaterial_id)
 
 # check that num genes provided is an integer
 if(!is.integer(opt$num_genes)){
