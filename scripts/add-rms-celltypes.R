@@ -14,7 +14,7 @@
 # the tumor cell subtype. This script combines the results in both of those columns in one singular 
 # `celltype` column classifying cells as tumor/non-tumor and by tumor subtype
 
-# Note: Not all libraries present and submitted to ScPCA contain cell type information
+# Note: Not all SCPCP000005 libraries present and submitted to ScPCA contain cell type information
 # If a seurat object is missing and therefore there is no cell type information, the `celltype`
 # column is populated with `NA`
 
@@ -26,7 +26,7 @@
 # --celltype_sce_dir: Full path to folder where all sce files containing celltypes are stored
 # --rms_seurat_dir: Full path to folder storing local copy of Seurat objects for RMS data
 
-#load the R project by finding the root directory using `here::here()`
+# load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
 renv::load(project_root)
 
@@ -47,7 +47,7 @@ option_list <- list(
     type = "character",
     default = file.path(project_root, "sample-info", "rms-processed-libraries.tsv"),
     help = "path to metadata file listing all libraries that celltype information should be added to.
-      This file should be specific to the RMS data from the Dyer/Chen project."
+      This file must correspond to the RMS data from the Dyer/Chen project."
   ),
   make_option(
     opt_str = c("--processed_sce_dir"),
