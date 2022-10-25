@@ -165,10 +165,10 @@ bash 01-run-downstream-analyses.sh \
 The ScPCA project, `SCPCP000005`, has cell type information available that is already published to be used to evaluate integration.
 The cell type information can be found in the metadata of the Seurat objects found in the s3 bucket, `s3://sc-data-integration/scpca/rms-dyer-seurat`.
 
-Prior to performing integration with this dataset, the filtered SCE objects (output from `scpca-nf`) were processed through `scpca-downstream-analyses` and then celltype was added to the `colData` of the SCE object.
+Prior to performing integration with this dataset, the filtered SCE objects (output from `scpca-nf`) are processed through `scpca-downstream-analyses` and then `celltype` is added to the `colData` of the SCE object.
 These processed SCE objects are in the S3 bucket, `s3://sc-data-integration/scpca/scpca-downstream-analyses`.
 
-The following commands were used in this order to generate the SCE objects with added celltype information (from the scripts directory):
+The following commands are used in this order to generate the SCE objects with added celltype information.
 
 ```
 # step 1: obtain filtered sce objects from S3 corresponding to SCPCP00005
@@ -187,7 +187,7 @@ bash 01-run-downstream-analyses.sh \
 Rscript add-rms-celltypes.R
 ```
 
-If using the defauls in `add-rms-celltypes.R`, the SCE objects with the new `celltype` column will be stored in `results/scpca/celltype_sce`.
+If using the defaults in `add-rms-celltypes.R`, the SCE objects with the new `celltype` column will be stored in `results/scpca/celltype_sce`.
 These can also be found in the S3 bucket, `s3://sc-data-integration/scpca/celltype_sce`.
 
 
