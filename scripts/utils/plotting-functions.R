@@ -60,6 +60,7 @@ setup_plot_celltypes <- function(sce,
 #' @param plot_colors Vector of colors to use for labeling cells. Must be
 #'   equivalent to the number of categories present in the cell_label_column.
 #' @param plot_title Title to use for the plot
+#' @param legend_title Legend title for colors to include in plot
 #' @param seed Random seed to set prior to shuffling SCE object
 #'
 #' @return ggplot2 object containing UMAP
@@ -69,6 +70,7 @@ plot_umap_panel <- function(sce,
                             umap_name,
                             plot_colors,
                             plot_title = NULL, 
+                            legend_title = NULL,
                             seed = NULL){
   
   set.seed(seed)
@@ -95,10 +97,13 @@ plot_umap_panel <- function(sce,
     guides(color = guide_legend(title = cell_label_column,
                                 override.aes = list(size = 3),
                                 label.theme = element_text(size = 16))) +
-    theme(legend.position = "none") +
-    theme(text = element_text(size = 14),
+    theme(legend.position = "none",
+          text = element_text(size = 14),
           legend.title = element_text(size = 16)) +
-    ggtitle(plot_title)
+    labs(
+      title = plot_title, 
+      color = legend_title
+    )
 
   return(umap)
 }
@@ -113,6 +118,7 @@ plot_umap_panel <- function(sce,
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
 #' @param group_name Name to use to describe all libraries grouped together in integrated object
 #' @param cell_label_column Column to use for labeling cells in UMAPs
+#' @param legend_title Legend title for colors to include in plot
 #' @param plot_colors Optional vector of colors to use in plot.
 #' @param seed Random seed to use for randomizing plotting in UMAPs
 #'
@@ -123,6 +129,7 @@ plot_integration_umap <- function(sce,
                                   integration_method,
                                   group_name,
                                   cell_label_column,
+                                  legend_title,
                                   plot_colors = NULL,
                                   seed = NULL) {
 
@@ -132,42 +139,7 @@ plot_integration_umap <- function(sce,
   if(!cell_label_column %in% colnames(colData(sce))){
     stop("Provided cell_label_column should be present in the SCE object.")
   }
-
-  # if using celltype, we only want to label the top `max_celltypes`
-  if(cell_label_column == "celltype"){
-    
-    # make sure that NA is actually set to NA, specifically a problem for python methods 
-    colData(sce)[[cell_label_column]][which(colData(sce)[[cell_label_column]] == "NA")] <- NA_character_
-    
-    # only need to relabel if > `max_celltypes` exist
-    num_celltypes <- length(unique(colData(sce)[,cell_label_column]))
-    if(num_celltypes > max_celltypes){
-
-      coldata_df <- colData(sce) %>%
-        as.data.frame() %>%
-        # make sure that celltype is a character vector and not a Factor
-        # this can happen if converting from AnnData and will cause errors later on
-        dplyr::mutate(celltype = as.character(celltype))
-
-      # select top `max_celltypes` cell types based on frequency
-      selected_celltypes <- coldata_df[,cell_label_column] %>%
-        table() %>%
-        as.data.frame() %>%
-        dplyr::arrange(desc(Freq)) %>%
-        dplyr::top_n(max_celltypes) %>%
-        dplyr::pull(".") %>%
-        as.character()
-
-      # if not in top cell types set to "other" for both merged and integrated SCE
-      coldata_df <- coldata_df %>%
-        # first label everything outside of selected celltypes as other then if NA convert back to NA
-        dplyr::mutate(new_celltype = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"),
-                      celltype = dplyr::if_else(!is.na(celltype), new_celltype, NA_character_)) %>%
-        dplyr::select(-new_celltype)
-
-      colData(sce) <- DataFrame(coldata_df)
-    }
-  }
+  
   # Define colors if not provided, or if provided check the size
   if (is.null(plot_colors)) {
     num_colors <- length(unique(sce[[cell_label_column]]))
@@ -190,6 +162,7 @@ plot_integration_umap <- function(sce,
                           umap_name = umap_name,
                           plot_colors,
                           plot_title = integration_method,
+                          legend_title = legend_title,
                           seed = seed)
 
   return(umap)
