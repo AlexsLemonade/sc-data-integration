@@ -43,7 +43,7 @@ grab_integrated_metadata <- function(integrated_file){
 #'
 #' @return Exports SCE object with additional celltype column and returns modified colData
 
-add_celltype <- function(sce_processed_filepath, 
+add_celltype_to_sce <- function(sce_processed_filepath, 
                          seurat_filepath, 
                          library_biomaterial_id, 
                          submitter_id, 

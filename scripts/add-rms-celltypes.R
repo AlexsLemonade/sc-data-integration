@@ -136,6 +136,6 @@ if(length(missing_sce_files) > 0){
 # get celltype data for each entry in library metadata from scpca
 library_metadata_df %>%
   dplyr::select(sce_processed_filepath, seurat_filepath, library_biomaterial_id, submitter_id) %>%
-  purrr::pwalk(add_celltype,
+  purrr::pwalk(add_celltype_to_sce,
                all_integrated_coldata = all_integrated_coldata)
 
