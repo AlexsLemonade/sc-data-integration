@@ -220,12 +220,14 @@ set_integration_order <- function(metrics_df,
 #' @param seed for sina plot reproducibility
 #' @param by_batch Whether to take the average and color by the batch
 #' @param batch_label Label to include in plot for batch, if by_batch is TRUE
+#' @param plot_colors Optional vector of colors to use
 #' 
 #' @return ggplot object
 plot_asw <- function(asw_df,
                      seed = seed, 
                      by_batch, 
-                     batch_label) {
+                     batch_label, 
+                     plot_colors = NULL) {
 
   # Set seed if given
   set.seed(seed)
@@ -254,7 +256,7 @@ plot_asw <- function(asw_df,
       aes(x = integration_method_factor,
           y = asw, 
           color = silhouette_cluster) +
-      ggforce::geom_sina(size = 1, alpha = 0.7,
+      ggforce::geom_sina(size = 1, alpha = 0.5,
                          position = position_dodge(width = 0.5)) +
       # add median/IQR pointrange to plot
       stat_summary(
@@ -270,8 +272,15 @@ plot_asw <- function(asw_df,
         geom = "pointrange",
         position = position_dodge(width = 0.5),
         size = 0.2
-      ) +
-      ggokabeito::scale_color_okabe_ito(name = batch_label) 
+      ) 
+    
+    if (is.null(plot_colors)) {
+      asw_plot <- asw_plot + 
+        ggokabeito::scale_color_okabe_ito(name = batch_label) 
+    } else {
+      asw_plot <- asw_plot + 
+        scale_color_manual(name = batch_label, values = plot_colors)  
+    }
   } else { 
     # or without batch grouping/coloring
     asw_plot <- asw_df_updated %>%

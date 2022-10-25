@@ -399,11 +399,12 @@ Results below (if present) are shown first for all cell types together, and then
 
 ```{r, fig.height=5, fig.width=7}
 if (celltypes_present) {
-  # Not separated
-  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = FALSE) # Provide ALL celltypes here
+  # Not separated; provide ALL celltypes here
+  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = FALSE) 
   print(asw_results$asw_plot)
   
-  asw_results <- run_asw(sce_list, "celltype_plot_names", params$seed, by_batch = TRUE, batch_label = "Cell type") # Provide only the subtypes to plot here
+  # Separated; provide only the subtypes to plot here and their colors
+  asw_results <- run_asw(sce_list, "celltype_plot_names", params$seed, by_batch = TRUE, batch_label = "Cell type", plot_colors = celltype_colors) 
   print(asw_results$asw_plot)
 } else {
   warning("No cell types are present, so cell type ASW will not be evaluated.")
