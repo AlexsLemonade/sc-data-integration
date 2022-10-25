@@ -1,13 +1,18 @@
 configfile: "config/config.yaml"
 pepfile: config['pepfile']
 
+if config['groups_to_integrate'] == "All":
+    PROJECT = pep.sample_table["project_name"]
+else:
+    PROJECT = config['groups_to_integrate']
+
 rule target:
     input:
         expand(os.path.join(config['results_dir'], "integrated_sce/{project}_integrated_{integration_methods}_sce.rds"),
-               project = pep.sample_table["project_name"],
+               project = PROJECT,
                integration_methods = config["integration_methods"]),
         expand(os.path.join(config['results_dir'], "analysis_reports/{project}_integration_report.html"),
-               project = pep.sample_table["project_name"])
+               project = PROJECT)
 
 
 # Rule used for building conda & renv environment
