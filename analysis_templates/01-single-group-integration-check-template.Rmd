@@ -172,7 +172,7 @@ if(!is.null(missing_umap)){
       "))
 }
 
-# Check whether celltype information is available
+# Check whether celltype information is available, and prepare if so
 if(params$celltype_column %in% coldata_names){
   # Set variable to TRUE
   celltypes_present <- TRUE
@@ -189,7 +189,23 @@ if(params$celltype_column %in% coldata_names){
         Cells without annotations are not considered in calculations or visualizations that assess cell type mixing.
       ")
     )
+  } 
+  
+  # Prepare celltypes for inclusion in plots, using the unintegrated SCE
+  celltype_setup <- setup_plot_celltypes(sce_list$unintegrated)
+  
+  # Define colors as standalone variable:
+  celltype_colors <- celltype_setup$celltype_colors
+  
+  
+  # Add `celltype_names` into all SCEs
+  # helper function:
+  add_celltype_names <- function(sce, celltype_plot_names) {
+    sce$celltype_plot_names <- celltype_plot_names
+    return(sce)
   }
+  sce_list <- purrr::map(sce_list, add_celltype_names, celltype_setup$celltype_plot_names)
+  
 } else {
   celltypes_present <- FALSE
   warning("No cell type information found for this dataset. Cannot make UMAPs annotated with cell type or evaluate cell type mixing.")
@@ -204,18 +220,18 @@ if(params$celltype_column %in% coldata_names){
 # create umap plots labeling by batch column
 batch_umaps <- names(sce_list) %>%
   purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
-                                      integration_method = .x,
+                                     integration_method = .x,
                                      params$group_name,
                                      cell_label_column = params$batch_column,
                                      seed = params$seed))
-  batch_legend <- cowplot::get_legend(batch_umaps[[1]])
+batch_legend <- cowplot::get_legend(batch_umaps[[1]])
   
-  ggpubr::ggarrange(plotlist = batch_umaps,
-                    common.legend = TRUE, 
-                    legend = "right",
-                    legend.grob = batch_legend, 
-                    ncol = 2, 
-                    nrow = 4) 
+ggpubr::ggarrange(plotlist = batch_umaps,
+                  common.legend = TRUE, 
+                  legend = "right",
+                  legend.grob = batch_legend, 
+                  ncol = 2, 
+                  nrow = 4) 
 ```
 
 
@@ -229,7 +245,7 @@ if(celltypes_present){
     purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
                                        integration_method = .x,
                                        params$group_name,
-                                       cell_label_column = params$celltype_column,
+                                       cell_label_column = "celltype_plot_names", # this column includes plotting celltypes
                                        seed = params$seed))
   
   celltype_legend <- cowplot::get_legend(celltype_umaps[[1]])
