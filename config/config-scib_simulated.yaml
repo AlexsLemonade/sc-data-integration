@@ -12,3 +12,4 @@ add_celltype: false
 
 # params for scvi only
 continuous_covariates: None
+
