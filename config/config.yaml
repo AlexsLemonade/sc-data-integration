@@ -20,4 +20,6 @@ continuous_covariates: "subsets_mito_percent"
 # how many dimensions to return in the latent space
 num_latent: 20
 
+# specify which projects to run through the workflow
+# to run a subset of projects use a list '["1M_Immune_Cells", "HumanBrainSubstantiaNigra"]'
 groups_to_integrate: "All"
