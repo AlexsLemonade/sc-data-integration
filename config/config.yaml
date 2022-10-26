@@ -7,6 +7,7 @@ pepfile: "sample-info/hca-project-pep.yaml"
 # cell type information paramaters
 add_celltype: true
 celltype_file: "sample-info/hca-celltype-info.tsv"
+max_celltypes: 5
 
 # workflow paramters
 seed: 2022
