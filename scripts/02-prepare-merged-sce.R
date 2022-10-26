@@ -67,7 +67,7 @@ option_list <- list(
     default = "All",
     help = "Groups present in `grouping_var` column of metadata file to create merged SCE objects for.
       Default is 'All' which produces a merged object for each group in the metadata file. 
-      Specify groups by using a comma separated list, e.g. 'group1,group2'"
+      Specify groups by using a vector, e.g. c('group1','group2')"
   )
   ,
   make_option(
@@ -162,10 +162,12 @@ groups <- library_metadata_df %>%
   dplyr::pull(opt$grouping_var) %>%
   unique()
 
-if(opt$groups_to_integrate == "All"){
+# check that groups to integrate isn't set to All 
+if(length(opt$groups_to_integrate) == 1 && (opt$groups_to_integrate == "All")){
   groups_to_integrate <- groups
 } else {
-  groups_to_integrate <- unlist(stringr::str_split(opt$groups_to_integrate, ","))
+  # if All is not used then unlist groups, using space, needed to parse a list from snakemake
+  groups_to_integrate <- unlist(stringr::str_split(opt$groups_to_integrate, " "))
   
   # check that specified groups are present in grouping_var column 
   if(!any(groups_to_integrate %in% groups)){
