@@ -6,13 +6,11 @@ params:
   integration_methods: !r as.vector(c("fastmnn", "harmony", "cca", "rpca"))
   batch_column: "batch"
   celltype_column: "celltype"
+  max_celltypes: 5
   num_pcs: 20
   ari_k_min: 5
   ari_k_max: 25
   ari_k_increment: 5
-  k0_fraction_min: 0.05
-  k0_fraction_max: 0.25
-  k0_fraction_increment: 0.05
   seed: 2022
   date: !r Sys.Date()
 
@@ -165,7 +163,7 @@ if(!is.null(missing_umap)){
       "))
 }
 
-# Check whether celltype information is available
+# Check whether celltype information is available, and prepare if so
 if(params$celltype_column %in% coldata_names){
   # Set variable to TRUE
   celltypes_present <- TRUE
@@ -182,6 +180,32 @@ if(params$celltype_column %in% coldata_names){
         Cells without annotations are not considered in calculations or visualizations that assess cell type mixing.
       ")
     )
+  } 
+  
+  # Prepare new column `celltype_plot_names` in SCE to contain celltypes 
+  #  as they should be shown in relevant plots
+  sce_list <- purrr::map(sce_list, 
+     ~setup_celltype_plot_names(
+      .x, 
+      celltype_column = params$celltype_column,
+      max_celltypes = params$max_celltypes)
+  )
+  
+  # Prepare colors for celltypes as a stand-alone variable, based on unintegrated SCE
+  celltype_colors <- sce_list$unintegrated$celltype_plot_names %>%
+    unique() %>%
+    length() %>%
+    rainbow()
+  
+  # Print a warning with information about cell type reduction, if reduced
+  if (!(all(sce_list$unintegrated$celltype == sce_list$unintegrated$celltype_plot_names))) {
+    warning(
+      glue::glue(
+        'There are more cell types in this data than can be displayed in plots.
+        Only the top {params$max_celltypes} cell types are explicitly shown in applicable plots. All remaining cell types are collectively designated as "other".
+        '
+      )
+    )
   }
 } else {
   celltypes_present <- FALSE
@@ -197,18 +221,19 @@ if(params$celltype_column %in% coldata_names){
 # create umap plots labeling by batch column
 batch_umaps <- names(sce_list) %>%
   purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
-                                      integration_method = .x,
+                                     integration_method = .x,
                                      params$group_name,
                                      cell_label_column = params$batch_column,
+                                     legend_title = "Batches",
                                      seed = params$seed))
-  batch_legend <- cowplot::get_legend(batch_umaps[[1]])
+batch_legend <- cowplot::get_legend(batch_umaps[[1]])
   
-  ggpubr::ggarrange(plotlist = batch_umaps,
-                    common.legend = TRUE, 
-                    legend = "right",
-                    legend.grob = batch_legend, 
-                    ncol = 2, 
-                    nrow = 4) 
+ggpubr::ggarrange(plotlist = batch_umaps,
+                  common.legend = TRUE, 
+                  legend = "right",
+                  legend.grob = batch_legend, 
+                  ncol = 2, 
+                  nrow = 4) 
 ```
 
 
@@ -222,7 +247,8 @@ if(celltypes_present){
     purrr::map(~ plot_integration_umap(sce = sce_list[[.x]],
                                        integration_method = .x,
                                        params$group_name,
-                                       cell_label_column = params$celltype_column,
+                                       cell_label_column = "celltype_plot_names", # this column includes plotting celltypes
+                                       legend_title = "Cell types",
                                        seed = params$seed))
   
   celltype_legend <- cowplot::get_legend(celltype_umaps[[1]])
@@ -371,12 +397,12 @@ Results below (if present) are shown first for all cell types together, and then
 
 ```{r, fig.height=5, fig.width=7}
 if (celltypes_present) {
-  # Not separated
-  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = FALSE)
+  # Not separated; provide ALL celltypes here
+  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = FALSE) 
   print(asw_results$asw_plot)
   
-  # Separated
-  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = TRUE, batch_label = "Cell type")
+  # Separated; provide only the subtypes to plot here and their colors
+  asw_results <- run_asw(sce_list, "celltype_plot_names", params$seed, by_batch = TRUE, batch_label = "Cell type", plot_colors = celltype_colors) 
   print(asw_results$asw_plot)
 } else {
   warning("No cell types are present, so cell type ASW will not be evaluated.")
