@@ -183,21 +183,11 @@ if(params$celltype_column %in% coldata_names){
   } 
   
   # Prepare celltypes for inclusion in plots, using the unintegrated SCE
-  celltype_setup <- setup_plot_celltypes(sce_list$unintegrated, 
-                                         cell_label_column = params$celltype_column,
-                                         max_celltypes = params$max_celltypes)
-  
-  # Define colors as standalone variable:
-  celltype_colors <- celltype_setup$celltype_colors
-  
-  
-  # Add `celltype_names` into all SCEs
-  # helper function:
-  add_celltype_names <- function(sce, celltype_plot_names) {
-    sce$celltype_plot_names <- celltype_plot_names
-    return(sce)
-  }
-  sce_list <- purrr::map(sce_list, add_celltype_names, celltype_setup$celltype_plot_names)
+  sce_list <- purrr::map(sce_list, 
+    ~ setup_plot_celltypes(.x, 
+    cell_label_column = params$celltype_column,
+    max_celltypes = params$max_celltypes))
+ 
   
   # Print a warning with information about cell type reduction, if reduced
   if (!(all(sce_list$unintegrated$celltype == sce_list$unintegrated$celltype_plot_names))) {
