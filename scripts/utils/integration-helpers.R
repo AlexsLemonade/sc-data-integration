@@ -5,6 +5,56 @@ suppressPackageStartupMessages({
   library(magrittr)
 })
 
+
+
+#' Find all nested files in a given downstream analyses output directory. If 
+#'   some files are missing, this function will throw an error and prompt users to
+#'   run downstream analyses.
+#'
+#' @param sce_dir downstream analyses output directory
+#' @param library_ids Vector of nested result directory names which corresponds
+#'  to library IDs
+#'
+#' @return Vector of all downstream analyses outputted SCE files, unless an error is thrown.
+find_downstream_sce_files <- function(library_ids, sce_dir) {
+
+  # find SCE files that match library ID
+  library_search <- paste(library_ids, collapse = "|")
+  all_library_files <- list.files(sce_dir,
+                                  pattern = library_search,
+                                  recursive = TRUE,
+                                  full.names = TRUE)
+  # just include RDS files, otherwise HTML files will also be found
+  sce_files <- all_library_files[grep(pattern = ".rds", all_library_files, ignore.case = TRUE)]
+  
+  # if the number of sce files is different then the library ID's find the missing files
+  if(length(sce_files) < length(library_ids)){
+    
+    libraries_found <- stringr::str_extract(sce_files, library_search)
+    missing_libraries <- setdiff(library_ids, libraries_found)
+    
+    stop(
+      glue::glue(
+        "\nMissing SCE object for {missing_libraries}.
+      Make sure that you have run `01-run-downstream-analyses.sh`."
+      )
+    )
+  }
+  
+  
+  # Return sce_files
+  return(sce_files)
+}
+
+
+
+
+
+
+
+
+
+
 #' Combine two or more SCE objects
 #'
 #' This function combines one or more SCE objects into a single SCE object, with
