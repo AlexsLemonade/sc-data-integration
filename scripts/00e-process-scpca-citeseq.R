@@ -164,6 +164,11 @@ process_citeseq_counts <- function(input_sce,
     altExp(sce, citeseq_name) <- scater::logNormCounts(altExp(sce, citeseq_name), 
                                                        size.factors = size_factors)
     
+    # Double check we actually did get a `logcounts` assay in there
+    if (!("logcounts" %in% assayNames(altExp(sce, citeseq_name)))) {
+      stop("Error in CITE-seq processing: Normalized counts are missing.")
+    }
+    
     # Double check that the number of cells matches in RNA and CITE, just in case
     if (!(all(colnames(sce) == colnames(altExp(sce, citeseq_name))))) {
       stop("Error in CITE-seq processing: Final RNA cell barcodes don't match ADT barcodes.")
