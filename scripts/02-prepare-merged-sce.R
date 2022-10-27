@@ -115,14 +115,6 @@ option_list <- list(
     help = "Number of highly variable genes to select."
   ),
   make_option(
-    opt_str = c("--sce_dir"),
-    type = "character",
-    default = file.path(project_root, "results", "human_cell_atlas", "scpca-downstream-analyses"),
-    help = "Path to folder where SCE objects to be converted are stored,
-    each file should contain the library ID in the filename and be stored as an RDS file.
-    Typically this is the output from running scpca-downstream-analyses"
-  ),
-  make_option(
     opt_str = c("--merged_sce_dir"),
     type = "character",
     default = file.path(project_root, "results", "human_cell_atlas", "merged_sce"),
@@ -196,12 +188,29 @@ if(!dir.exists(opt$merged_sce_dir)){
 
 # Identify SCE files -----------------------------------------------------------
 
+# grab all unique directories corresponding to projects considered for integration
+input_sce_dirs <- library_metadata_df %>%
+  dplyr::pull(integration_input_dir) %>%
+  unique()
+
+# small function to search based on input directory and provided pattern
+perform_sce_file_search <- function(input_dir,
+                                    library_pattern){
+  library_files <- list.files(input_dir,
+                              pattern = library_pattern,
+                              recursive = TRUE,
+                              full.names = TRUE)
+  return(library_files)
+}
+
 # find SCE files that match library ID
 library_search <- paste(library_ids, collapse = "|")
-all_library_files <- list.files(opt$sce_dir,
-                        pattern = library_search,
-                        recursive = TRUE,
-                        full.names = TRUE)
+
+# search for files in all provided input directories to grab full paths 
+all_library_files <- purrr::map(input_sce_dirs, 
+                                ~ (perform_sce_file_search(input_dir = .x, library_pattern = library_search))) %>%
+  unlist()
+
 # just include RDS files, otherwise HTML files will also be found
 sce_files <- all_library_files[grep(pattern = ".rds", all_library_files, ignore.case = TRUE)]
 
