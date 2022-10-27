@@ -10,7 +10,9 @@ The `utils/` directory contains functions used within these scripts and is separ
 - [Obtaining `SingleCellExperiment` objects](#obtaining-singlecellexperiment-objects)
 - [Re-formatting cell type information](#re-formatting-cell-type-information)
   - [Special considerations for cell type information](#special-considerations-for-cell-type-information)
+  - [Simulation `SingleCellExperiment` objectss](#simulation-singlecellexperiment-objectss)
 - [Running HCA test datasets through `scpca-downstream-analyses`](#running-hca-test-datasets-through-scpca-downstream-analyses)
+- [Preparing ScPCA test datasets for integration](#preparing-scpca-test-datasets-for-integration)
   - [Generating the mitochondrial gene list](#generating-the-mitochondrial-gene-list)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -75,16 +77,16 @@ The ID submitted by the user in the cell type file was mapped to the `library_bi
 
 ### Simulation `SingleCellExperiment` objectss
 
-We additionally process several simulated datasets, referred to as `scib_simulated`, in the pipeline. 
+We additionally process several simulated datasets, referred to as `scib_simulated`, in the pipeline.
 To prepare simulation data for use in the pipeline, there are two scripts which are run:
 
 - `00b-obtain-sim-sce.R`, which prepares two simulated projects `sim1` and `sim2` for `scpca-downstream-analyses` input by converting them from H5 to RDS files with normalized SCE objects, and batches are further split into separate RDS files.
-- `00c-create-sim-subsets.R` prepares three additional simulation projects derived from `sim1`: `sim1a`, `sim1b`, and `sim1c`. 
+- `00c-create-sim-subsets.R` prepares three additional simulation projects derived from `sim1`: `sim1a`, `sim1b`, and `sim1c`.
 The script saves additional RDS files containing SCE objects for each batch in each of the three subsetted simulations.
 These versions of `sim1` were designed to have different schematics of celltypes across batches in order to explore how celltype presence overlap (or lack of overlap) among different bacthes influences integration.
 
 **Note:**Simulated datasets can then be run directly through the integration workflow and do not need to be processed with `01-run-downstream-analyses.sh`.
-The integration workflow can be run using the `config/config-scib_simulated.yaml` file which is configured to run all the simulated datasets and assumes that SCE objects are stored in the `data/scib_simulated/sce` directory. 
+The integration workflow can be run using the `config/config-scib_simulated.yaml` file which is configured to run all the simulated datasets and assumes that SCE objects are stored in the `data/scib_simulated/sce` directory.
 
 ## Running HCA test datasets through `scpca-downstream-analyses`
 
@@ -144,7 +146,9 @@ The list of libraries used can be found in `sample-info/scpca-processed-librarie
 The `_filtered.rds` files for the libraries being integrated can be obtained by using the `00d-obtain-scpca-sce.R` script.
 Running this script with the default arguments will copy over the SCE objects stored in files named as `<library_id>_filtered.rds` to the local `data/scpca/filtered_sce` folder.
 
-After copying over the files from S3 to your local `data` directory, the core workflow from `scpca-downstream-analyses` will need to be run to obtain the normalized and processed SCE files needed as input for the integration workflow.
+Next, ScPCA data should be processed through the `00e-process-scpca-citeseq.R` so that any potential CITE-Seq data in the SCE object is filtered and normalized, and results will be stored in files named as `<library_id>_filtered.rds` to the local `results/scpca/filtered_sce` folder.
+
+Finally, the core workflow from `scpca-downstream-analyses` will need to be run to obtain the normalized and processed SCE files needed as input for the integration workflow.
 
 This can be done using the following command and by providing the full paths to each of the input metadata files and directories:
 
@@ -152,7 +156,7 @@ This can be done using the following command and by providing the full paths to 
 bash 01-run-downstream-analyses.sh \
   --downstream_repo <full path to location of scpca-downstream-repo> \
   --processed_library_df <full path to sample-info/scpca-processed-libraries.tsv> \
-  --filtered_sce_dir <full path to data/scpca/filtered_sce> \
+  --filtered_sce_dir <full path to results/scpca/filtered_sce> \
   --results_dir <full path to results/scpca/scpca-downstream-analyses> \
   --mito_file <full path to scpca-downstream-repo/reference-files/Homo.sapiens.GRCh38.104.mitogenes.txt>
   --downstream_metadata_file <full path to sample-info/scpca-downstream-metadata.tsv> \
