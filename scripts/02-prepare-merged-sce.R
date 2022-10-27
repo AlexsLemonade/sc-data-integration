@@ -171,7 +171,7 @@ if(length(opt$groups_to_integrate) == 1 && (opt$groups_to_integrate == "All")){
   
   # check that specified groups are present in grouping_var column 
   if(!any(groups_to_integrate %in% groups)){
-    stop("Provided `--groups_to_integrate` must also be present in the `--grouping_var` colum of 
+    stop("Provided `--groups_to_integrate` must also be present in the `--grouping_var` column of 
          the library metadata file.")
   }
 }
