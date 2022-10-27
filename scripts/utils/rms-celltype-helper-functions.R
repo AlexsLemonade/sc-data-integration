@@ -23,9 +23,6 @@ grab_integrated_metadata <- function(integrated_file){
                   SJID, # corresponding submitter ID
                   annot.clusters) # annotated tumor cell types))
   
-  # remove integrated object to save space 
-  rm(integrated_seurat_obj)
-  
   return(coldata_df)
   
 }
@@ -47,7 +44,8 @@ add_celltype_to_sce <- function(sce_processed_filepath,
                          seurat_filepath, 
                          library_biomaterial_id, 
                          submitter_id, 
-                         all_integrated_coldata){
+                         all_integrated_coldata,
+                         celltype_sce_filepath){
   
   # find seurat obj 
   if(!file.exists(seurat_filepath)){
@@ -82,7 +80,13 @@ add_celltype_to_sce <- function(sce_processed_filepath,
   sce_coldata <- as.data.frame(colData(sce)) %>%
     tibble::rownames_to_column("barcode")
   
-  if(!is.null(seurat_coldata)){
+  if(is.null(seurat_coldata)){
+    
+    # set celltype to NA if no seurat object is found for this submitter ID and therefore no celltype 
+    sce_coldata <- sce_coldata %>%
+      dplyr::mutate(celltype = NA)
+    
+  } else {
     
     # join with integrated coldata only if tumor subtypes exist 
     if(has_tumor_subtypes){
@@ -97,16 +101,11 @@ add_celltype_to_sce <- function(sce_processed_filepath,
     sce_coldata <- sce_coldata %>%
       dplyr::left_join(seurat_coldata)
     
-  } else {
-    # set celltype to NA if no seurat object is found for this submitter ID and therefore no celltype 
-    sce_coldata <- sce_coldata %>%
-      dplyr::mutate(celltype = NA)
   }
   # add coldata back to SCE object 
   colData(sce) <- DataFrame(sce_coldata, row.names = sce_coldata$barcode)
   
   # export rds file with annotated celltype 
-  celltype_sce_filepath <- file.path(opt$celltype_sce_dir, paste0(library_biomaterial_id, "_processed_celltype.rds"))
   readr::write_rds(sce, celltype_sce_filepath)
   
   return(sce_coldata)
