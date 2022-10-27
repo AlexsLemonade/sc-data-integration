@@ -135,6 +135,11 @@ option_list <- list(
 # Parse options
 opt <- parse_args(OptionParser(option_list = option_list))
 
+# check that num genes provided is an integer
+if(!is.integer(opt$num_genes)){
+  stop("--num_hvg must be an integer.")
+}
+
 # checks that provided metadata files exist
 if(!file.exists(opt$library_file)){
   stop("--library_file provided does not exist.")
@@ -183,11 +188,6 @@ library_metadata_df <- library_metadata_df %>%
 # grab library ids 
 library_ids <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
-
-# check that num genes provided is an integer
-if(!is.integer(opt$num_genes)){
-  stop("--num_hvg must be an integer.")
-}
 
 # setup output directory
 if(!dir.exists(opt$merged_sce_dir)){
