@@ -142,13 +142,12 @@ bash 01-run-downstream-analyses.sh \
 
 We have provided a select subset of ScPCA projects and libraries to use for testing the data integration workflow.
 The list of libraries used can be found in `sample-info/scpca-processed-libraries.tsv` and the list of projects can be found in `sample-info/scpca-project-metadata.tsv`.
+Note that the metadata file `sample-info/scpca-processed-libraries.tsv` additionally contains a boolean column `has_CITEseq` indicating whether or not the given library has CITE-Seq data.
 
 The `_filtered.rds` files for the libraries being integrated can be obtained by using the `00d-obtain-scpca-sce.R` script.
 Running this script with the default arguments will copy over the SCE objects stored in files named as `<library_id>_filtered.rds` to the local `data/scpca/filtered_sce` folder.
 
-Next, ScPCA data should be processed through the `00e-process-scpca-citeseq.R` so that any potential CITE-Seq data in the SCE object is filtered and normalized, and results will be stored in files named as `<library_id>_filtered.rds` to the local `results/scpca/filtered_sce` folder.
-
-Finally, the core workflow from `scpca-downstream-analyses` will need to be run to obtain the normalized and processed SCE files needed as input for the integration workflow.
+Next, the core workflow from `scpca-downstream-analyses` will need to be run to obtain the normalized and processed SCE files needed as input for the integration workflow.
 
 This can be done using the following command and by providing the full paths to each of the input metadata files and directories:
 
@@ -163,6 +162,9 @@ bash 01-run-downstream-analyses.sh \
 ```
 
 **Note* You should not use the `--repeat_filtering` option here because there will not be any unfiltered SCE files to use to perform filtering so the workflow will report an error.
+
+Finally, ScPCA data should be processed through the `00e-process-scpca-citeseq.R` so that any potential CITE-Seq data in the SCE object is filtered and normalized, and results will be stored in the local `results/scpca/scpca-downstream-analyses_citeseq` folder.
+
 
 ### Generating the mitochondrial gene list
 
