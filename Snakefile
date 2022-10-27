@@ -44,7 +44,7 @@ rule merge_sces:
           --add_celltype {config[add_celltype]} \
           --celltype_info "{config[celltype_file]}" \
           --grouping_var {config[grouping_var]} \
-          --groups_to_integrate {config[groups_to_integrate]} \
+          --groups_to_integrate "{config[groups_to_integrate]}" \
           --merged_sce_dir "{output}" \
           --num_hvg {config[num_hvg]} \
           --subset_hvg \
