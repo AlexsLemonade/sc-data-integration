@@ -162,33 +162,14 @@ if(!dir.exists(opt$merged_sce_dir)){
 
 # Identify SCE files -----------------------------------------------------------
 
-# find SCE files that match library ID
-library_search <- paste(library_ids, collapse = "|")
-all_library_files <- list.files(opt$sce_dir,
-                        pattern = library_search,
-                        recursive = TRUE,
-                        full.names = TRUE)
-# just include RDS files, otherwise HTML files will also be found
-sce_files <- all_library_files[grep(pattern = ".rds", all_library_files, ignore.case = TRUE)]
-
-# if the number of sce files is different then the library ID's find the missing files
-if(length(sce_files) < length(library_ids)){
-
-  libraries_found <- stringr::str_extract(sce_files, library_search)
-  missing_libraries <- setdiff(library_ids, libraries_found)
-
-  stop(
-    glue::glue(
-      "\nMissing SCE object for {missing_libraries}.
-      Make sure that you have run `01-run-downstream-analyses.sh`."
-    )
-  )
-}
+# find SCE files that match library ID, and throw an error if any are missing.
+sce_files <- find_downstream_sce_files(library_ids, opt$sce_dir)
 
 # Merge by group ---------------------------------------------------------------
 
 # get the library IDs from the SCE file names so that we can name the SCEs in the correct order
-library_ids_sce_order <- stringr::str_extract(sce_files, pattern = library_search)
+library_ids_sce_order <- stringr::str_extract(sce_files, 
+                                              pattern = paste(library_ids, collapse = "|"))
 
 sce_file_df <- data.frame(sce_files = sce_files,
                           library_id= library_ids_sce_order) %>%
