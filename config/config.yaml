@@ -1,6 +1,5 @@
 ## data specific params
 processed_tsv: "sample-info/hca-processed-libraries.tsv"
-sce_dir: "results/human_cell_atlas/scpca-downstream-analyses"
 results_dir: "results/human_cell_atlas"
 pepfile: "sample-info/hca-project-pep.yaml"
 

@@ -30,8 +30,7 @@ rule build_renv:
 rule merge_sces:
     conda: "envs/scpca-renv.yaml"
     input:
-        processed_tsv = config["processed_tsv"],
-        sce_dir = config["sce_dir"]
+        processed_tsv = config["processed_tsv"]
     output:
         directory(os.path.join(config["results_dir"], "merged_sce"))
     log:
@@ -40,7 +39,6 @@ rule merge_sces:
         """
         Rscript scripts/02-prepare-merged-sce.R \
           --library_file "{input.processed_tsv}" \
-          --sce_dir "{input.sce_dir}" \
           --add_celltype {config[add_celltype]} \
           --celltype_info "{config[celltype_file]}" \
           --grouping_var {config[grouping_var]} \
