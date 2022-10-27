@@ -14,12 +14,13 @@
 project_root <- here::here()
 renv::load(project_root)
 
-# import libraries
+# import libraries and source functions
 suppressPackageStartupMessages({
   library(magrittr)
   library(optparse)
   library(SingleCellExperiment)
 })
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
 
 # Set up optparse options
 option_list <- list(
@@ -33,13 +34,13 @@ option_list <- list(
   make_option(
     opt_str = c("--scpca_downstream_analyses_dir"),
     type = "character",
-    default = file.path(project_root, "data", "scpca", "scpca-sownstream-analyses"),
+    default = file.path(project_root, "results", "scpca", "scpca-downstream-analyses"),
     help = "path to folder where all input sce files created by the scpca_downstream_analyses pipeline are stored"
   ),
   make_option(
     opt_str = c("--citeseq_processed_sce_dir"),
     type = "character",
-    default = file.path(project_root, "results", "scpca", "scpca-downstream-analyses_citeseq"),
+    default = file.path(project_root, "results", "scpca", "citeseq_sce"),
     help = "path to folder where all output sce files are stored with normalized CITE-seq"
   ),
   make_option(
@@ -66,56 +67,30 @@ if(!file.exists(opt$library_file)){
   stop("--library_file provided does not exist.")
 }
 
-# identify relevant libraries
+# identify relevant libraries with CITE-seq data to process
 library_metadata_df <- readr::read_tsv(opt$library_file)
-
-# find SCE files that match library ID
-library_search <- paste(opt$library_file$, collapse = "|")
-all_library_files <- list.files(opt$sce_dir,
-                                pattern = library_search,
-                                recursive = TRUE,
-                                full.names = TRUE)
-# just include RDS files, otherwise HTML files will also be found
-sce_files <- all_library_files[grep(pattern = ".rds", all_library_files, ignore.case = TRUE)]
-
-# if the number of sce files is different then the library ID's find the missing files
-if(length(sce_files) < length(library_ids)){
-  
-  libraries_found <- stringr::str_extract(sce_files, library_search)
-  missing_libraries <- setdiff(library_ids, libraries_found)
-  
-  stop(
-    glue::glue(
-      "\nMissing SCE object for {missing_libraries}.
-      Make sure that you have run `01-run-downstream-analyses.sh`."
-    )
+citeseq_libraries_df <- library_metadata_df %>%
+  dplyr::filter(has_CITEseq == TRUE) %>%
+  dplyr::mutate(input_sce_dir = file.path(opt$scpca_downstream_analyses_dir, 
+                                          sample_biomaterial_id)
   )
+
+
+# Define input files
+# note - input and output files are sorted to ensure they are in the same order.
+input_sce_files <- sort(find_downstream_sce_files(citeseq_libraries_df$library_biomaterial_id, opt$scpca_downstream_analyses_dir))
+
+
+# Define the output files and make sure directories exist
+output_sce_files <- sort(file.path(opt$citeseq_processed_sce_dir, 
+                                   citeseq_libraries_df$sample_biomaterial_id, 
+                                   paste0(citeseq_libraries_df$library_biomaterial_id, "_sce.rds")
+))
+
+# quick length check:
+if (!(length(input_sce_files) == length(output_sce_files))) {
+  stop("Error: Could not prepare data for CITEseq processing.")
 }
-
-
-
-
-
-
-
-# construct path to filtered RDS files and ensure they are present
-# if missing, throw error to run downstream analyses 
-filtered_sce_files <- library_metadata_df %>%
-  
-  # SCPCL000208_miQC_processed_sce.rds 
-  dplyr::mutate(sce_filename = paste0(library_biomaterial_id, "_filtered.rds"),
-                downstream_file_path = file.path(scpca_project_id,
-                                               sample_biomaterial_id,
-                                               sce_filename)) %>%
-  dplyr::pull(filtered_file_path)
-filtered_sce_files_input <- file.path(opt$filtered_sce_dir,
-                                      filtered_sce_files)
-missing_sce_files <- filtered_sce_files_input[which(!file.exists(filtered_sce_files_input))]
-if(length(missing_sce_files) > 0){
-  stop("Input SCE files are not present. Make sure `00d-obtain-scpca-sce.R` has been run.")
-}
-
-# Setup output:
 
 # helper function:
 create_dir <- function(dir_name) {
@@ -124,23 +99,13 @@ create_dir <- function(dir_name) {
   }
 }
 
-# make sure the output directory exists
-create_dir(opt$citeseq_processed_sce_dir)
-
-
-# Define the output file names, using same nested directory structure as in opt$filtered_sce_dir 
-filtered_sce_files_output <- file.path(opt$citeseq_processed_sce_dir,
-                                       filtered_sce_files)
-
-# Make sure each subdirectory exists as well
-purrr::walk(dirname(filtered_sce_files_output), create_dir)
+# Make sure each output directory exist as well
+purrr::walk(dirname(output_sce_files), create_dir)
 
  
-# Process the CITE-seq, where present ------------------------------------------
+# Process the CITE-seq present ------------------------------------------
 
-# For files with CITE-seq, this function processes and exports them to the output directory
-# For files without CITE-seq, this function effectively copies them to the output directory 
-#  with no futher processing
+# Filters and normalizes ADT counts in CITE-Seq altExps
 process_citeseq_counts <- function(input_sce, 
                                    output_sce, 
                                    citeseq_name = opt$citeseq_name) {
@@ -214,18 +179,18 @@ process_citeseq_counts <- function(input_sce,
 
 
 # Process data depending on repeat setting:
-if (all(file.exists(filtered_sce_files_output))) {
+if (all(file.exists(output_sce_files))) {
   if (!(is.null(opt$repeat_processing))) {
     warning("CITE-Seq data is being re-processed and files will be overwritten.")
-    purrr::walk2(filtered_sce_files_input, 
-                 filtered_sce_files_output,
+    purrr::walk2(input_sce_files, 
+                 output_sce_files,
                  process_citeseq_counts)
   } else {
     warning("CITE-Seq data has already been processed. To overwrite files, use the `--repeat_processing` flag.")
   } 
 } else {
-  purrr::walk2(filtered_sce_files_input, 
-               filtered_sce_files_output,
+  purrr::walk2(input_sce_files, 
+               output_sce_files,
                process_citeseq_counts)
 }
 
