@@ -164,7 +164,7 @@ bash 01-run-downstream-analyses.sh \
 **Note* You should not use the `--repeat_filtering` option here because there will not be any unfiltered SCE files to use to perform filtering so the workflow will report an error.
 
 Finally, ScPCA data should be processed through the `01a-process-scpca-citeseq.R` so that any potential CITE-Seq data in the SCE object is filtered and normalized.
-For any SCE files with CITE-Seq data, results will be stored in the local `results/scpca/scpca-downstream-analyses_citeseq` folder.
+For any SCE files with CITE-Seq data, results will be stored in the local `results/scpca/citeseq_sce` folder.
 
 
 ### Generating the mitochondrial gene list
