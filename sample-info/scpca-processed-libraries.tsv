@@ -1,16 +1,26 @@
-scpca_project_id	submitter	library_biomaterial_id	sample_biomaterial_id	diagnosis	technology	seq_unit	folder_structure	filtered_sce_filename
-SCPCP000001	green_mulcahy_levy	SCPCL000002	SCPCS000002	Glioblastoma	10Xv3	cell	SCPCP000001/SCPCS000002	SCPCL000002_filtered.rds
-SCPCP000001	green_mulcahy_levy	SCPCL000003	SCPCS000003	Glioblastoma	10Xv3	cell	SCPCP000001/SCPCS000003	SCPCL000003_filtered.rds
-SCPCP000001	green_mulcahy_levy	SCPCL000006	SCPCS000006	Glioblastoma	10Xv3	cell	SCPCP000001/SCPCS000006	SCPCL000006_filtered.rds
-SCPCP000001	green_mulcahy_levy	SCPCL000007	SCPCS000007	Glioblastoma	10Xv3	cell	SCPCP000001/SCPCS000007	SCPCL000007_filtered.rds
-SCPCP000001	green_mulcahy_levy	SCPCL000008	SCPCS000008	Glioblastoma	10Xv3	cell	SCPCP000001/SCPCS000008	SCPCL000008_filtered.rds
-SCPCP000006	murphy_chen	SCPCL000205	SCPCS000168	Wilms tumor	10Xv3.1	nucleus	SCPCP000006/SCPCS000168	SCPCL000205_filtered.rds
-SCPCP000006	murphy_chen	SCPCL000206	SCPCS000169	Wilms tumor	10Xv3.1	nucleus	SCPCP000006/SCPCS000169	SCPCL000206_filtered.rds
-SCPCP000006	murphy_chen	SCPCL000207	SCPCS000170	Wilms tumor	10Xv3.1	nucleus	SCPCP000006/SCPCS000170	SCPCL000207_filtered.rds
-SCPCP000006	murphy_chen	SCPCL000208	SCPCS000171	Wilms tumor	10Xv3.1	nucleus	SCPCP000006/SCPCS000171	SCPCL000208_filtered.rds
-SCPCP000006	murphy_chen	SCPCL000209	SCPCS000172	Wilms tumor	10Xv3.1	nucleus	SCPCP000006/SCPCS000172	SCPCL000209_filtered.rds
-SCPCP000007	gawad	SCPCL000295	SCPCS000221	Acute myeloid leukemia	10Xv2_5prime	cell	SCPCP000007/SCPCS000221	SCPCL000295_filtered.rds
-SCPCP000007	gawad	SCPCL000296	SCPCS000222	Acute myeloid leukemia	10Xv2_5prime	cell	SCPCP000007/SCPCS000222	SCPCL000296_filtered.rds
-SCPCP000007	gawad	SCPCL000297	SCPCS000223	Acute myeloid leukemia	10Xv2_5prime	cell	SCPCP000007/SCPCS000223	SCPCL000297_filtered.rds
-SCPCP000007	gawad	SCPCL000298	SCPCS000224	Acute myeloid leukemia	10Xv2_5prime	cell	SCPCP000007/SCPCS000224	SCPCL000298_filtered.rds
-SCPCP000007	gawad	SCPCL000299	SCPCS000225	Acute myeloid leukemia	10Xv2_5prime	cell	SCPCP000007/SCPCS000225	SCPCL000299_filtered.rds
+project_name	submitter	library_biomaterial_id	sample_biomaterial_id	diagnosis	technology	seq_unit	folder_structure	filtered_sce_filename	integration_input_dir	submitter_id	participant_id	subdiagnosis	tissue_location	disease_timing
+SCPCP000001	green_mulcahy_levy	SCPCL000002	SCPCS000002	Glioblastoma	10Xv3	cell	SCPCP000001/SCPCS000002	SCPCL000002_filtered.rds	results/scpca/scpca-downstream-analyses	1107	NA	NA	Right thalamus	Initial diagnosis
+SCPCP000001	green_mulcahy_levy	SCPCL000003	SCPCS000003	Glioblastoma	10Xv3	cell	SCPCP000001/SCPCS000003	SCPCL000003_filtered.rds	results/scpca/scpca-downstream-analyses	1115	NA	Gliomatosis cerebri	Left frontal with right frontal and left basal ganglia involvement	Initial diagnosis
+SCPCP000001	green_mulcahy_levy	SCPCL000006	SCPCS000006	Glioblastoma	10Xv3	cell	SCPCP000001/SCPCS000006	SCPCL000006_filtered.rds	results/scpca/scpca-downstream-analyses	1458	NA	RIG	Left cerebral hemisphere	Initial diagnosis
+SCPCP000001	green_mulcahy_levy	SCPCL000007	SCPCS000007	Glioblastoma	10Xv3	cell	SCPCP000001/SCPCS000007	SCPCL000007_filtered.rds	results/scpca/scpca-downstream-analyses	868	NA	RIG	Left frontal (with satellite lesions in same lobe)	Initial diagnosis
+SCPCP000001	green_mulcahy_levy	SCPCL000008	SCPCS000008	Glioblastoma	10Xv3	cell	SCPCP000001/SCPCS000008	SCPCL000008_filtered.rds	results/scpca/scpca-downstream-analyses	910	NA	RIG	Cerebellum (multiple masses)	Initial diagnosis
+SCPCP000006	murphy_chen	SCPCL000205	SCPCS000168	Wilms tumor	10Xv3.1	nucleus	SCPCP000006/SCPCS000168	SCPCL000205_filtered.rds	results/scpca/scpca-downstream-analyses	SJWLM059659_D1	NA	Anaplastic	Kidney	Initial diagnosis
+SCPCP000006	murphy_chen	SCPCL000206	SCPCS000169	Wilms tumor	10Xv3.1	nucleus	SCPCP000006/SCPCS000169	SCPCL000206_filtered.rds	results/scpca/scpca-downstream-analyses	SJWLM059660_D1	NA	Favorable	Kidney	Initial diagnosis
+SCPCP000006	murphy_chen	SCPCL000207	SCPCS000170	Wilms tumor	10Xv3.1	nucleus	SCPCP000006/SCPCS000170	SCPCL000207_filtered.rds	results/scpca/scpca-downstream-analyses	SJWLM071556_D1	NA	Favorable	Kidney	Initial diagnosis
+SCPCP000006	murphy_chen	SCPCL000208	SCPCS000171	Wilms tumor	10Xv3.1	nucleus	SCPCP000006/SCPCS000171	SCPCL000208_filtered.rds	results/scpca/scpca-downstream-analyses	SJWLM030897_D2	NA	Favorable	Kidney	Initial diagnosis
+SCPCP000006	murphy_chen	SCPCL000209	SCPCS000172	Wilms tumor	10Xv3.1	nucleus	SCPCP000006/SCPCS000172	SCPCL000209_filtered.rds	results/scpca/scpca-downstream-analyses	SJWLM043456_D1	NA	Favorable	Kidney	Initial diagnosis
+SCPCP000007	gawad	SCPCL000295	SCPCS000221	Acute myeloid leukemia	10Xv2_5prime	cell	SCPCP000007/SCPCS000221	SCPCL000295_filtered.rds	results/scpca/scpca-downstream-analyses	BM-AML-3210	NA	M5a	Bone marrow	Initial diagnosis
+SCPCP000007	gawad	SCPCL000296	SCPCS000222	Acute myeloid leukemia	10Xv2_5prime	cell	SCPCP000007/SCPCS000222	SCPCL000296_filtered.rds	results/scpca/scpca-downstream-analyses	BM-AML-3371	NA	NA	Bone marrow	Initial diagnosis
+SCPCP000007	gawad	SCPCL000297	SCPCS000223	Acute myeloid leukemia	10Xv2_5prime	cell	SCPCP000007/SCPCS000223	SCPCL000297_filtered.rds	results/scpca/scpca-downstream-analyses	BM-AML-3492	NA	M3, Acute promyelocytic leukemia	Bone marrow	Initial diagnosis
+SCPCP000007	gawad	SCPCL000298	SCPCS000224	Acute myeloid leukemia	10Xv2_5prime	cell	SCPCP000007/SCPCS000224	SCPCL000298_filtered.rds	results/scpca/scpca-downstream-analyses	BM-AML-4000	NA	M2	Bone marrow	Initial diagnosis
+SCPCP000007	gawad	SCPCL000299	SCPCS000225	Acute myeloid leukemia	10Xv2_5prime	cell	SCPCP000007/SCPCS000225	SCPCL000299_filtered.rds	results/scpca/scpca-downstream-analyses	BM-AML-4010	NA	Normal karyotype	Bone marrow	Initial diagnosis
+SCPCP000005	dyer_chen	SCPCL000495	SCPCS000250	Rhabdomyosarcoma	10Xv3	nucleus	SCPCP000005/SCPCL000495	SCPCL000495_filtered.rds	results/scpca/celltype_sce	SJRHB030680_R1	SJRHB030680	Embryonal rhabdomyosarcoma	Lung	Recurrence
+SCPCP000005	dyer_chen	SCPCL000478	SCPCS000252	Rhabdomyosarcoma	10Xv3	nucleus	SCPCP000005/SCPCL000478	SCPCL000478_filtered.rds	results/scpca/celltype_sce	SJRHB011_D	SJRHB011	Embryonal rhabdomyosarcoma	Infratemporal fossa	Recurrence
+SCPCP000005	dyer_chen	SCPCL000479	SCPCS000253	Rhabdomyosarcoma	10Xv3	nucleus	SCPCP000005/SCPCL000479	SCPCL000479_filtered.rds	results/scpca/celltype_sce	SJRHB012_R	SJRHB012	Embryonal rhabdomyosarcoma	Prostate	Recurrence
+SCPCP000005	dyer_chen	SCPCL000480	SCPCS000254	Rhabdomyosarcoma	10Xv3	nucleus	SCPCP000005/SCPCL000480	SCPCL000480_filtered.rds	results/scpca/celltype_sce	SJRHB012_S	SJRHB012	Embryonal rhabdomyosarcoma	Prostate/bladder	Recurrence
+SCPCP000005	dyer_chen	SCPCL000481	SCPCS000255	Rhabdomyosarcoma	10Xv3	nucleus	SCPCP000005/SCPCL000481	SCPCL000481_filtered.rds	results/scpca/celltype_sce	SJRHB000026_R2	SJRHB00026	Embryonal rhabdomyosarcoma	Pelvis	Recurrence
+SCPCP000005	dyer_chen	SCPCL000498	SCPCS000251	Rhabdomyosarcoma	10Xv3	nucleus	SCPCP000005/SCPCL000498	SCPCL000498_filtered.rds	results/scpca/celltype_sce	SJRHB031320_D1	SJRHB031320	Alveolar rhabdomyosarcoma	Abdominal wall	Initial diagnosis
+SCPCP000005	dyer_chen	SCPCL000483	SCPCS000257	Rhabdomyosarcoma	10Xv3	nucleus	SCPCP000005/SCPCL000483	SCPCL000483_filtered.rds	results/scpca/celltype_sce	SJRHB010463_M1	NA	Alveolar rhabdomyosarcoma	Lung	Recurrence
+SCPCP000005	dyer_chen	SCPCL000484	SCPCS000258	Rhabdomyosarcoma	10Xv3	nucleus	SCPCP000005/SCPCL000484	SCPCL000484_filtered.rds	results/scpca/celltype_sce	SJRHB010468_D1	SJRHB010468	Alveolar rhabdomyosarcoma	Thigh	Initial diagnosis
+SCPCP000005	dyer_chen	SCPCL000488	SCPCS000262	Rhabdomyosarcoma	10Xv3	nucleus	SCPCP000005/SCPCL000488	SCPCL000488_filtered.rds	results/scpca/celltype_sce	SJRHB013757_D2	SJRHB013757	Alveolar rhabdomyosarcoma	Calf	Initial diagnosis
+SCPCP000005	dyer_chen	SCPCL000491	SCPCS000265	Rhabdomyosarcoma	10Xv3	nucleus	SCPCP000005/SCPCL000491	SCPCL000491_filtered.rds	results/scpca/celltype_sce	SJRHB013759_A1	SJRHB013759	Alveolar rhabdomyosarcoma	Chest	Recurrence

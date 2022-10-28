@@ -1,13 +1,18 @@
 configfile: "config/config.yaml"
 pepfile: config['pepfile']
 
+if config['groups_to_integrate'] == "All":
+    PROJECT = pep.sample_table["project_name"]
+else:
+    PROJECT = config['groups_to_integrate']
+
 rule target:
     input:
         expand(os.path.join(config['results_dir'], "integrated_sce/{project}_integrated_{integration_methods}_sce.rds"),
-               project = pep.sample_table["project_name"],
+               project = PROJECT,
                integration_methods = config["integration_methods"]),
         expand(os.path.join(config['results_dir'], "analysis_reports/{project}_integration_report.html"),
-               project = pep.sample_table["project_name"])
+               project = PROJECT)
 
 
 # Rule used for building conda & renv environment
@@ -25,8 +30,7 @@ rule build_renv:
 rule merge_sces:
     conda: "envs/scpca-renv.yaml"
     input:
-        processed_tsv = config["processed_tsv"],
-        sce_dir = config["sce_dir"]
+        processed_tsv = config["processed_tsv"]
     output:
         directory(os.path.join(config["results_dir"], "merged_sce"))
     log:
@@ -35,10 +39,10 @@ rule merge_sces:
         """
         Rscript scripts/02-prepare-merged-sce.R \
           --library_file "{input.processed_tsv}" \
-          --sce_dir "{input.sce_dir}" \
           --add_celltype {config[add_celltype]} \
           --celltype_info "{config[celltype_file]}" \
           --grouping_var {config[grouping_var]} \
+          --groups_to_integrate "{config[groups_to_integrate]}" \
           --merged_sce_dir "{output}" \
           --num_hvg {config[num_hvg]} \
           --subset_hvg \
@@ -224,6 +228,7 @@ rule generate_report:
                             params = list(group_name = '{wildcards.project}', \
                                           merged_sce_dir = '{workflow.basedir}/{input.merged_sce_dir}', \
                                           integrated_sce_dir = '{workflow.basedir}/{params.integrated_sce_dir}', \
-                                          integration_methods = '{config[integration_methods]}'))" \
+                                          integration_methods = '{config[integration_methods]}', \
+                                          max_celltypes = {config[max_celltypes]}))" \
         &> {log}
         """
