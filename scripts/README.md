@@ -75,16 +75,16 @@ The ID submitted by the user in the cell type file was mapped to the `library_bi
 
 ### Simulation `SingleCellExperiment` objectss
 
-We additionally process several simulated datasets, referred to as `scib_simulated`, in the pipeline. 
+We additionally process several simulated datasets, referred to as `scib_simulated`, in the pipeline.
 To prepare simulation data for use in the pipeline, there are two scripts which are run:
 
 - `00b-obtain-sim-sce.R`, which prepares two simulated projects `sim1` and `sim2` for `scpca-downstream-analyses` input by converting them from H5 to RDS files with normalized SCE objects, and batches are further split into separate RDS files.
-- `00c-create-sim-subsets.R` prepares three additional simulation projects derived from `sim1`: `sim1a`, `sim1b`, and `sim1c`. 
+- `00c-create-sim-subsets.R` prepares three additional simulation projects derived from `sim1`: `sim1a`, `sim1b`, and `sim1c`.
 The script saves additional RDS files containing SCE objects for each batch in each of the three subsetted simulations.
 These versions of `sim1` were designed to have different schematics of celltypes across batches in order to explore how celltype presence overlap (or lack of overlap) among different bacthes influences integration.
 
 **Note:**Simulated datasets can then be run directly through the integration workflow and do not need to be processed with `01-run-downstream-analyses.sh`.
-The integration workflow can be run using the `config/config-scib_simulated.yaml` file which is configured to run all the simulated datasets and assumes that SCE objects are stored in the `data/scib_simulated/sce` directory. 
+The integration workflow can be run using the `config/config-scib_simulated.yaml` file which is configured to run all the simulated datasets and assumes that SCE objects are stored in the `data/scib_simulated/sce` directory.
 
 ## Running HCA test datasets through `scpca-downstream-analyses`
 
@@ -155,10 +155,42 @@ bash 01-run-downstream-analyses.sh \
   --filtered_sce_dir <full path to data/scpca/filtered_sce> \
   --results_dir <full path to results/scpca/scpca-downstream-analyses> \
   --mito_file <full path to scpca-downstream-repo/reference-files/Homo.sapiens.GRCh38.104.mitogenes.txt>
-  --downstream_metadata_file <full path to sample-info/scpca-downstream-metadata.tsv> \
+  --downstream_metadata_file <full path to sample-info/scpca-downstream-metadata.tsv>
 ```
 
 **Note* You should not use the `--repeat_filtering` option here because there will not be any unfiltered SCE files to use to perform filtering so the workflow will report an error.
+
+### Preparing SCPCP000005 for data integration
+
+The ScPCA project, `SCPCP000005`, has cell type information available that is already published to be used to evaluate integration([Patel _et al_. 2022](https://doi.org/10.1016/j.devcel.2022.04.003)).
+The cell type information can be found in the metadata of the Seurat objects found in the s3 bucket, `s3://sc-data-integration/scpca/rms-dyer-seurat`.
+
+Prior to performing integration with this dataset, the filtered SCE objects (output from `scpca-nf`) are processed through `scpca-downstream-analyses` and then `celltype` is added to the `colData` of the SCE object.
+These processed SCE objects are in the S3 bucket, `s3://sc-data-integration/scpca/scpca-downstream-analyses`.
+
+The following commands are used in this order to generate the SCE objects with added celltype information.
+Note that your system must have >=16GB RAM to run the third script, `add-rms-celltypes.R`.
+
+```
+# step 1: obtain filtered sce objects from S3 corresponding to SCPCP00005
+Rscript 00d-obtain-scpca-sce.R --library_file "../sample-info/rms-processed-libraries.tsv"
+
+# step 2: run downstream analyses
+bash 01-run-downstream-analyses.sh \
+  --downstream_repo <full path to location of scpca-downstream-repo> \
+  --processed_library_df <full path to sample-info/rms-processed-libraries.tsv> \
+  --filtered_sce_dir <full path to data/scpca/filtered_sce> \
+  --results_dir <full path to results/scpca/scpca-downstream-analyses> \
+  --mito_file <full path to scpca-downstream-repo/reference-files/Homo.sapiens.GRCh38.104.mitogenes.txt>
+  --downstream_metadata_file <full path to sample-info/scpca-downstream-metadata.tsv>
+
+# step 3: add celltype column to metadata
+Rscript add-rms-celltypes.R
+```
+
+If using the defaults in `add-rms-celltypes.R`, the SCE objects with the new `celltype` column will be stored in `results/scpca/celltype_sce`.
+These can also be found in the S3 bucket, `s3://sc-data-integration/scpca/celltype_sce`.
+
 
 ### Generating the mitochondrial gene list
 
