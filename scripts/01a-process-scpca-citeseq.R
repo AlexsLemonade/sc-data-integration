@@ -106,6 +106,7 @@ purrr::walk(dirname(output_sce_files), create_dir)
 # Process the CITE-seq present ------------------------------------------
 
 # Filters and normalizes ADT counts in CITE-Seq altExps
+# Overall reference: http://bioconductor.org/books/3.15/OSCA.advanced/integrating-with-protein-abundance.html#normalization
 process_citeseq_counts <- function(input_sce, 
                                    output_sce, 
                                    citeseq_name = opt$citeseq_name) {
@@ -117,9 +118,8 @@ process_citeseq_counts <- function(input_sce,
   sce <- readr::read_rds(input_sce)
   starting_cell_count <- ncol(sce) # number of starting cells, for comparing back after filtering
 
-  # Check if CITE-Seq
-  if (citeseq_name %in% altExpNames(sce)) {
-    # Overall reference: http://bioconductor.org/books/3.15/OSCA.advanced/integrating-with-protein-abundance.html#normalization
+  # Only run if file does not exist or repeat is TRUE aka not null
+ # if (  !(file.exists(output_sce)) | !(is.null(opt$repeat_process)) ) {
     
     ##### Perform QC ####
     # http://bioconductor.org/books/3.15/OSCA.advanced/integrating-with-protein-abundance.html#applying-custom-qc-filters
@@ -141,6 +141,8 @@ process_citeseq_counts <- function(input_sce,
     # Calculate size factors
     size_factors <- scuttle::medianSizeFactors(altExp(sce, citeseq_name), reference = baseline)
     
+    #cat(basename(input_sce), sum(size_factors  == 0), "\n")
+
     # Ensure that no size_factors are 0
     while(sum(size_factors == 0)) {
       
@@ -161,17 +163,21 @@ process_citeseq_counts <- function(input_sce,
     altExp(sce, citeseq_name) <- scater::logNormCounts(altExp(sce, citeseq_name), 
                                                        size.factors = size_factors)
     
+    # Add metadata column about filtering
+    metadata(sce)$citeseq_percent_cells_removed <- percent_removed
+    
+    
     # Double check we actually did get a `logcounts` assay in there
     if (!("logcounts" %in% assayNames(altExp(sce, citeseq_name)))) {
       stop("Error in CITE-seq processing: Normalized counts are missing.")
     }
     
-    # Double check that the number of cells matches in RNA and CITE, just in case
+    # Double check that the cells match in RNA and CITE, just in case
     if (!(all(colnames(sce) == colnames(altExp(sce, citeseq_name))))) {
       stop("Error in CITE-seq processing: Final RNA cell barcodes don't match ADT barcodes.")
     }
     
-  }
+ # }
   
   # Export to file
   readr::write_rds(sce, output_sce)
@@ -179,10 +185,10 @@ process_citeseq_counts <- function(input_sce,
 
 
 # Process data depending on repeat setting:
-if (all(file.exists(output_sce_files)) & !opt$repeat_processing) {
+if (all(file.exists(output_sce_files)) & is.null(opt$repeat_processing)) {
   stop("CITE-Seq data has already been processed. To overwrite files, use the `--repeat_processing` flag.")
 }
-if (opt$repeat_processing) {
+if (!(is.null(opt$repeat_processing))) {
   warning("CITE-Seq data is being re-processed and files may be overwritten.")
 }
 purrr::walk2(input_sce_files, 
