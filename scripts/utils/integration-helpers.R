@@ -36,7 +36,7 @@ find_downstream_sce_files <- function(library_ids, sce_dir) {
     stop(
       glue::glue(
         "\nMissing SCE object for {missing_libraries}.
-      Make sure that you have run `01-run-downstream-analyses.sh`."
+      Make sure that you have run `01-run-downstream-analyses.sh` or provided the correct input directory."
       )
     )
   }
