@@ -37,6 +37,7 @@ grab_integrated_metadata <- function(integrated_file){
 #' @param library_biomaterial_id Unique ID corresponding to library 
 #' @param submitter_id Unique ID associated with submitter_id from ScPCA
 #' @param all_integrated_coldata Data frame from integrated seurat objects 
+#' @param celltype_sce_filepath Path to write SCE  object with cell types added
 #'
 #' @return Exports SCE object with additional celltype column and returns modified colData
 
