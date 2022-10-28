@@ -124,7 +124,7 @@ This file must contain the following columns, but may also contain additional co
 | `sample_biomaterial_id`    | Unique ID associated with the individual sample           |
 | `library_biomaterial_id`   | Unique ID associated with the individual library that was sequenced |
 | `project_name`    | The shorthand project name                 |
-| `integration_input_dir` | The directory containing the `SingleCellExperiment` objects to be used as input to the data integration workflow |
+| `integration_input_dir` | The directory containing the `SingleCellExperiment` objects to be used as input to the data integration snakemake workflow |
 
 
 4. `hca-celltype-info.tsv`: This file contains all available cell type information for projects listed in `hca-project-metadata.tsv`.
