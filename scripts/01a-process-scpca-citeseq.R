@@ -179,18 +179,13 @@ process_citeseq_counts <- function(input_sce,
 
 
 # Process data depending on repeat setting:
-if (all(file.exists(output_sce_files))) {
-  if (!(is.null(opt$repeat_processing))) {
-    warning("CITE-Seq data is being re-processed and files will be overwritten.")
-    purrr::walk2(input_sce_files, 
-                 output_sce_files,
-                 process_citeseq_counts)
-  } else {
-    warning("CITE-Seq data has already been processed. To overwrite files, use the `--repeat_processing` flag.")
-  } 
-} else {
-  purrr::walk2(input_sce_files, 
-               output_sce_files,
-               process_citeseq_counts)
+if (all(file.exists(output_sce_files)) & !opt$repeat_processing) {
+  stop("CITE-Seq data has already been processed. To overwrite files, use the `--repeat_processing` flag.")
 }
+if (opt$repeat_processing) {
+  warning("CITE-Seq data is being re-processed and files may be overwritten.")
+}
+purrr::walk2(input_sce_files, 
+             output_sce_files,
+             process_citeseq_counts)
 
