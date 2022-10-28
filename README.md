@@ -175,6 +175,8 @@ bash scripts/01-run-downstream-analyses.sh \
   --s3_bucket "s3://sc-data-integration/human_cell_atlas_results/scpca-downstream-analyses"
 ```
 
+**Note:** If you wish to run ScPCA data through the integration workflow, rather than HCA data, please see the [special guidelines for preparing ScPCA data](./scripts/README.md#preparing-scpca-test-datasets-for-integration).
+
 ## Running the integration workflow
 
 To run the integration workflow, invoke `snakemake` from the `sc-data-integration` directory with the following command:
