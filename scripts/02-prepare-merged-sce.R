@@ -62,6 +62,15 @@ option_list <- list(
     and merging."
   ),
   make_option(
+    opt_str = c("--groups_to_integrate"),
+    type = "character",
+    default = "All",
+    help = "Groups present in `grouping_var` column of metadata file to create merged SCE objects for.
+      Default is 'All' which produces a merged object for each group in the metadata file. 
+      Specify groups by using a vector, e.g. c('group1','group2')"
+  )
+  ,
+  make_option(
     opt_str = c("--add_celltype"),
     action = "store_true",
     default = FALSE,
@@ -106,14 +115,6 @@ option_list <- list(
     help = "Number of highly variable genes to select."
   ),
   make_option(
-    opt_str = c("--sce_dir"),
-    type = "character",
-    default = file.path(project_root, "results", "human_cell_atlas", "scpca-downstream-analyses"),
-    help = "Path to folder where SCE objects to be converted are stored,
-    each file should contain the library ID in the filename and be stored as an RDS file.
-    Typically this is the output from running scpca-downstream-analyses"
-  ),
-  make_option(
     opt_str = c("--merged_sce_dir"),
     type = "character",
     default = file.path(project_root, "results", "human_cell_atlas", "merged_sce"),
@@ -126,6 +127,11 @@ option_list <- list(
 # Parse options
 opt <- parse_args(OptionParser(option_list = option_list))
 
+# check that num genes provided is an integer
+if(!is.integer(opt$num_genes)){
+  stop("--num_hvg must be an integer.")
+}
+
 # checks that provided metadata files exist
 if(!file.exists(opt$library_file)){
   stop("--library_file provided does not exist.")
@@ -133,8 +139,6 @@ if(!file.exists(opt$library_file)){
 
 # read in library metadata and grab unfiltered sce file paths
 library_metadata_df <- readr::read_tsv(opt$library_file)
-library_ids <- library_metadata_df %>%
-  dplyr::pull(library_biomaterial_id)
 
 # check that cell type file exists if using add_celltype option 
 if(opt$add_celltype){
@@ -150,10 +154,32 @@ if(!opt$grouping_var %in% colnames(library_metadata_df)){
   stop("Must provide a grouping_var that is a column in the library metadata file.")
 }
 
-# check that num genes provided is an integer
-if(!is.integer(opt$num_genes)){
-  stop("--num_hvg must be an integer.")
+# define groups to integrate
+groups <- library_metadata_df %>%
+  dplyr::pull(opt$grouping_var) %>%
+  unique()
+
+# check that groups to integrate isn't set to All 
+if(length(opt$groups_to_integrate) == 1 && (opt$groups_to_integrate == "All")){
+  groups_to_integrate <- groups
+} else {
+  # if All is not used then unlist groups, using space, needed to parse a list from snakemake
+  groups_to_integrate <- unlist(stringr::str_split(opt$groups_to_integrate, " "))
+  
+  # check that specified groups are present in grouping_var column 
+  if(!any(groups_to_integrate %in% groups)){
+    stop("Provided `--groups_to_integrate` must also be present in the `--grouping_var` column of 
+         the library metadata file.")
+  }
 }
+
+# subset metadata file to only contain groups to integrate 
+library_metadata_df <- library_metadata_df %>%
+  dplyr::filter(.data[[opt$grouping_var]] %in% groups_to_integrate)
+
+# grab library ids 
+library_ids <- library_metadata_df %>%
+  dplyr::pull(library_biomaterial_id)
 
 # setup output directory
 if(!dir.exists(opt$merged_sce_dir)){
@@ -162,8 +188,13 @@ if(!dir.exists(opt$merged_sce_dir)){
 
 # Identify SCE files -----------------------------------------------------------
 
+# grab all unique directories corresponding to projects considered for integration
+input_sce_dirs <- library_metadata_df %>%
+  dplyr::pull(integration_input_dir) %>%
+  unique()
+
 # find SCE files that match library ID, and throw an error if any are missing.
-sce_files <- find_downstream_sce_files(library_ids, opt$sce_dir)
+sce_files <- find_downstream_sce_files(library_ids, input_sce_dirs)
 
 # Merge by group ---------------------------------------------------------------
 

@@ -81,12 +81,13 @@ For exploring data integration, we are using test datasets that have been obtain
 All data from the HCA that we are using can be found in the S3 bucket, `s3://ccdl-scpca-data/human_cell_atlas_data`.
 The following files all contain information related to the test datasets.
 
-1. `hca-project-metadata.tsv`: This file contains information about each of the projects that are being used for testing from the HCA.
-Each row in this file corresponds to a project and contains the following columns:
+1. `<project_name>-project-metadata.tsv`: This file contains information about each of the projects that are being used for testing integration from a given area (e.g., HCA, simulated, ScPCA).
+Each row in this file corresponds to a project, dataset, or group of libraries that should be integrated together.
+All `project-metadata.tsv` files must contain a `project_name` column, but may also contain other relevant project information such as the following:
 
 | column_id         | contents                                                           |
 |-------------------|--------------------------------------------------------------------|
-| `project_name`    | The shorthand project name assigned by the HCA                     |
+| `project_name`    | The shorthand project name                     |
 | `source_id`       | Unique ID associated with the project                              |
 | `tissue_group`    | Tissue group the project belongs to (e.g. blood, brain, or kidney) |
 | `files_directory` | files directory on S3                                              |
@@ -114,8 +115,17 @@ Each row in this file corresponds to a library and contains the following column
 | `s3_files_dir`    | files directory on S3                                              |
 | `loom_file`       | loom file name in the format `tissue_group/project_name/bundle_uuid/filename` |
 
-3. `hca-processed-libraries.tsv`: This file contains the list of libraries from each project that are being used for testing data integration.
-This file is used as input to the script, `scripts/00-obtain-sce.R`, used for converting loom to `SingleCellExperiment` objects and saving those objects to S3.
+3. `<project_name>-processed-libraries.tsv`: This file contains the list of libraries from each project that are being used for testing data integration.
+This metadata file is required for most scripts, including running `scpca-downstream-analyses` using `01-run-downstream-analyses.sh` and for running the integration workflow.
+This file must contain the following columns, but may also contain additional columns related to a given dataset:
+
+| column_id         | contents                                                           |
+|-------------------|--------------------------------------------------------------------|
+| `sample_biomaterial_id`    | Unique ID associated with the individual sample           |
+| `library_biomaterial_id`   | Unique ID associated with the individual library that was sequenced |
+| `project_name`    | The shorthand project name                 |
+| `integration_input_dir` | The directory containing the `SingleCellExperiment` objects to be used as input to the data integration snakemake workflow |
+
 
 4. `hca-celltype-info.tsv`: This file contains all available cell type information for projects listed in `hca-project-metadata.tsv`.
 This file was created using the `scripts/00a-reformat-celltype-info.R` which takes as input the cell type information available for each project from the Human Cell Atlas Data Portal.
@@ -129,6 +139,8 @@ Each row corresponds to a single cell and contain the following information:
 | `project` | The shorthand project name assigned by the HCA                        |
 | `barcode` | The unique cell barcode                       |
 | `celltype` | The assigned cell type for a given barcode, obtained from cell type data stored in `s3://sc-data-integration/human_cell_atlas_data/celltype`                        |
+
+
 
 ## Shared data files
 

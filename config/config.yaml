@@ -1,12 +1,12 @@
 ## data specific params
 processed_tsv: "sample-info/hca-processed-libraries.tsv"
-sce_dir: "results/human_cell_atlas/scpca-downstream-analyses"
 results_dir: "results/human_cell_atlas"
 pepfile: "sample-info/hca-project-pep.yaml"
 
 # cell type information paramaters
 add_celltype: true
 celltype_file: "sample-info/hca-celltype-info.tsv"
+max_celltypes: 5
 
 # workflow paramters
 seed: 2022
@@ -19,3 +19,7 @@ integration_methods: ["fastmnn", "harmony", "seurat-cca", "seurat-rpca"]
 continuous_covariates: "subsets_mito_percent"
 # how many dimensions to return in the latent space
 num_latent: 20
+
+# specify which projects to run through the workflow
+# to run a subset of projects use a python-formatted list '["1M_Immune_Cells", "HumanBrainSubstantiaNigra"]'
+groups_to_integrate: "All"
