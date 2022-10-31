@@ -145,6 +145,12 @@ process_citeseq_counts <- function(input_sce,
 
     # Ensure that no size_factors are 0
     while(sum(size_factors == 0)) {
+      warning(
+        glue::glue(
+          "{length(sum(size_factors == 0))} cell(s) has an ADT size factors of zero for {basename(input_sce)}.
+          These cells will be removed and size factors will be recalculated.
+          ")
+      )
       
       # Remove those cells that are still 0, and start again
       sce <- sce[,size_factors != 0]
@@ -156,7 +162,7 @@ process_citeseq_counts <- function(input_sce,
     # Print warning about number of cells removed
     percent_removed <- 100* ((starting_cell_count - ncol(sce)) / starting_cell_count)
     warning(
-      glue::glue("{round(percent_removed, 2)}% of cells while processing CITE-seq counts in {basename(input_sce)}.")
+      glue::glue("Removed {round(percent_removed, 2)}% of cells while processing ADT counts in {basename(input_sce)}.")
     )
   
     # Finally, perform normalization with the final size factors and save back to SCE
@@ -169,7 +175,7 @@ process_citeseq_counts <- function(input_sce,
     
     # Double check we actually did get a `logcounts` assay in there
     if (!("logcounts" %in% assayNames(altExp(sce, citeseq_name)))) {
-      stop("Error in CITE-seq processing: Normalized counts are missing.")
+      stop("Error in CITE-seq processing: Normalized ADT counts are missing.")
     }
     
     # Double check that the cells match in RNA and CITE, just in case
