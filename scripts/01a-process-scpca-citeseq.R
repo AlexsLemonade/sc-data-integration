@@ -127,7 +127,10 @@ process_citeseq_counts <- function(input_sce,
       tibble::as_tibble(rownames = "cell_barcode") %>%
       dplyr::filter(discard == FALSE) %>%
       dplyr::pull(cell_barcode)
-      
+      retain_adts <- as.data.frame(rowData(altExp(sce))) %>%
+        tibble::rownames_to_column("ADT") %>%
+        dplyr::filter(detected > 1 & mean > 1) %>%
+        dplyr::pull(ADT)
     # Keep only cells that are present in retain_barcodes
     # note that this also filters the altExp
     sce <- sce[,retain_barcodes]
