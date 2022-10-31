@@ -163,6 +163,12 @@ if(!is.null(missing_umap)){
       "))
 }
 
+# set colors to use for batches 
+batch_colors <- sce_list$unintegrated[[params$batch_column]] %>%
+    unique() %>%
+    length() %>%
+    rainbow()
+
 # Check whether celltype information is available, and prepare if so
 if(params$celltype_column %in% coldata_names){
   # Set variable to TRUE
@@ -225,6 +231,7 @@ batch_umaps <- names(sce_list) %>%
                                      params$group_name,
                                      cell_label_column = params$batch_column,
                                      legend_title = "Batches",
+                                     plot_colors = batch_colors,
                                      seed = params$seed))
 batch_legend <- cowplot::get_legend(batch_umaps[[1]])
   
@@ -379,7 +386,10 @@ Therefore, a well-integrated dataset would show lower batch ASW values compared 
 
 
 ```{r fig.height=5, fig.width=7}
-asw_results <- run_asw(sce_list, params$batch_column, params$seed) # defaults are fine: group by batch and label as `Batch`
+asw_results <- run_asw(sce_list, 
+                       params$batch_column, 
+                       params$seed,
+                       plot_colors = batch_colors) # defaults are fine: group by batch and label as `Batch`
 
 # Plot results:
 print(asw_results$asw_plot)
