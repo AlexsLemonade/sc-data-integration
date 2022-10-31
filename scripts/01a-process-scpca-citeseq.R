@@ -134,6 +134,7 @@ process_citeseq_counts <- function(input_sce,
     # Keep only cells that are present in retain_barcodes
     # note that this also filters the altExp
     sce <- sce[,retain_barcodes]
+    altExp(sce, citeseq_name) <- altExp(sce, citeseq_name)[retain_adts, ]
     
     #### Perform normalization ####
     # http://bioconductor.org/books/3.15/OSCA.advanced/integrating-with-protein-abundance.html#cite-seq-median-norm
