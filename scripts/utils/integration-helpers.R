@@ -35,7 +35,7 @@ perform_file_search <- function(input_dir,
 #'  to library IDs
 #'
 #' @return Vector of all downstream analyses outputted SCE files, unless an error is thrown.
-find_downstream_sce_files <- function(library_ids, sce_dirs) {
+find_input_sce_files <- function(library_ids, sce_dirs) {
 
   # find SCE files that match library ID
   library_search <- paste(library_ids, collapse = "|")
