@@ -194,7 +194,7 @@ input_sce_dirs <- library_metadata_df %>%
   unique()
 
 # find SCE files that match library ID, and throw an error if any are missing.
-sce_files <- find_downstream_sce_files(library_ids, input_sce_dirs)
+sce_files <- find_input_sce_files(library_ids, input_sce_dirs)
 
 # Merge by group ---------------------------------------------------------------
 
