@@ -60,7 +60,7 @@ option_list <- list(
   ),
   make_option(
     opt_str = c("--repeat_processing"),
-    default = TRUE,
+    default = FALSE,
     action = "store_true",
     help = "Indicates whether or not to repeat CITE-seq processing steps even if 
       output SCE objects already exist"
@@ -179,15 +179,19 @@ process_citeseq_counts <- function(input_sce,
     
     # Print warning about number of cells removed
     percent_removed <- 100* ((starting_cell_count - ncol(sce)) / starting_cell_count)
-    warning(
-      glue::glue("Removed {round(percent_removed, 4)}% of cells while processing ADT counts in {basename(input_sce)}.")
-    )
+    if (percent_removed >  0) {
+      warning(
+        glue::glue("Removed {round(percent_removed, 4)}% of cells while processing ADT counts in {basename(input_sce)}.")
+      )
+    }
   
     # Print warning about ADTs removed
     discard_adts <- paste(adt_df$ADT[adt_df$retain == FALSE], collapse = ", ")
-    warning(
-      glue::glue("The following ADTs were removed due to low counts: {discard_adts}")
-    )
+    if (nchar(discard_adts) > 0) {
+      warning(
+        glue::glue("The following ADTs were removed due to low counts: {discard_adts}")
+      )
+     }
     
     # Finally, perform normalization with the final size factors and save back to SCE
     altExp(filtered_sce, citeseq_name) <- scater::logNormCounts(altExp(filtered_sce, citeseq_name), 
