@@ -78,7 +78,7 @@ citeseq_libraries_df <- library_metadata_df %>%
 
 # Define input files
 # note - input and output files are sorted to ensure they are in the same order.
-input_sce_files <- sort(find_downstream_sce_files(citeseq_libraries_df$library_biomaterial_id, opt$scpca_downstream_analyses_dir))
+input_sce_files <- sort(find_input_sce_files(citeseq_libraries_df$library_biomaterial_id, opt$scpca_downstream_analyses_dir))
 
 
 # Define the output files and make sure directories exist
