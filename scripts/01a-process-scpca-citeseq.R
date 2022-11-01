@@ -60,7 +60,7 @@ option_list <- list(
   ),
   make_option(
     opt_str = c("--repeat_processing"),
-    default = FALSE,
+    default = TRUE,
     action = "store_true",
     help = "Indicates whether or not to repeat CITE-seq processing steps even if 
       output SCE objects already exist"
@@ -162,8 +162,12 @@ process_citeseq_counts <- function(input_sce,
     # Calculate size factors
     size_factors <- scuttle::medianSizeFactors(altExp(sce, citeseq_name), reference = baseline)
 
-    # Error out if any size_factors are 0
+    # Error out if any size_factors are NA or 0
     n_zero <- sum(size_factors == 0)
+    
+    if (is.na(n_zero)) {
+      stop("Error: ADT size factors could not be calculated. Try using a less stringest `adt_threshold`.")
+    }
     if(n_zero > 0) {
       stop(
         glue::glue(
@@ -181,7 +185,6 @@ process_citeseq_counts <- function(input_sce,
   
     # Print warning about ADTs removed
     discard_adts <- paste(adt_df$ADT[adt_df$discard == TRUE], collapse = ", ")
-    percent_removed <- 100* ((starting_cell_count - ncol(sce)) / starting_cell_count)
     warning(
       glue::glue("The following ADTs were removed due to low counts: {discard_adts}")
     )
