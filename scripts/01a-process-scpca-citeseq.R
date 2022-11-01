@@ -8,6 +8,7 @@
 # --filtered_sce_dir: Path to the folder where all SCE files are stored  
 # --citeseq_processed_sce_dir: Path to folder where processed SCE files will be stored
 # --citeseq_name: Name of the altExp slot containing CITE-seq
+# --adt_threshold: Count threshold for removing ADTs
 # --repeat_processing: Flag to repeat processing if output already exists. 
 
 #load the R project by finding the root directory using `here::here()`
@@ -50,7 +51,16 @@ option_list <- list(
     help = "Name of the altExp slot in the sce object that holds the CITE-seq data"
   ),
   make_option(
+    opt_str = c("--adt_threshold"),
+    type = "integer",
+    default = 1, 
+    help = "Threshold of ADT counts allowed. Only ADTs above the threshold are retained;
+           If an ADT's detected and mean counts are <= threshold, that ADT will be removed. 
+           Default value is 1."
+  ),
+  make_option(
     opt_str = c("--repeat_processing"),
+    default = FALSE,
     action = "store_true",
     help = "Indicates whether or not to repeat CITE-seq processing steps even if 
       output SCE objects already exist"
@@ -118,8 +128,8 @@ process_citeseq_counts <- function(input_sce,
   sce <- readr::read_rds(input_sce)
   starting_cell_count <- ncol(sce) # number of starting cells, for comparing back after filtering
 
-  # Only run if file does not exist or repeat is TRUE aka not null
- # if (  !(file.exists(output_sce)) | !(is.null(opt$repeat_process)) ) {
+  # Only run if file does not exist or repeat is TRUE
+  if (  !(file.exists(output_sce)) | opt$repeat_process == TRUE ) {
     
     ##### Perform QC ####
     # http://bioconductor.org/books/3.15/OSCA.advanced/integrating-with-protein-abundance.html#applying-custom-qc-filters
@@ -127,13 +137,20 @@ process_citeseq_counts <- function(input_sce,
       tibble::as_tibble(rownames = "cell_barcode") %>%
       dplyr::filter(discard == FALSE) %>%
       dplyr::pull(cell_barcode)
-      retain_adts <- as.data.frame(rowData(altExp(sce))) %>%
-        tibble::rownames_to_column("ADT") %>%
-        dplyr::filter(detected > 1 & mean > 1) %>%
-        dplyr::pull(ADT)
-    # Keep only cells that are present in retain_barcodes
-    # note that this also filters the altExp
+  
+    # Only retain ADTs with >1 counts
+    adt_df <- as.data.frame(rowData(altExp(sce))) %>%
+      tibble::rownames_to_column("ADT") %>%
+      # discard anything at or below given threshold
+      dplyr::mutate(discard = detected <= opt$adt_threshold & mean <= opt$adt_threshold)
+    
+    # Vector of ADTs to retain
+    retain_adts <- adt_df$ADT[adt_df$discard == FALSE]
+    
+    # Keep only cells that are present in retain_barcodes (note that this also filters the altExp)
     sce <- sce[,retain_barcodes]
+    
+    # Remove low-count ADTs as well
     altExp(sce, citeseq_name) <- altExp(sce, citeseq_name)[retain_adts, ]
     
     #### Perform normalization ####
@@ -144,23 +161,16 @@ process_citeseq_counts <- function(input_sce,
     
     # Calculate size factors
     size_factors <- scuttle::medianSizeFactors(altExp(sce, citeseq_name), reference = baseline)
-    
-    #cat(basename(input_sce), sum(size_factors  == 0), "\n")
 
-    # Ensure that no size_factors are 0
-    while(sum(size_factors == 0)) {
-      warning(
+    # Error out if any size_factors are 0
+    n_zero <- sum(size_factors == 0)
+    if(n_zero > 0) {
+      stop(
         glue::glue(
-          "{length(sum(size_factors == 0))} cell(s) has an ADT size factors of zero for {basename(input_sce)}.
-          These cells will be removed and size factors will be recalculated.
+          "Error: {n_zero} cell(s) have/has an ADT size factors of zero for {basename(input_sce)}.
+          Cannot perform CITE-seq processing.
           ")
       )
-      
-      # Remove those cells that are still 0, and start again
-      sce <- sce[,size_factors != 0]
-      
-      baseline <- DropletUtils::ambientProfileBimodal(altExp(sce, citeseq_name))
-      size_factors <- scuttle::medianSizeFactors(altExp(sce, citeseq_name), reference = baseline)
     }
     
     # Print warning about number of cells removed
@@ -169,12 +179,20 @@ process_citeseq_counts <- function(input_sce,
       glue::glue("Removed {round(percent_removed, 2)}% of cells while processing ADT counts in {basename(input_sce)}.")
     )
   
+    # Print warning about ADTs removed
+    discard_adts <- paste(adt_df$ADT[adt_df$discard == TRUE], collapse = ", ")
+    percent_removed <- 100* ((starting_cell_count - ncol(sce)) / starting_cell_count)
+    warning(
+      glue::glue("The following ADTs were removed due to low counts: {discard_adts}")
+    )
+    
     # Finally, perform normalization with the final size factors and save back to SCE
     altExp(sce, citeseq_name) <- scater::logNormCounts(altExp(sce, citeseq_name), 
                                                        size.factors = size_factors)
     
-    # Add metadata column about filtering
+    # Add metadata columns about filtering
     metadata(sce)$citeseq_percent_cells_removed <- percent_removed
+    metadata(sce)$adts_removed <- discard_adts
     
     
     # Double check we actually did get a `logcounts` assay in there
@@ -187,10 +205,10 @@ process_citeseq_counts <- function(input_sce,
       stop("Error in CITE-seq processing: Final RNA cell barcodes don't match ADT barcodes.")
     }
     
- # }
-  
-  # Export to file
-  readr::write_rds(sce, output_sce)
+    # Export to file
+    readr::write_rds(sce, output_sce)
+  }
+
 }
 
 
