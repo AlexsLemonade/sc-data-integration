@@ -139,28 +139,28 @@ process_citeseq_counts <- function(input_sce,
       dplyr::pull(cell_barcode)
   
     # Only retain ADTs with >1 counts
-    adt_df <- as.data.frame(rowData(altExp(sce))) %>%
+    adt_df <- as.data.frame(rowData(altExp(sce, citeseq_name))) %>%
       tibble::rownames_to_column("ADT") %>%
       # discard anything at or below given threshold
-      dplyr::mutate(discard = detected <= opt$adt_threshold & mean <= opt$adt_threshold)
+      dplyr::mutate(retain = detected > opt$adt_threshold & mean > opt$adt_threshold)
     
     # Vector of ADTs to retain
-    retain_adts <- adt_df$ADT[adt_df$discard == FALSE]
+    retain_adts <- adt_df$ADT[adt_df$retain == TRUE]
     
     # Keep only cells that are present in retain_barcodes (note that this also filters the altExp)
-    sce <- sce[,retain_barcodes]
+    filtered_sce <- sce[,retain_barcodes]
     
     # Remove low-count ADTs as well
-    altExp(sce, citeseq_name) <- altExp(sce, citeseq_name)[retain_adts, ]
+    altExp(filtered_sce, citeseq_name) <- altExp(filtered_sce, citeseq_name)[retain_adts, ]
     
     #### Perform normalization ####
     # http://bioconductor.org/books/3.15/OSCA.advanced/integrating-with-protein-abundance.html#cite-seq-median-norm
     
     # Calculate baseline:
-    baseline <- DropletUtils::ambientProfileBimodal(altExp(sce, citeseq_name))
+    baseline <- DropletUtils::ambientProfileBimodal(altExp(filtered_sce, citeseq_name))
     
     # Calculate size factors
-    size_factors <- scuttle::medianSizeFactors(altExp(sce, citeseq_name), reference = baseline)
+    size_factors <- scuttle::medianSizeFactors(altExp(filtered_sce, citeseq_name), reference = baseline)
 
     # Error out if any size_factors are NA or 0
     n_zero <- sum(size_factors == 0)
@@ -180,36 +180,36 @@ process_citeseq_counts <- function(input_sce,
     # Print warning about number of cells removed
     percent_removed <- 100* ((starting_cell_count - ncol(sce)) / starting_cell_count)
     warning(
-      glue::glue("Removed {round(percent_removed, 2)}% of cells while processing ADT counts in {basename(input_sce)}.")
+      glue::glue("Removed {round(percent_removed, 4)}% of cells while processing ADT counts in {basename(input_sce)}.")
     )
   
     # Print warning about ADTs removed
-    discard_adts <- paste(adt_df$ADT[adt_df$discard == TRUE], collapse = ", ")
+    discard_adts <- paste(adt_df$ADT[adt_df$retain == FALSE], collapse = ", ")
     warning(
       glue::glue("The following ADTs were removed due to low counts: {discard_adts}")
     )
     
     # Finally, perform normalization with the final size factors and save back to SCE
-    altExp(sce, citeseq_name) <- scater::logNormCounts(altExp(sce, citeseq_name), 
+    altExp(filtered_sce, citeseq_name) <- scater::logNormCounts(altExp(filtered_sce, citeseq_name), 
                                                        size.factors = size_factors)
     
     # Add metadata columns about filtering
-    metadata(sce)$citeseq_percent_cells_removed <- percent_removed
-    metadata(sce)$adts_removed <- discard_adts
+    metadata(filtered_sce)$citeseq_percent_cells_removed <- percent_removed
+    metadata(filtered_sce)$adts_removed <- discard_adts
     
     
     # Double check we actually did get a `logcounts` assay in there
-    if (!("logcounts" %in% assayNames(altExp(sce, citeseq_name)))) {
+    if (!("logcounts" %in% assayNames(altExp(filtered_sce, citeseq_name)))) {
       stop("Error in CITE-seq processing: Normalized ADT counts are missing.")
     }
     
     # Double check that the cells match in RNA and CITE, just in case
-    if (!(all(colnames(sce) == colnames(altExp(sce, citeseq_name))))) {
+    if (!(all(colnames(filtered_sce) == colnames(altExp(filtered_sce, citeseq_name))))) {
       stop("Error in CITE-seq processing: Final RNA cell barcodes don't match ADT barcodes.")
     }
     
     # Export to file
-    readr::write_rds(sce, output_sce)
+    readr::write_rds(filtered_sce, output_sce)
   }
 
 }
