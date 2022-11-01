@@ -189,7 +189,7 @@ process_citeseq_counts <- function(input_sce,
     discard_adts <- paste(adt_df$ADT[adt_df$retain == FALSE], collapse = ", ")
     if (nchar(discard_adts) > 0) {
       warning(
-        glue::glue("The following ADTs were removed due to low counts: {discard_adts}")
+        glue::glue("The following ADTs were removed from {basename(input_sce)} due to low counts: {discard_adts}")
       )
      }
     
