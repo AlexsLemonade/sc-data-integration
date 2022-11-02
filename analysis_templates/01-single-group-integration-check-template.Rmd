@@ -248,6 +248,14 @@ if (celltypes_present == TRUE) {
     glue::glue("Not including NA cell types, there are {n_celltypes} total cell types, with the following number of cells:")
   )
   table(known_celltypes)
+  
+  # Create DF of celltype counts for plotting use later
+  celltype_plot_counts <- tibble::as_tibble(table(known_celltypes)) %>%
+    dplyr::rename(
+      celltype_plot_names = known_celltypes
+    ) %>%
+    dplyr::mutate(celltype_plot_names_label = glue::glue("{celltype_plot_names} (N={n})"))
+  
 }
 ```
 
@@ -456,11 +464,20 @@ Results below (if present) are shown first for all cell types together, and then
 ```{r, fig.height=5, fig.width=7}
 if (celltypes_present) {
   # Not separated; provide ALL celltypes here
-  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = FALSE) 
+  asw_results <- run_asw(sce_list, 
+                         params$celltype_column, 
+                         params$seed, 
+                         by_batch = FALSE) 
   print(asw_results$asw_plot)
   
   # Separated; provide only the subtypes to plot here and their colors
-  asw_results <- run_asw(sce_list, "celltype_plot_names", params$seed, by_batch = TRUE, batch_label = "Cell type", plot_colors = celltype_colors) 
+  asw_results <- run_asw(sce_list, 
+                         "celltype_plot_names", 
+                         params$seed, 
+                         by_batch = TRUE, 
+                         batch_label = "Cell type", 
+                         plot_colors = celltype_colors,
+                         label_df = celltype_plot_counts) 
   print(asw_results$asw_plot)
 } else {
   warning("No cell types are present, so cell type ASW will not be evaluated.")

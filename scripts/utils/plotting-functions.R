@@ -290,13 +290,15 @@ set_integration_order <- function(metrics_df,
 #' @param by_batch Whether to take the average and color by the batch
 #' @param batch_label Label to include in plot for batch, if by_batch is TRUE
 #' @param plot_colors Optional vector of colors to use
+#' @param label_df Optional vector frame of labels to use in the legend
 #' 
 #' @return ggplot object
 plot_asw <- function(asw_df,
                      seed = seed, 
                      by_batch, 
                      batch_label, 
-                     plot_colors = NULL) {
+                     plot_colors = NULL, 
+                     legend_labels = NULL) {
 
   # Set seed if given
   set.seed(seed)
@@ -348,7 +350,7 @@ plot_asw <- function(asw_df,
         ggokabeito::scale_color_okabe_ito(name = batch_label) 
     } else {
       asw_plot <- asw_plot + 
-        scale_color_manual(name = batch_label, values = plot_colors)  
+        scale_color_manual(name = batch_label, values = plot_colors, labels = legend_labels)  
     }
   } else { 
     # or without batch grouping/coloring

@@ -94,7 +94,8 @@ run_ari <- function(sce_list, batch_column, k_range, seed) {
 #'   Default is `TRUE`.
 #' @param batch_label Label to include in plot. Default is "Batch"
 #' @param plot_colors Optional vector of colors to use in the plot.
-#' 
+#' @param legend_label Optional vector frame of labels to use in the legend
+
 #'
 #' @return Data frame and ggplot object of ARI results
 run_asw <- function(sce_list, 
@@ -102,7 +103,8 @@ run_asw <- function(sce_list,
                     seed, 
                     by_batch = TRUE, 
                     batch_label = "Batch", 
-                    plot_colors = NULL) {
+                    plot_colors = NULL, 
+                    legend_label = NULL) {
     
   # calculate for unintegrated SCE
   asw_unintegrated <- calculate_silhouette_width(sce_list$unintegrated,
@@ -121,7 +123,7 @@ run_asw <- function(sce_list,
   asw_df <- dplyr::bind_rows(asw_unintegrated, asw_integrated_list)
   
   # Visualize results
-  asw_plot <- plot_asw(asw_df, seed, by_batch, batch_label, plot_colors)
+  asw_plot <- plot_asw(asw_df, seed, by_batch, batch_label, plot_colors, legend_label)
   
   # Return df and plot
   return(
