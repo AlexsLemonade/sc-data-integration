@@ -415,7 +415,8 @@ plot_lisi <- function(lisi_df, lisi_type = "iLISI"){
   }
   
   # Perform score normalization using either the number of batches or cell types depending on the score type
-num_batches <- length(unique(lisi_df$batch_identity))
+  num_batches <- length(unique(lisi_df$batch_identity))
+  
   if (lisi_type == "iLISI") {
     # normalize following the scIB method
     # https://github.com/theislab/scib/blob/067eb1aee7044f5ce0652fa363ec8deab0e9668d/scib/metrics/lisi.py#L98-L100

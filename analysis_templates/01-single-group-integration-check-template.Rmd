@@ -296,7 +296,7 @@ print(ilisi_results$lisi_plot)
 
 Complementary to iLISI, the cLISI (_cell type_ local inverse Simpson's index) metric can be used to measure the local distribution of cell types in the integrated dataset, as defined in [Korsunksky et al.](https://doi.org/10.1038/s41592-019-0619-0). 
 The cLISI score can be interpreted as describing how many cell types are represented within a local neighborhood. 
-The range of cLISI scores will be from 1 to the number of cell types, however we have normalized the score following the same method utilized by the `scIB` benchmarking tools: (num cell types - clisi/(num cell types - 1)
+The range of cLISI scores will be from 1 to the number of cell types, however we have normalized the score following the same method utilized by the `scIB` benchmarking tools: `(num cell types - clisi)/(num cell types - 1)`.
 Therefore, we would expect that well integrated datasets to be close to 0 indicating low mixing of cell types, while poorly integrated datasets would be close to 1 indicating high mixing of cell types.
 
 
