@@ -26,7 +26,7 @@ perform_file_search <- function(input_dir,
 
 
 
-#' Find all nested files in a given downstream analyses output directory. If 
+#' Find all nested files in a given SCE output directory. If 
 #'   some files are missing, this function will throw an error and prompt users to
 #'   run downstream analyses.
 #'
