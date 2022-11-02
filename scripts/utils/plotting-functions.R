@@ -48,6 +48,51 @@ setup_celltype_plot_names <- function(sce,
 }
 
 
+
+
+
+
+#' Make stacked barplot of number of cells across batches from an SCE with both
+#'  celltype and batch information
+#'
+#' @param sce_coldata colData slot of an SCE object that contains `batch_column` 
+#'  and `celltype_column` columns for plotting
+#' @param batch_column Name of the batch column. Default "batch"
+#' @param celltype_column Name of the celltype column. Default "celltype"
+#' @param plot_colors Optional vector of colors for filling barplots by cell types.
+#'   If `NULL`, the plot uses the default ggplot2 palette
+#' @param plot_title Title for the plot
+#'
+#' @return ggplot2 barplot object
+plot_barplot_batch_celltype <- function(sce_coldata, 
+                                        batch_column = "batch", 
+                                        celltype_column = "celltype",
+                                        plot_colors = NULL, 
+                                        plot_title = NULL
+                                        ) {
+  
+  batch_cell_barplot <- as.data.frame(sce_coldata) %>%
+    ggplot() +
+    aes_string(x = batch_column, 
+               fill = celltype_column) + 
+    geom_bar(color = "black", size = 0.2) +
+    labs(
+      x = "Batch",
+      y = "Number of cells", 
+      fill = "Cell type", 
+      title = plot_title
+    ) 
+  
+  # Add colors if specified
+  if (!is.null(plot_colors)) {
+    batch_cell_barplot <- batch_cell_barplot + 
+      scale_fill_manual(values = plot_colors)
+  }
+  
+  return(batch_cell_barplot)
+}
+
+
 #' Create a single UMAP plot colored by a provided column in the sce object
 #'
 #' @param sce SCE to grab UMAP embeddings from for plotting
@@ -55,6 +100,8 @@ setup_celltype_plot_names <- function(sce,
 #' @param umap_name Name or UMAP embeddings (e.g. "UMAP" or "fastmnn_UMAP")
 #' @param plot_colors Vector of colors to use for labeling cells. Must be
 #'   equivalent to the number of categories present in the cell_label_column.
+#' @param include_legend_counts Whether to include counts (like (N=###)) in legend 
+#'   key labels. Default is `TRUE`.
 #' @param plot_title Title to use for the plot
 #' @param legend_title Legend title for colors to include in plot
 #' @param seed Random seed to set prior to shuffling SCE object
@@ -64,6 +111,7 @@ setup_celltype_plot_names <- function(sce,
 plot_umap_panel <- function(sce,
                             cell_label_column,
                             umap_name,
+                            include_legend_counts = TRUE,
                             plot_colors,
                             plot_title = NULL, 
                             legend_title = NULL,
@@ -81,6 +129,28 @@ plot_umap_panel <- function(sce,
   # randomly shuffle cells prior to plotting
   col_order <- sample(ncol(sce))
   shuffled_sce <- sce[,col_order]
+  
+  # Update `cell_label_column` to include N's, if specified
+  if (include_legend_counts) {
+    
+    cell_label_column_sym <- rlang::ensym(cell_label_column)
+    coldata_df <- as.data.frame( colData(shuffled_sce) )
+    
+    # Calculate counts and create a string for labeling in column `names_with_n`
+    celltype_counts <- coldata_df %>%
+      dplyr::count(!!cell_label_column_sym) %>%
+      # new name here!
+      dplyr::mutate(names_with_n = paste0(
+        !!cell_label_column_sym, " (N = ", n, ")"
+      )) %>%
+      dplyr::select(-n)
+    
+    # Join into colData, and update cell_label_column string
+    colData(shuffled_sce) <- coldata_df %>%
+      dplyr::inner_join(celltype_counts) %>%
+      DataFrame()
+    cell_label_column <- "names_with_n"
+  }
 
   # create umap and label with provided cell label column
   umap <- scater::plotReducedDim(shuffled_sce,
@@ -113,6 +183,8 @@ plot_umap_panel <- function(sce,
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
 #' @param group_name Name to use to describe all libraries grouped together in integrated object
 #' @param cell_label_column Column to use for labeling cells in UMAPs
+#' @param include_legend_counts Whether to include counts (like (N=###)) in legend 
+#'   key labels. Default is `TRUE`.
 #' @param legend_title Legend title for colors to include in plot
 #' @param plot_colors Optional vector of colors to use in plot.
 #' @param seed Random seed to use for randomizing plotting in UMAPs
@@ -124,6 +196,7 @@ plot_integration_umap <- function(sce,
                                   integration_method,
                                   group_name,
                                   cell_label_column,
+                                  include_legend_counts = TRUE,
                                   legend_title,
                                   plot_colors = NULL,
                                   seed = NULL) {
@@ -155,7 +228,8 @@ plot_integration_umap <- function(sce,
   umap <- plot_umap_panel(sce = sce,
                           cell_label_column,
                           umap_name = umap_name,
-                          plot_colors,
+                          include_legend_counts, 
+                          plot_colors = batch_colors,
                           plot_title = integration_method,
                           legend_title = legend_title,
                           seed = seed)
