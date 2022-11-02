@@ -5,7 +5,7 @@
 # Option descriptions: 
 # 
 # --library_file: The path to the file listing all libraries whose SCE files _may_ need to be processed.
-# --filtered_sce_dir: Path to the folder where all SCE files are stored  
+# --scpca_downstream_analyses_dir: Path to the folder where all input SCE files are stored  
 # --citeseq_processed_sce_dir: Path to folder where processed SCE files will be stored
 # --citeseq_name: Name of the altExp slot containing CITE-seq
 # --adt_threshold: Count threshold for removing ADTs
@@ -129,7 +129,7 @@ process_citeseq_counts <- function(input_sce,
   starting_cell_count <- ncol(sce) # number of starting cells, for comparing back after filtering
 
   # Only run if file does not exist or repeat is TRUE
-  if (  !(file.exists(output_sce)) | opt$repeat_process == TRUE ) {
+  if (  !(file.exists(output_sce)) | opt$repeat_processing == TRUE ) {
     
     ##### Perform QC ####
     # http://bioconductor.org/books/3.15/OSCA.advanced/integrating-with-protein-abundance.html#applying-custom-qc-filters
@@ -220,10 +220,10 @@ process_citeseq_counts <- function(input_sce,
 
 
 # Process data depending on repeat setting:
-if (all(file.exists(output_sce_files)) & is.null(opt$repeat_processing)) {
+if (all(file.exists(output_sce_files)) & opt$repeat_processing == FALSE) {
   stop("CITE-Seq data has already been processed. To overwrite files, use the `--repeat_processing` flag.")
 }
-if (!(is.null(opt$repeat_processing))) {
+if (opt$repeat_processing == TRUE) {
   warning("CITE-Seq data is being re-processed and files may be overwritten.")
 }
 purrr::walk2(input_sce_files, 
