@@ -5,6 +5,76 @@ suppressPackageStartupMessages({
   library(magrittr)
 })
 
+
+
+
+#' Search for files based on input directory and provided pattern
+#'
+#' @param input_dir Directory to search in
+#' @param search_pattern Filename pattern to search for
+#'
+#' @return Vector of all detected files
+perform_file_search <- function(input_dir,
+                                    search_pattern){
+  detected_files <- list.files(input_dir,
+                              pattern = search_pattern,
+                              recursive = TRUE,
+                              full.names = TRUE)
+  return(detected_files)
+}
+
+
+
+
+#' Find all nested files in a given SCE output directory. If 
+#'   some files are missing, this function will throw an error and prompt users to
+#'   run downstream analyses.
+#'
+#' @param sce_dirs Vector of several directories to search in (can be length 1)
+#' @param library_ids Vector of nested result directory names which corresponds
+#'  to library IDs
+#'
+#' @return Vector of all identified SCE files, unless an error is thrown.
+find_input_sce_files <- function(library_ids, sce_dirs) {
+
+  # find SCE files that match library ID
+  library_search <- paste(library_ids, collapse = "|")
+  
+  all_library_files <- purrr::map(sce_dirs, 
+                                  ~ (perform_file_search(input_dir = .x, search_pattern = library_search))) %>%
+    unlist()
+  
+  # just include RDS files, otherwise HTML files will also be found
+  sce_files <- all_library_files[grep(pattern = ".rds", all_library_files, ignore.case = TRUE)]
+  
+  # if the number of sce files is different then the library ID's find the missing files
+  if(length(sce_files) < length(library_ids)){
+    
+    libraries_found <- stringr::str_extract(sce_files, library_search)
+    missing_libraries <- setdiff(library_ids, libraries_found)
+    
+    stop(
+      glue::glue(
+        "\nMissing SCE object for {missing_libraries}.
+      Make sure that you have run `01-run-downstream-analyses.sh` or provided the correct input folder(s)."
+      )
+    )
+  }
+  
+  
+  # Return sce_files
+  return(sce_files)
+}
+
+
+
+
+
+
+
+
+
+
 #' Combine two or more SCE objects
 #'
 #' This function combines one or more SCE objects into a single SCE object, with
