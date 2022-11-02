@@ -10,7 +10,9 @@ The `utils/` directory contains functions used within these scripts and is separ
 - [Obtaining `SingleCellExperiment` objects](#obtaining-singlecellexperiment-objects)
 - [Re-formatting cell type information](#re-formatting-cell-type-information)
   - [Special considerations for cell type information](#special-considerations-for-cell-type-information)
+  - [Simulation `SingleCellExperiment` objectss](#simulation-singlecellexperiment-objectss)
 - [Running HCA test datasets through `scpca-downstream-analyses`](#running-hca-test-datasets-through-scpca-downstream-analyses)
+- [Preparing ScPCA test datasets for integration](#preparing-scpca-test-datasets-for-integration)
   - [Generating the mitochondrial gene list](#generating-the-mitochondrial-gene-list)
 
 <!-- END doctoc generated TOC please keep comment here to allow auto update -->
@@ -140,11 +142,12 @@ bash 01-run-downstream-analyses.sh \
 
 We have provided a select subset of ScPCA projects and libraries to use for testing the data integration workflow.
 The list of libraries used can be found in `sample-info/scpca-processed-libraries.tsv` and the list of projects can be found in `sample-info/scpca-project-metadata.tsv`.
+Note that the metadata file `sample-info/scpca-processed-libraries.tsv` additionally contains a boolean column `has_CITEseq` indicating whether or not the given library has CITE-Seq data.
 
 The `_filtered.rds` files for the libraries being integrated can be obtained by using the `00d-obtain-scpca-sce.R` script.
 Running this script with the default arguments will copy over the SCE objects stored in files named as `<library_id>_filtered.rds` to the local `data/scpca/filtered_sce` folder.
 
-After copying over the files from S3 to your local `data` directory, the core workflow from `scpca-downstream-analyses` will need to be run to obtain the normalized and processed SCE files needed as input for the integration workflow.
+Next, the core workflow from `scpca-downstream-analyses` will need to be run to obtain the normalized and processed SCE files needed as input for the integration workflow.
 
 This can be done using the following command and by providing the full paths to each of the input metadata files and directories:
 
@@ -152,13 +155,17 @@ This can be done using the following command and by providing the full paths to 
 bash 01-run-downstream-analyses.sh \
   --downstream_repo <full path to location of scpca-downstream-repo> \
   --processed_library_df <full path to sample-info/scpca-processed-libraries.tsv> \
-  --filtered_sce_dir <full path to data/scpca/filtered_sce> \
+  --filtered_sce_dir <full path to results/scpca/filtered_sce> \
   --results_dir <full path to results/scpca/scpca-downstream-analyses> \
   --mito_file <full path to scpca-downstream-repo/reference-files/Homo.sapiens.GRCh38.104.mitogenes.txt>
   --downstream_metadata_file <full path to sample-info/scpca-downstream-metadata.tsv>
 ```
 
 **Note* You should not use the `--repeat_filtering` option here because there will not be any unfiltered SCE files to use to perform filtering so the workflow will report an error.
+
+
+Finally, ScPCA data should be processed through the `01a-process-scpca-citeseq.R` so that any potential CITE-Seq data in the SCE object is filtered and normalized.
+For any SCE files with CITE-Seq data, results will be stored in the local `results/scpca/citeseq_sce` folder.
 
 ### Preparing SCPCP000005 for data integration
 

@@ -67,7 +67,7 @@ library_metadata_df <- readr::read_tsv(opt$library_file)
 # construct path to filtered RDS files on S3 to copy to local filtered SCE folder 
 s3_filtered_sce_files <- library_metadata_df %>%
   dplyr::mutate(sce_filename = paste0(library_biomaterial_id, "_filtered.rds"),
-                filtered_file_path = file.path(project_name,
+                filtered_file_path = file.path(scpca_project_id,
                                                sample_biomaterial_id,
                                                sce_filename)) %>%
   dplyr::pull(filtered_file_path)
