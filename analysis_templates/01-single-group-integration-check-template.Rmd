@@ -121,7 +121,6 @@ sce_list <- purrr::map(all_sce_files, readr::read_rds) %>%
 
 
 ```{r sce-checks}
-
 # check that batch column is found in colData of both merged and integrated sce objects
 # first find all the column names of the coldata found in common
 coldata_names <- sce_list %>%
@@ -218,6 +217,55 @@ if(params$celltype_column %in% coldata_names){
   warning("No cell type information found for this dataset. Cannot make UMAPs annotated with cell type or evaluate cell type mixing.")
 }
   
+```
+
+## Explore dataset size
+
+This section displays information about the overall dataset size, number of batches, and number of cells (if present).
+
+First, how many batches and cell types (if present) are there? If there are cell present, what are they?
+
+```{r table-batch-celltypes}
+ # pull out an SCE object to count from; all SCEs should be equivalent for these calculations
+sce_coldata <- colData(sce_list[[1]])
+
+
+# How many batches?
+n_batches <- length(unique(sce_coldata[,params$batch_column]))
+print(
+  glue::glue("There are {n_batches} total batches, with the following number of cells:")
+)
+table(sce_coldata[,params$batch_column])
+
+# If there are celltypes, 
+if (celltypes_present == TRUE) {
+  
+  # How many celltypes?
+  known_celltypes <- sce_coldata[,params$celltype_column] [!is.na(sce_coldata[,params$celltype_column])]
+  n_celltypes <- length(unique(known_celltypes))
+  
+  print(
+    glue::glue("Not including NA cell types, there are {n_celltypes} total cell types, with the following number of cells:")
+  )
+  table(known_celltypes)
+}
+```
+
+
+The plots below shows how the celltypes are distributed across batches. 
+The total height of each bar corresponds to the number of cells in the given batch.
+The plot is displayed both with and without the infrequent cell types collapsed into "other."
+
+
+```{r barplot-batch-celltypes}
+# Using the "other" grouping and associated colors
+plot_barplot_batch_celltype(sce_coldata, params$batch_column, "celltype_plot_names", 
+                            plot_colors = celltype_colors, 
+                            plot_title = "Top 5 cell types and other")
+
+
+# Show all cell types without collapsing into "other"
+plot_barplot_batch_celltype(sce_coldata, params$batch_column, params$celltype_column, plot_title = "All cell types")
 ```
 
 
