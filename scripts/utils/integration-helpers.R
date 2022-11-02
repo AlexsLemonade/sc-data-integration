@@ -34,7 +34,7 @@ perform_file_search <- function(input_dir,
 #' @param library_ids Vector of nested result directory names which corresponds
 #'  to library IDs
 #'
-#' @return Vector of all downstream analyses outputted SCE files, unless an error is thrown.
+#' @return Vector of all identified SCE files, unless an error is thrown.
 find_input_sce_files <- function(library_ids, sce_dirs) {
 
   # find SCE files that match library ID
