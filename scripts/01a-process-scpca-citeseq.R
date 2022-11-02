@@ -94,7 +94,7 @@ input_sce_files <- sort(find_input_sce_files(citeseq_libraries_df$library_biomat
 # Define the output files and make sure directories exist
 output_sce_files <- sort(file.path(opt$citeseq_processed_sce_dir, 
                                    citeseq_libraries_df$sample_biomaterial_id, 
-                                   paste0(citeseq_libraries_df$library_biomaterial_id, "_sce.rds")
+                                   paste0(citeseq_libraries_df$library_biomaterial_id, "_processed_citeseq.rds")
 ))
 
 # quick length check:
