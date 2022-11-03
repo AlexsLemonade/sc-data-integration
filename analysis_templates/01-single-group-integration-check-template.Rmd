@@ -229,7 +229,6 @@ First, how many batches and cell types (if present) are there? If there are cell
  # pull out an SCE object to count from; all SCEs should be equivalent for these calculations
 sce_coldata <- colData(sce_list[[1]])
 
-
 # How many batches?
 n_batches <- length(unique(sce_coldata[,params$batch_column]))
 print(
@@ -249,12 +248,13 @@ if (celltypes_present == TRUE) {
   )
   table(known_celltypes)
   
-  # Create DF of celltype counts for plotting use later
-  celltype_plot_counts <- tibble::as_tibble(table(known_celltypes)) %>%
+  # Create vector of celltype labels with counts for plotting use later
+  celltype_plot_labels <- tibble::as_tibble(table(known_celltypes)) %>%
     dplyr::rename(
       celltype_plot_names = known_celltypes
     ) %>%
-    dplyr::mutate(celltype_plot_names_label = glue::glue("{celltype_plot_names} (N={n})"))
+    dplyr::mutate(label = glue::glue("{celltype_plot_names} (N={n})")) %>%
+    dplyr::pull(label)
   
 }
 ```
@@ -477,7 +477,7 @@ if (celltypes_present) {
                          by_batch = TRUE, 
                          batch_label = "Cell type", 
                          plot_colors = celltype_colors,
-                         label_df = celltype_plot_counts) 
+                         legend_labels = celltype_plot_labels) 
   print(asw_results$asw_plot)
 } else {
   warning("No cell types are present, so cell type ASW will not be evaluated.")
