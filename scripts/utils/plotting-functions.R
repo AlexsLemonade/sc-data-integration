@@ -33,9 +33,11 @@ setup_celltype_plot_names <- function(sce,
     # if not in top cell types set to "other" for both merged and integrated SCE
     coldata_df <- coldata_df %>%
       # first label everything outside of selected celltypes as other then if NA convert back to NA
+      # ensure that 'other' is last
       dplyr::mutate(celltype = as.character(celltype),
                     celltype_plot_names = dplyr::if_else(celltype %in% selected_celltypes, celltype, "other"),
-                    celltype_plot_names = dplyr::if_else(is.na(celltype), NA_character_, celltype_plot_names))
+                    celltype_plot_names = dplyr::if_else(is.na(celltype), NA_character_, celltype_plot_names), 
+                    celltype_plot_names = forcats::fct_relevel(celltype_plot_names, "other", after = Inf))
   } 
   
   # Return coldata_df to the SCE
@@ -413,7 +415,8 @@ plot_lisi <- function(lisi_df, lisi_type = "iLISI"){
   }
   
   # Perform score normalization using either the number of batches or cell types depending on the score type
-num_batches <- length(unique(lisi_df$batch_identity))
+  num_batches <- length(unique(lisi_df$batch_identity))
+  
   if (lisi_type == "iLISI") {
     # normalize following the scIB method
     # https://github.com/theislab/scib/blob/067eb1aee7044f5ce0652fa363ec8deab0e9668d/scib/metrics/lisi.py#L98-L100
