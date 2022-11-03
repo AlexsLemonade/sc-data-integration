@@ -196,7 +196,7 @@ if(params$celltype_column %in% coldata_names){
       max_celltypes = params$max_celltypes)
   )
   
-  # Prepare colors for celltypes as a stand-alone variable, based on the first
+  # Prepare colors for celltypes as a stand-alone variable, based on unintegrated SCE
   celltype_colors <- sce_list$unintegrated$celltype_plot_names %>%
     unique() %>%
     length() %>%
