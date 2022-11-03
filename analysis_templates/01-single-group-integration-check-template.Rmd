@@ -270,14 +270,14 @@ if (celltypes_present == TRUE) {
   # Using the "other" grouping and associated colors
   plot_barplot_batch_celltype(sce_coldata, params$batch_column, "celltype_plot_names", 
                               plot_colors = celltype_colors, 
-                              plot_title = "Top 5 cell types and other")
+                              plot_title = "Top 5 cell types and other") %>% print()
 
 
   # Show all cell types without collapsing into "other"
   plot_barplot_batch_celltype(sce_coldata, 
                               params$batch_column, 
                               params$celltype_column, 
-                              plot_title = "All cell types")
+                              plot_title = "All cell types") %>% print()
 }
 
 ```
