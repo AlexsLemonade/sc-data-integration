@@ -232,10 +232,12 @@ sce_coldata <- colData(sce_list[[1]])
 
 # How many batches?
 n_batches <- length(unique(sce_coldata[,params$batch_column]))
+batch_table <- table(sce_coldata[,params$batch_column])
 print(
-  glue::glue("There are {n_batches} total batches, with the following number of cells:")
+  glue::glue("There are {n_batches} total batches, with the following number of cells:
+  {batch_table}
+  ")
 )
-table(sce_coldata[,params$batch_column])
 
 # If there are celltypes, perform calculations
 if (celltypes_present == TRUE) {
