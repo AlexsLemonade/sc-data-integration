@@ -1849,6 +1849,31 @@
       "Hash": "195f3206842ea5ae11968e8d462bb828",
       "Requirements": []
     },
+    "gt": {
+      "Package": "gt",
+      "Version": "0.7.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "b6f71436ae6088b9a773a5253217ade1",
+      "Requirements": [
+        "base64enc",
+        "bitops",
+        "cli",
+        "commonmark",
+        "dplyr",
+        "fs",
+        "ggplot2",
+        "glue",
+        "htmltools",
+        "magrittr",
+        "rlang",
+        "sass",
+        "scales",
+        "stringr",
+        "tibble",
+        "tidyselect"
+      ]
+    },
     "gtable": {
       "Package": "gtable",
       "Version": "0.3.0",
