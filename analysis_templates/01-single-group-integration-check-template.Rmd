@@ -42,6 +42,9 @@ suppressPackageStartupMessages({
 theme_set(theme_bw())
 
 set.seed(params$seed)
+
+# Maximum value for `max_celltypes` 
+celltypes_ceiling <- 20
 ```
 
 
@@ -68,6 +71,17 @@ knitr::knit_hooks$set(
            '</div>', sep = '\n')
    }
 )
+
+# Check max_celltypes params
+if (params$max_celltypes > celltypes_ceiling) {
+  warning(
+    "The requested number of celltypes {params$max_celltypes} is too high. 
+    It will be changed to the maximum-allowed value of {celltypes_ceiling.}"
+  )
+  max_celltypes <- celltypes_ceiling
+} else {
+  max_celltypes <- params$max_celltypes
+}
 ```
 
 
@@ -193,7 +207,7 @@ if(params$celltype_column %in% coldata_names){
      ~setup_celltype_plot_names(
       .x, 
       celltype_column = params$celltype_column,
-      max_celltypes = params$max_celltypes)
+      max_celltypes = max_celltypes)
   )
   
   # Prepare colors for celltypes as a stand-alone variable, based on unintegrated SCE
@@ -207,7 +221,7 @@ if(params$celltype_column %in% coldata_names){
     warning(
       glue::glue(
         'There are more cell types in this data than can be displayed in plots.
-        Only the top {params$max_celltypes} cell types are explicitly shown in applicable plots. All remaining cell types are collectively designated as "other".
+        Only the top {max_celltypes} cell types are explicitly shown in applicable plots. All remaining cell types are collectively designated as "other".
         '
       )
     )
@@ -223,7 +237,7 @@ if(params$celltype_column %in% coldata_names){
 
 This section displays information about the overall dataset size, number of batches, and number of cells (if present).
 
-First, how many batches and cell types (if present) are there? If there are cell present, what are they?
+First, how many batches and celltypes (if present) are there? If there are celltypes present, what are they?
 
 ```{r table-batch-celltypes}
 # pull out an SCE object for this section
@@ -267,17 +281,9 @@ if (celltypes_present == TRUE) {
     )
   )
   
-  # Using the "other" grouping and associated colors
   plot_barplot_batch_celltype(sce_coldata, params$batch_column, "celltype_plot_names", 
                               plot_colors = celltype_colors, 
-                              plot_title = "Top 5 cell types and other") %>% print()
-
-
-  # Show all cell types without collapsing into "other"
-  plot_barplot_batch_celltype(sce_coldata, 
-                              params$batch_column, 
-                              params$celltype_column, 
-                              plot_title = "All cell types") %>% print()
+                              plot_title = glue::glue("Top {max_celltypes} cell types and other"))
 }
 
 ```
