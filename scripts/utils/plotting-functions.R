@@ -290,7 +290,7 @@ set_integration_order <- function(metrics_df,
 #' @param by_batch Whether to take the average and color by the batch
 #' @param batch_label Label to include in plot for batch, if by_batch is TRUE
 #' @param plot_colors Optional vector of colors to use
-#' @param label_df Optional vector frame of labels to use in the legend
+#' @param legend_labels Optional vector of labels to use in the legend
 #' 
 #' @return ggplot object
 plot_asw <- function(asw_df,
