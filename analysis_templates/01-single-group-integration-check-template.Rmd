@@ -238,7 +238,7 @@ if(params$celltype_column %in% coldata_names){
 
 ## Explore dataset size
 
-This section displays information about the overall dataset size, number of batches, and number of cells (if present).
+This section displays information about the overall dataset size, number of batches, and number of cell types (if present).
 
 First, how many batches and celltypes (if present) are there? If there are celltypes present, what are they?
 
