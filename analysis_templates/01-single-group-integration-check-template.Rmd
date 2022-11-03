@@ -6,7 +6,7 @@ params:
   integration_methods: !r as.vector(c("fastmnn", "harmony", "cca", "rpca"))
   batch_column: "batch"
   celltype_column: "celltype"
-  max_celltypes: 20
+  max_celltypes: 5
   num_pcs: 20
   ari_k_min: 5
   ari_k_max: 25
@@ -268,7 +268,9 @@ if (celltypes_present == TRUE) {
   # How many celltypes?
   n_celltypes_df <- count_groups(params$celltype_column)
   print(
-    glue::glue("Not including NA cell types, there are {nrow(n_celltypes_df)} total cell types, with the following number of cells:")
+    glue::glue("There are {sum(is.na(sce_coldata[,params$celltype_column]))} cells of unknown subtype.
+               
+               There are {nrow(n_celltypes_df)} cells with annotated cell types, each with the following number of cells:")
   )
   gt::gt(n_celltypes_df)
 }
@@ -282,9 +284,10 @@ If celltypes are not available, there will not be a barplot here.
 ```{r barplot-batch-celltypes}
 # If there are celltypes, make barplot
 if (celltypes_present == TRUE) {
-  plot_barplot_batch_celltype(sce_coldata, params$batch_column, "celltype_plot_names", 
-                              plot_colors = celltype_colors, 
-                              plot_title = glue::glue("Cell types"))
+  plot_barplot_batch_celltype(sce_coldata, 
+                              params$batch_column, 
+                              "celltype_plot_names", 
+                              plot_colors = celltype_colors)
 }
 ```
 
@@ -312,7 +315,10 @@ batch_plot_labels <- extract_labels(n_batch_df, params$batch_column)
 
 # Create celltype label vector
 if (celltypes_present) {
-  celltype_plot_labels <- extract_labels(n_celltypes_df, params$celltype_column)
+  celltype_plot_labels <- extract_labels(
+    count_groups("celltype_plot_names"),
+    "celltype_plot_names"
+  )
 }
 ```
 
