@@ -42,6 +42,9 @@ suppressPackageStartupMessages({
 theme_set(theme_bw())
 
 set.seed(params$seed)
+
+# Maximum value for `max_celltypes` 
+celltypes_ceiling <- 10
 ```
 
 
@@ -68,6 +71,19 @@ knitr::knit_hooks$set(
            '</div>', sep = '\n')
    }
 )
+
+# Check max_celltypes param
+if (params$max_celltypes > celltypes_ceiling) {
+  warning(
+    glue::glue(
+      "The requested number of celltypes {params$max_celltypes} is too high. 
+      It will be changed to the maximum-allowed value of {celltypes_ceiling}"
+    )
+  )
+  max_celltypes <- celltypes_ceiling
+} else {
+  max_celltypes <- params$max_celltypes
+}
 ```
 
 
@@ -121,7 +137,6 @@ sce_list <- purrr::map(all_sce_files, readr::read_rds) %>%
 
 
 ```{r sce-checks}
-
 # check that batch column is found in colData of both merged and integrated sce objects
 # first find all the column names of the coldata found in common
 coldata_names <- sce_list %>%
@@ -194,7 +209,7 @@ if(params$celltype_column %in% coldata_names){
      ~setup_celltype_plot_names(
       .x, 
       celltype_column = params$celltype_column,
-      max_celltypes = params$max_celltypes)
+      max_celltypes = max_celltypes)
   )
   
   # Prepare colors for celltypes as a stand-alone variable, based on unintegrated SCE
@@ -208,7 +223,8 @@ if(params$celltype_column %in% coldata_names){
     warning(
       glue::glue(
         'There are more cell types in this data than can be displayed in plots.
-        Only the top {params$max_celltypes} cell types are explicitly shown in applicable plots. All remaining cell types are collectively designated as "other".
+        Only the top {max_celltypes} cell types are explicitly shown in applicable plots. All remaining cell types are collectively designated as "other".
+        To change this value, use the `max_celltypes` RMarkdown parameter.
         '
       )
     )
@@ -219,6 +235,93 @@ if(params$celltype_column %in% coldata_names){
 }
   
 ```
+
+## Explore dataset size
+
+This section displays information about the overall dataset size, number of batches, and number of cell types (if present).
+
+First, how many batches and celltypes (if present) are there? If there are celltypes present, what are they?
+
+```{r table-batch-celltypes}
+# pull out an SCE object for this section
+# all SCEs in the list should be equivalent for these calculations and plots
+sce_coldata <- colData(sce_list[[1]]) %>% tibble::as_tibble()
+
+# helper function to count
+count_groups <- function(colname) {
+  # colname: the column of interest we should count
+  colname_sym <- rlang::sym(colname)
+  sce_coldata %>%
+    dplyr::count(!!colname_sym, name = "count")
+}
+
+# How many batches?
+n_batch_df <- count_groups(params$batch_column)
+print(
+  glue::glue("There are {nrow(n_batch_df)} total batches, with the following number of cells:")
+)
+gt::gt(n_batch_df)
+
+# If there are celltypes, perform calculations
+if (celltypes_present == TRUE) {
+  
+  # How many celltypes?
+  n_celltypes_df <- count_groups(params$celltype_column)
+  print(
+    glue::glue("There are {sum(is.na(sce_coldata[,params$celltype_column]))} cells of unknown subtype.
+               
+               There are {nrow(n_celltypes_df)} cells with annotated cell types, each with the following number of cells:")
+  )
+  gt::gt(n_celltypes_df)
+}
+```
+
+If celltypes are available, a barplot below will show how the celltypes are distributed across batches. 
+The total height of each bar corresponds to the number of cells in the given batch.
+If celltypes are not available, there will not be a barplot here.
+
+
+```{r barplot-batch-celltypes}
+# If there are celltypes, make barplot
+if (celltypes_present == TRUE) {
+  plot_barplot_batch_celltype(sce_coldata, 
+                              params$batch_column, 
+                              "celltype_plot_names", 
+                              plot_colors = celltype_colors)
+}
+```
+
+
+
+
+```{r setup-plot-labels}
+# Before plotting, set up some labels to use in plots so we can have `N=` in 
+#  the legends for batches and celltypes, when present
+
+# helper function:
+extract_labels <- function(count_df, colname) {
+  colname_sym <- rlang::sym(colname)
+  # count_df is a tibble of counts with two columns: `colname`, and `count`
+  count_df %>%
+    dplyr::mutate(label = paste0(
+      !!colname_sym, " (N=", count, ")"
+      )
+    ) %>%
+    dplyr::pull(label)
+}
+
+# Create batch label vector
+batch_plot_labels <- extract_labels(n_batch_df, params$batch_column)
+
+# Create celltype label vector
+if (celltypes_present) {
+  celltype_plot_labels <- extract_labels(
+    count_groups("celltype_plot_names"),
+    "celltype_plot_names"
+  )
+}
+```
+
 
 
 ## UMAPs
@@ -232,6 +335,7 @@ batch_umaps <- names(sce_list) %>%
                                      cell_label_column = params$batch_column,
                                      legend_title = "Batches",
                                      plot_colors = batch_colors,
+                                     legend_labels = batch_plot_labels, 
                                      seed = params$seed))
 batch_legend <- cowplot::get_legend(batch_umaps[[1]])
   
@@ -256,6 +360,8 @@ if(celltypes_present){
                                        params$group_name,
                                        cell_label_column = "celltype_plot_names", # this column includes plotting celltypes
                                        legend_title = "Cell types",
+                                       plot_colors = celltype_colors,
+                                       legend_labels = celltype_plot_labels,
                                        seed = params$seed))
   
   celltype_legend <- cowplot::get_legend(celltype_umaps[[1]])
@@ -389,7 +495,8 @@ Therefore, a well-integrated dataset would show lower batch ASW values compared 
 asw_results <- run_asw(sce_list, 
                        params$batch_column, 
                        params$seed,
-                       plot_colors = batch_colors) # defaults are fine: group by batch and label as `Batch`
+                       plot_colors = batch_colors,
+                       legend_labels = batch_plot_labels)
 
 # Plot results:
 print(asw_results$asw_plot)
@@ -408,11 +515,20 @@ Results below (if present) are shown first for all cell types together, and then
 ```{r, fig.height=5, fig.width=7}
 if (celltypes_present) {
   # Not separated; provide ALL celltypes here
-  asw_results <- run_asw(sce_list, params$celltype_column, params$seed, by_batch = FALSE) 
+  asw_results <- run_asw(sce_list, 
+                         params$celltype_column, 
+                         params$seed, 
+                         by_batch = FALSE) 
   print(asw_results$asw_plot)
   
   # Separated; provide only the subtypes to plot here and their colors
-  asw_results <- run_asw(sce_list, "celltype_plot_names", params$seed, by_batch = TRUE, batch_label = "Cell type", plot_colors = celltype_colors) 
+  asw_results <- run_asw(sce_list, 
+                         "celltype_plot_names", 
+                         params$seed, 
+                         by_batch = TRUE, 
+                         batch_label = "Cell type", 
+                         plot_colors = celltype_colors,
+                         legend_labels = celltype_plot_labels) 
   print(asw_results$asw_plot)
 } else {
   warning("No cell types are present, so cell type ASW will not be evaluated.")

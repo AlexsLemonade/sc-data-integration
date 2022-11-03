@@ -48,6 +48,51 @@ setup_celltype_plot_names <- function(sce,
 }
 
 
+
+
+
+
+#' Make stacked barplot of number of cells across batches from an SCE with both
+#'  celltype and batch information
+#'
+#' @param sce_coldata colData slot of an SCE object that contains `batch_column` 
+#'  and `celltype_column` columns for plotting
+#' @param batch_column Name of the batch column. Default "batch"
+#' @param celltype_column Name of the celltype column. Default "celltype"
+#' @param plot_colors Optional vector of colors for filling barplots by cell types.
+#'   If `NULL`, the plot uses the default ggplot2 palette
+#' @param plot_title Title for the plot
+#'
+#' @return ggplot2 barplot object
+plot_barplot_batch_celltype <- function(sce_coldata, 
+                                        batch_column = "batch", 
+                                        celltype_column = "celltype",
+                                        plot_colors = NULL, 
+                                        plot_title = NULL
+                                        ) {
+  
+  batch_cell_barplot <- as.data.frame(sce_coldata) %>%
+    ggplot() +
+    aes_string(x = batch_column, 
+               fill = celltype_column) + 
+    geom_bar(color = "black", size = 0.2) +
+    labs(
+      x = "Batch",
+      y = "Number of cells", 
+      fill = "Cell type", 
+      title = plot_title
+    ) 
+  
+  # Add colors if specified
+  if (!is.null(plot_colors)) {
+    batch_cell_barplot <- batch_cell_barplot + 
+      scale_fill_manual(values = plot_colors)
+  }
+  
+  return(batch_cell_barplot)
+}
+
+
 #' Create a single UMAP plot colored by a provided column in the sce object
 #'
 #' @param sce SCE to grab UMAP embeddings from for plotting
@@ -57,6 +102,7 @@ setup_celltype_plot_names <- function(sce,
 #'   equivalent to the number of categories present in the cell_label_column.
 #' @param plot_title Title to use for the plot
 #' @param legend_title Legend title for colors to include in plot
+#' @param legend_labels Vector of labels to use in the legend
 #' @param seed Random seed to set prior to shuffling SCE object
 #'
 #' @return ggplot2 object containing UMAP
@@ -67,6 +113,7 @@ plot_umap_panel <- function(sce,
                             plot_colors,
                             plot_title = NULL, 
                             legend_title = NULL,
+                            legend_labels = NULL,
                             seed = NULL){
   
   set.seed(seed)
@@ -88,10 +135,11 @@ plot_umap_panel <- function(sce,
                                  colour_by = cell_label_column,
                                  point_size = 0.1,
                                  point_alpha = 0.4) +
-    scale_color_manual(values = plot_colors) +
+    scale_color_manual(values = plot_colors, 
+                       name = legend_title, 
+                       labels = legend_labels) +
     # relabel legend and resize dots
-    guides(color = guide_legend(title = legend_title,
-                                override.aes = list(size = 3),
+    guides(color = guide_legend(override.aes = list(size = 3),
                                 label.theme = element_text(size = 16))) +
     theme(legend.position = "none",
           text = element_text(size = 14),
@@ -114,6 +162,7 @@ plot_umap_panel <- function(sce,
 #' @param group_name Name to use to describe all libraries grouped together in integrated object
 #' @param cell_label_column Column to use for labeling cells in UMAPs
 #' @param legend_title Legend title for colors to include in plot
+#' @param legend_labels Vector of labels to use in the legend
 #' @param plot_colors Optional vector of colors to use in plot.
 #' @param seed Random seed to use for randomizing plotting in UMAPs
 #'
@@ -124,7 +173,9 @@ plot_integration_umap <- function(sce,
                                   integration_method,
                                   group_name,
                                   cell_label_column,
-                                  legend_title,
+                                  include_legend_counts = TRUE,
+                                  legend_title = NULL, 
+                                  legend_labels = NULL,
                                   plot_colors = NULL,
                                   seed = NULL) {
 
@@ -134,6 +185,7 @@ plot_integration_umap <- function(sce,
   if(!cell_label_column %in% colnames(colData(sce))){
     stop("Provided cell_label_column should be present in the SCE object.")
   }
+
   
   # Define colors if not provided, or if provided check the size
   if (is.null(plot_colors)) {
@@ -144,7 +196,7 @@ plot_integration_umap <- function(sce,
       stop("The number of provided colors does not match the number of labels.")
     }
   }
-
+  
   if(integration_method == "unintegrated"){
     umap_name <- "UMAP"
   } else {
@@ -154,10 +206,11 @@ plot_integration_umap <- function(sce,
 
   umap <- plot_umap_panel(sce = sce,
                           cell_label_column,
-                          umap_name = umap_name,
-                          plot_colors,
+                          umap_name = umap_name, 
+                          plot_colors = plot_colors,
                           plot_title = integration_method,
                           legend_title = legend_title,
+                          legend_labels = legend_labels,
                           seed = seed)
 
   return(umap)
@@ -216,13 +269,15 @@ set_integration_order <- function(metrics_df,
 #' @param by_batch Whether to take the average and color by the batch
 #' @param batch_label Label to include in plot for batch, if by_batch is TRUE
 #' @param plot_colors Optional vector of colors to use
+#' @param legend_labels Optional vector of labels to use in the legend
 #' 
 #' @return ggplot object
 plot_asw <- function(asw_df,
                      seed = seed, 
                      by_batch, 
                      batch_label, 
-                     plot_colors = NULL) {
+                     plot_colors = NULL, 
+                     legend_labels = NULL) {
 
   # Set seed if given
   set.seed(seed)
@@ -274,7 +329,7 @@ plot_asw <- function(asw_df,
         ggokabeito::scale_color_okabe_ito(name = batch_label) 
     } else {
       asw_plot <- asw_plot + 
-        scale_color_manual(name = batch_label, values = plot_colors)  
+        scale_color_manual(name = batch_label, values = plot_colors, labels = legend_labels)  
     }
   } else { 
     # or without batch grouping/coloring
