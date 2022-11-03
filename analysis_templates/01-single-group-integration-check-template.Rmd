@@ -196,7 +196,7 @@ if(params$celltype_column %in% coldata_names){
       max_celltypes = params$max_celltypes)
   )
   
-  # Prepare colors for celltypes as a stand-alone variable, based on unintegrated SCE
+  # Prepare colors for celltypes as a stand-alone variable, based on the first
   celltype_colors <- sce_list$unintegrated$celltype_plot_names %>%
     unique() %>%
     length() %>%
@@ -226,7 +226,8 @@ This section displays information about the overall dataset size, number of batc
 First, how many batches and cell types (if present) are there? If there are cell present, what are they?
 
 ```{r table-batch-celltypes}
- # pull out an SCE object to count from; all SCEs should be equivalent for these calculations
+# pull out an SCE object for this section
+# all SCEs in the list should be equivalent for these calculations and plots
 sce_coldata <- colData(sce_list[[1]])
 
 # How many batches?
@@ -236,7 +237,7 @@ print(
 )
 table(sce_coldata[,params$batch_column])
 
-# If there are celltypes, 
+# If there are celltypes, perform calculations
 if (celltypes_present == TRUE) {
   
   # How many celltypes?
@@ -247,34 +248,63 @@ if (celltypes_present == TRUE) {
     glue::glue("Not including NA cell types, there are {n_celltypes} total cell types, with the following number of cells:")
   )
   table(known_celltypes)
-  
-  # Create vector of celltype labels with counts for plotting use later
-  celltype_plot_labels <- tibble::as_tibble(table(known_celltypes)) %>%
-    dplyr::rename(
-      celltype_plot_names = known_celltypes
-    ) %>%
-    dplyr::mutate(label = glue::glue("{celltype_plot_names} (N={n})")) %>%
-    dplyr::pull(label)
-  
 }
 ```
 
 
-The plots below shows how the celltypes are distributed across batches. 
-The total height of each bar corresponds to the number of cells in the given batch.
-The plot is displayed both with and without the infrequent cell types collapsed into "other."
 
 
 ```{r barplot-batch-celltypes}
-# Using the "other" grouping and associated colors
-plot_barplot_batch_celltype(sce_coldata, params$batch_column, "celltype_plot_names", 
-                            plot_colors = celltype_colors, 
-                            plot_title = "Top 5 cell types and other")
+# If there are celltypes, make barplots
+if (celltypes_present == TRUE) {
+  
+  print(
+    glue::glue(
+      "The plots below shows how the celltypes are distributed across batches. 
+       The total height of each bar corresponds to the number of cells in the given batch.
+       The plot is displayed both with and without the infrequent cell types collapsed into 'other'.
+      "
+    )
+  )
+  
+  # Using the "other" grouping and associated colors
+  plot_barplot_batch_celltype(sce_coldata, params$batch_column, "celltype_plot_names", 
+                              plot_colors = celltype_colors, 
+                              plot_title = "Top 5 cell types and other")
 
 
-# Show all cell types without collapsing into "other"
-plot_barplot_batch_celltype(sce_coldata, params$batch_column, params$celltype_column, plot_title = "All cell types")
+  # Show all cell types without collapsing into "other"
+  plot_barplot_batch_celltype(sce_coldata, 
+                              params$batch_column, 
+                              params$celltype_column, 
+                              plot_title = "All cell types")
+}
+
 ```
+
+
+
+
+```{r setup-plot-labels}
+# Before plotting, set up some labels to use in plots so we can have `N=` in 
+#  the legends for batches and celltypes, when present
+
+# helper function:
+extract_labels <- function(colname) {
+  as.data.frame(table(sce_coldata[,colname])) %>%
+    dplyr::mutate(label = glue::glue("{Var1} (N={Freq})")) %>%
+    dplyr::pull(label)
+}
+
+# Create batch label vector
+batch_plot_labels <- extract_labels(params$batch_column)
+
+# Create celltype label vector, considering top 5 & 'other' (not all celltypes) 
+if (celltypes_present) {
+  celltype_plot_labels <- extract_labels("celltype_plot_names")
+}
+```
+
 
 
 ## UMAPs
@@ -288,6 +318,7 @@ batch_umaps <- names(sce_list) %>%
                                      cell_label_column = params$batch_column,
                                      legend_title = "Batches",
                                      plot_colors = batch_colors,
+                                     legend_labels = batch_plot_labels, 
                                      seed = params$seed))
 batch_legend <- cowplot::get_legend(batch_umaps[[1]])
   
@@ -312,6 +343,8 @@ if(celltypes_present){
                                        params$group_name,
                                        cell_label_column = "celltype_plot_names", # this column includes plotting celltypes
                                        legend_title = "Cell types",
+                                       plot_colors = celltype_colors,
+                                       legend_labels = celltype_plot_labels,
                                        seed = params$seed))
   
   celltype_legend <- cowplot::get_legend(celltype_umaps[[1]])
@@ -445,7 +478,8 @@ Therefore, a well-integrated dataset would show lower batch ASW values compared 
 asw_results <- run_asw(sce_list, 
                        params$batch_column, 
                        params$seed,
-                       plot_colors = batch_colors) # defaults are fine: group by batch and label as `Batch`
+                       plot_colors = batch_colors,
+                       legend_labels = batch_plot_labels)
 
 # Plot results:
 print(asw_results$asw_plot)
