@@ -6,6 +6,16 @@ suppressPackageStartupMessages({
 })
 
 
+#' Helper function for creating directories
+#'
+#' @param dir_name Name of directory to create
+#'
+#' @return Vector of all detected files
+create_dir <- function(dir_name) {
+  if(!dir.exists(dir_name)){
+    dir.create(dir_name, recursive = TRUE)
+  }
+}
 
 
 #' Search for files based on input directory and provided pattern
