@@ -105,7 +105,7 @@ library_metadata_df <- readr::read_tsv(opt$library_file) %>%
   #  sim1a/b/c are not included
   dplyr::filter(scib_original == TRUE)
   
-library_ids <- library_metadata_df %>%
+library_id <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
 
 # Make output directory(ies) if doesn't exist
@@ -225,7 +225,7 @@ hdf5_to_sce <- function(h5_file,
 # only copy from S3 if option to copy is used at the command line
 if(!is.null(opt$copy_s3)){
   # grab all library ID's that should have SCE's copied over
-  libraries_include <- paste("--include '", "*", library_ids,"'", "*", sep = '', collapse = ' ')
+  libraries_include <- paste("--include '", "*", library_id,"'", "*", sep = '', collapse = ' ')
   sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, sce_output_dir,
                      '--exclude "*"', libraries_include, '--recursive', sep = " ")
   system(sync_call, ignore.stdout = TRUE)
