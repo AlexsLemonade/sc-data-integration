@@ -35,6 +35,8 @@ renv::load(project_root)
 library(magrittr)
 library(optparse)
 library(LoomExperiment)
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+
 
 # Set up optparse options
 option_list <- list(
@@ -115,13 +117,8 @@ if(!file.exists(opt$library_file)){
 }
 
 # create directories if they don't exist 
-if(!dir.exists(opt$loom_dir)){
-  dir.create(opt$loom_dir, recursive = TRUE)
-}
-
-if(!dir.exists(opt$sce_output_dir)){
-  dir.create(opt$sce_output_dir, recursive = TRUE)
-}
+create_dir(opt$loom_dir)
+create_dir(opt$sce_output_dir)
 
 # read in metadata file 
 all_metadata_df <- readr::read_tsv(opt$metadata_file)
@@ -159,17 +156,13 @@ process_metadata_df <- all_metadata_df %>%
 # create output folders for each tissue group/project for sce results 
 sce_output_folders <- unique(process_metadata_df$sce_output_folder)
 for (folder in 1:length(sce_output_folders)){
-  if(!dir.exists(sce_output_folders[folder])){
-    dir.create(sce_output_folders[folder], recursive = TRUE)
-  }
+  create_dir(sce_output_folders[folder])
 }
 
 # create output folders for each tissue group/project for celltype data 
 celltype_output_folders <- unique(process_metadata_df$celltype_output_folder)
 for (folder in 1:length(celltype_output_folders)){
-  if(!dir.exists(celltype_output_folders[folder])){
-    dir.create(celltype_output_folders[folder], recursive = TRUE)
-  }
+  create_dir(celltype_output_folders[folder])
 }
 
 

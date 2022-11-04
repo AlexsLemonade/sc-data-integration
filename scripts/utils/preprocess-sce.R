@@ -33,6 +33,8 @@ renv::load(project_root)
 # import libraries
 library(magrittr)
 library(optparse)
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+
 
 # Set up optparse options
 option_list <- list(
@@ -163,9 +165,7 @@ unfiltered_sce_files <- file.path(opt$unfiltered_sce_dir,
   filtered_sce_output_folders <- unique(library_metadata_df$folder_structure)
   filtered_sce_output_folders <- file.path(opt$filtered_sce_dir, filtered_sce_output_folders)
   for (folder in 1:length(filtered_sce_output_folders)){
-    if(!dir.exists(filtered_sce_output_folders[folder])){
-      dir.create(filtered_sce_output_folders[folder], recursive = TRUE)
-    }
+    create_dir(filtered_sce_output_folders[folder])
   }
   
   # apply function to read in unfiltered sce, filter sce, and save filtered sce

@@ -23,6 +23,8 @@ suppressPackageStartupMessages({
   library(magrittr)
   library(optparse)
 })
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+
 
 # Set up optparse options
 option_list <- list(
@@ -56,9 +58,7 @@ if(!file.exists(opt$library_file)){
 }
 
 # create directories if they don't exist 
-if(!dir.exists(opt$filtered_sce_dir)){
-  dir.create(opt$filtered_sce_dir, recursive = TRUE)
-}
+create_dir(opt$filtered_sce_dir)
 
 # identify datasets to be converted
 # want to grab both project and library ids together

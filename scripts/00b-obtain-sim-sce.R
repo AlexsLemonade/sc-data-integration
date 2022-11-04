@@ -115,7 +115,7 @@ if (length(sce_output_dir) != 1) {
   stop("There should only be a single `integration_input_dir` value for simulated data.
        If something has changed, code needs re-factoring.")
 }
-create_dir( sce_output_dir )
+create_dir(sce_output_dir)
 
 # get a metadata with just libraries to be processed
 # add file info for sce filepaths
