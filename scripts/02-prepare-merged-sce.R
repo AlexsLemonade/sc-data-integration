@@ -143,7 +143,6 @@ if(opt$add_celltype){
   if(!file.exists(opt$celltype_info)){
     stop("--celltype_info file provided does not exist.")
   }
-  
   celltype_info_df <- readr::read_tsv(opt$celltype_info)
 }
 
@@ -180,9 +179,7 @@ library_ids <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
 
 # setup output directory
-if(!dir.exists(opt$merged_sce_dir)){
-  dir.create(opt$merged_sce_dir, recursive = TRUE)
-}
+create_dir(opt$merged_sce_dir)
 
 # Identify SCE files -----------------------------------------------------------
 
