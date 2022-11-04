@@ -102,13 +102,6 @@ if (!(length(input_sce_files) == length(output_sce_files))) {
   stop("Error: Could not prepare data for CITEseq processing.")
 }
 
-# helper function:
-create_dir <- function(dir_name) {
-  if(!dir.exists(dir_name)){
-    dir.create(dir_name, recursive = TRUE)
-  }
-}
-
 # Make sure each output directory exist as well
 purrr::walk(dirname(output_sce_files), create_dir)
 
