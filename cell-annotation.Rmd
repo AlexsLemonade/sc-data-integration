@@ -100,12 +100,6 @@ preds_df <- tibble::as_tibble(preds_hpca$labels) %>%
   dplyr::rename(celltype = value) %>%
   dplyr::mutate(cell_barcode = rownames(preds_hpca),
                 reference = "hpca")
-
-# How many of each celltype?
-preds_df %>%
-  dplyr::count(celltype) %>%
-  # in descending order:
-  dplyr::arrange(-n)
 ```
 
 And a heatmap version, showing all celltypes. 
