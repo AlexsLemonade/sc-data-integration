@@ -1617,33 +1617,7 @@ preds_hpca &lt;- SingleR::SingleR(
 preds_df &lt;- tibble::as_tibble(preds_hpca$labels) %&gt;%
   dplyr::rename(celltype = value) %&gt;%
   dplyr::mutate(cell_barcode = rownames(preds_hpca),
-                reference = &quot;hpca&quot;)
-
-# How many of each celltype?
-preds_df %&gt;%
-  dplyr::count(celltype) %&gt;%
-  # in descending order:
-  dplyr::arrange(-n)</code></pre>
-<pre><code>## # A tibble: 17 × 2
-##    celltype                n
-##    &lt;chr&gt;               &lt;int&gt;
-##  1 GMP                  1466
-##  2 Monocyte             1292
-##  3 Pre-B_cell_CD34-      750
-##  4 Pro-Myelocyte         566
-##  5 CMP                   177
-##  6 NK_cell               174
-##  7 DC                     74
-##  8 T_cells                73
-##  9 B_cell                 55
-## 10 Myelocyte              26
-## 11 Neutrophils            15
-## 12 Macrophage             11
-## 13 Pro-B_cell_CD34+       11
-## 14 HSC_-G-CSF              6
-## 15 Epithelial_cells        2
-## 16 HSC_CD34+               1
-## 17 Smooth_muscle_cells     1</code></pre>
+                reference = &quot;hpca&quot;)</code></pre>
 <p>And a heatmap version, showing all celltypes. The bar the top shows
 the final assignment, which are the rows with highest scores.</p>
 <pre class="r"><code>SingleR::plotScoreHeatmap(preds_hpca)</code></pre>
