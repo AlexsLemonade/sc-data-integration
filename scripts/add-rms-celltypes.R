@@ -20,11 +20,11 @@
 
 # Option descriptions: 
 # 
-# --library_file: The full path to the file listing all libraries that celltype information should be added to.
-# --processed_sce_dir: Full path to folder where all filtered and processed sce files are found, output from 
+# --rms_library_file: path to the file listing all libraries that celltype information should be added to.
+# --scpca_library_file: path to the file listing all ScPCA libraries
+# --processed_sce_dir: path to folder where all filtered and processed sce files are found, output from 
 #   running scpca-downstream-analyses 
-# --celltype_sce_dir: Full path to folder where all sce files containing celltypes are stored
-# --rms_seurat_dir: Full path to folder storing local copy of Seurat objects for RMS data
+# --rms_seurat_dir: path to folder storing local copy of Seurat objects for RMS data
 
 # load the R project by finding the root directory using `here::here()`
 project_root <- here::here()
@@ -38,28 +38,31 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
 })
 
-source(file.path(project_root, "scripts", "utils", "rms-celltype-helper-functions.R"))
+utils_dir <- file.path(project_root, "scripts", "utils")
+source(utils_dir, "integration-helpers.R")
+source(utils_dir, "rms-celltype-helper-functions.R")
+
 
 # Set up optparse options
 option_list <- list(
   make_option(
-    opt_str = c("-l", "--library_file"),
+    opt_str = c("-l", "--rms_library_file"),
     type = "character",
     default = file.path(project_root, "sample-info", "rms-processed-libraries.tsv"),
     help = "path to metadata file listing all libraries that celltype information should be added to.
       This file must correspond to the RMS data from the Dyer/Chen project."
   ),
   make_option(
+    opt_str = c("-l", "--scpca_library_file"),
+    type = "character",
+    default = file.path(project_root, "sample-info", "scpca-processed-libraries.tsv"),
+    help = "path to metadata file listing all ScPCA libraries, which should include the RMS data from the Dyer/Chen project."
+  ),
+  make_option(
     opt_str = c("--processed_sce_dir"),
     type = "character",
     default = file.path(project_root, "results", "scpca", "scpca-downstream-analyses"),
     help = "path to folder where all filtered and processed sce files are found, output from running scpca-downstream-analyses"
-  ),
-  make_option(
-    opt_str = c("--celltype_sce_dir"),
-    type = "character",
-    default = file.path(project_root, "results", "scpca", "celltype_sce"),
-    help = "path to folder where all sce files containing celltypes are stored"
   ),
   make_option(
     opt_str = c("--rms_seurat_dir"),
@@ -74,15 +77,27 @@ option_list <- list(
 opt <- parse_args(OptionParser(option_list = option_list))
 
 # File set up ------------------------------------------------------------------
+# define project name
+scpca_project_name <- "SCPCP000005"
+
 # checks that provided metadata files exist
-if(!file.exists(opt$library_file)){
-  stop("--library_file provided does not exist.")
+if(!file.exists(opt$rms_library_file)){
+  stop("--rms_library_file provided does not exist.")
+}
+if(!file.exists(opt$scpca_library_file)){
+  stop("--scpca_library_file provided does not exist.")
 }
 
-# check that celltype sce dir exists 
-if(!dir.exists(opt$celltype_sce_dir)){
-  dir.create(opt$celltype_sce_dir, recursive = TRUE)
+# Read the ScPCA library file and find, check, and create the output directory
+celltype_sce_dir <- readr::read_tsv(opt$scpca_library_file) %>%
+  dplyr::filter(project_name == scpca_project_name) %>%
+  dplyr::pull(integration_input_dir) %>%
+  unique()
+if (length(celltype_sce_dir) != 1) {
+  stop("There should only be a single `integration_input_dir` value for ScPCA project {scpca_project_name}.
+       If something has changed, code needs re-factoring.")
 }
+create_dir(celltype_sce_dir)
 
 # check that integrated RMS data is present, needed for grabbing tumor sub-celltypes 
 integrated_sn_obj_file <- file.path(opt$rms_seurat_dir, "2020330 RMS integrated snRNA Seurat object-005.Rds")
@@ -101,9 +116,10 @@ all_integrated_coldata <- integrated_sce_file_list %>%
   dplyr::bind_rows() %>%
   dplyr::mutate(barcode = stringr::word(unique_cell_id, -1, sep = "-")) # add barcode column to coldata
 
+
 # identify submitter ids and matching sample, library ids
 # want to grab both project and library ids together
-library_metadata_df <- readr::read_tsv(opt$library_file) %>%
+library_metadata_df <- readr::read_tsv(opt$rms_library_file) %>%
   dplyr::select(sample_biomaterial_id, library_biomaterial_id, submitter_id, project_name, seq_unit) %>%
   dplyr::mutate(sce_processed_filename = paste0(library_biomaterial_id, "_miQC_processed_sce.rds"), 
                 sce_processed_filepath = file.path(opt$processed_sce_dir, 
@@ -137,7 +153,7 @@ if(length(missing_sce_files) > 0){
 library_metadata_df %>%
   dplyr::select(sce_processed_filepath, seurat_filepath, library_biomaterial_id, submitter_id) %>%
   # add column containing the filepath to store the modified SCE object 
-  dplyr::mutate(celltype_sce_filepath = file.path(opt$celltype_sce_dir, 
+  dplyr::mutate(celltype_sce_filepath = file.path(celltype_sce_dir, 
                                                   paste0(library_biomaterial_id, "_processed_celltype.rds"))) %>%
   purrr::pwalk(add_celltype_to_sce,
                all_integrated_coldata = all_integrated_coldata)
