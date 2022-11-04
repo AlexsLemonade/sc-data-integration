@@ -31,10 +31,9 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
   library(SingleR)
   library(celldex)
-  library(scRNAseq)
 })
 
-set.seed(params$seed)
+set.seed(params$seed) # unclear if this is doing anything? probably not. but maybe later!
 ```
 
 
