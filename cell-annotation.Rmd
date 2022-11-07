@@ -100,6 +100,9 @@ preds_df <- tibble::as_tibble(preds_hpca$labels) %>%
   dplyr::rename(celltype = value) %>%
   dplyr::mutate(cell_barcode = rownames(preds_hpca),
                 reference = "hpca")
+
+# Save the celltypes:
+hpca_celltypes <- unique(ref_se$label.main)
 ```
 
 And a heatmap version, showing all celltypes. 
@@ -137,6 +140,9 @@ preds_df <- preds_df %>%
                   reference = "blueprint_encode")
   )
 
+# Save the celltypes:
+blueprint_celltypes <- unique(ref_se$label.main)
+
 # And the heatmap:
 SingleR::plotScoreHeatmap(preds_blue_enc)
 ```
@@ -162,6 +168,95 @@ preds_df %>%
 We'll have to harmonize the celltype names between references to do a robust comparison, but from a _very_ quick glance, overlap is thinner than one might like.
 That said, we don't necessarily expect Blueprint/ENCODE to do particularly well anyways!
 
+
+For a clearer comparison, we'll harmonize predicted celltypes, but let's just focus on exactly matching celltypes as a start - 
+```{r}
+# Let's see what we have here:
+sort(hpca_celltypes)
+sort(blueprint_celltypes)
+
+# Manually compiled data rame of celltypes roughly present in BOTH references
+#  for now leaving the Pre/Pro B-cells out
+shared_celltypes_df <- tibble::tribble(
+  ~hpca_celltype, ~blueprint_celltype,
+  # Both references have it:
+  "Astrocyte", "Astrocytes",
+  "B_cell", "B-cells",
+  "Chondrocytes","Chondrocytes",
+  "DC", "DC", 
+  "Endothelial_cells", "Endothelial cells", 
+  "Epithelial_cells", "Epithelial cells", 
+  "Fibroblasts", "Fibroblasts", 
+  "Keratinocytes", "Keratinocytes", 
+  "Macrophage", "Macrophages", 
+  "Monocyte", "Monocytes", 
+  "Neurons", "Neurons", 
+  "Neutrophils", "Neutrophils", 
+  "NK_cell", "NK cells", 
+  "Smooth_muscle_cells", "Smooth muscle", 
+  # two groups - collapse back to overall T cells
+  "T_cells", "CD8+ T-cells",
+  "T_cells", "CD4+ T-cells",
+  # two groups of HSCs, again, collapse back to overall
+  "HSC_-G-CSF", "HSC", 
+  "HSC_CD34+", "HSC"
+) %>%
+  dplyr::mutate(harmonized_celltype = ifelse(blueprint_celltype == "HSC",
+                                             blueprint_celltype, 
+                                             hpca_celltype))
+
+harmonize_celltypes <- function(preds_df, reference_name) {
+  if (reference_name == "hpca") {
+    shared_celltypes_colname <- rlang::sym("hpca_celltype")
+  } else {
+    shared_celltypes_colname <- rlang::sym("blueprint_celltype")
+  }
+  
+  filtered_preds_df <- preds_df %>%
+    dplyr::filter(reference == reference_name) 
+  
+  sym_reference_name <- rlang::sym(reference_name)
+  filtered_preds_df %>%
+    dplyr::inner_join(
+      dplyr::select(
+        shared_celltypes_df, 
+        celltype = {{shared_celltypes_colname}},
+        harmonized_celltype
+      )
+    ) %>% 
+    dplyr::select(cell_barcode, {{sym_reference_name}} := harmonized_celltype) %>%
+    dplyr::right_join(filtered_preds_df) %>%
+    dplyr::mutate({{reference_name}} := dplyr::if_else(
+      {{sym_reference_name}} %in% shared_celltypes_df$harmonized_celltype,
+      {{sym_reference_name}},
+      celltype
+    )) %>% 
+    dplyr::select(-celltype, -reference)
+  }
+  
+preds_df_harmonized <- harmonize_celltypes(preds_df, "blueprint_encode") %>%
+  dplyr::left_join(
+    harmonize_celltypes(preds_df, "hpca")  
+  )
+
+# How often do they match?
+
+preds_df_harmonized %>%
+  dplyr::summarize(percent_same = sum(blueprint_encode == hpca) / dplyr::n() )
+
+
+# Where do they not match?
+preds_df_harmonized %>%
+  dplyr::filter(hpca != blueprint_encode)
+  
+# Are there specific combinations that get differently annotated?
+preds_df_harmonized %>%
+  dplyr::filter(hpca != blueprint_encode) %>%
+  dplyr::select(-cell_barcode) %>%
+  dplyr::count(blueprint_encode, hpca) %>%
+  dplyr::arrange(-n)
+
+```
 ## Session Info
 
 ```{r session_info}
