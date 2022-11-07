@@ -28,8 +28,6 @@
 #   principal component analysis. Otherwise only highly variable genes are used
 #   as input.
 # --num_hvg: Number of highly variable genes to select.
-# --sce_dir: Path to folder where SCE objects to be converted are stored,
-#   each file should contain the library ID in the filename and be stored as an RDS file.
 #   Typically this is the output from running scpca-downstream-analyses
 # --merged_sce_dir: Path to folder where all merged SCE objects will be stored
 #
@@ -145,7 +143,6 @@ if(opt$add_celltype){
   if(!file.exists(opt$celltype_info)){
     stop("--celltype_info file provided does not exist.")
   }
-  
   celltype_info_df <- readr::read_tsv(opt$celltype_info)
 }
 
@@ -182,9 +179,7 @@ library_ids <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
 
 # setup output directory
-if(!dir.exists(opt$merged_sce_dir)){
-  dir.create(opt$merged_sce_dir, recursive = TRUE)
-}
+create_dir(opt$merged_sce_dir)
 
 # Identify SCE files -----------------------------------------------------------
 

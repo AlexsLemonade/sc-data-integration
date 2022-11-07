@@ -27,6 +27,7 @@ renv::load(project_root)
 # import libraries
 library(magrittr)
 library(optparse)
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
 
 # Set up optparse options
 option_list <- list(
@@ -81,9 +82,7 @@ group_names <- library_metadata_df %>%
   unique()
 
 # setup output directory 
-if(!dir.exists(opt$anndata_output_dir)){
-  dir.create(opt$anndata_output_dir, recursive = TRUE)
-}
+create_dir(opt$anndata_output_dir)
 
 # Identify merged SCE files ----------------------------------------------------
 
