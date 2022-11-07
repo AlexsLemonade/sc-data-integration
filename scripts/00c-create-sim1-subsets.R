@@ -3,7 +3,7 @@
 
 # Option descriptions: 
 # 
-# --sce_dir: Path to the folder where all SCE objects are saved locally 
+# --library_file: The path to the file listing all libraries
 # --s3_sce_bucket: Bucket on S3 where SCE objects are stored
 # --copy_s3: indicates whether or not to copy existing SCE file from S3 first. 
 #   To copy files use `--copy_s3`
@@ -20,14 +20,16 @@ suppressPackageStartupMessages({
   library(optparse)
   library(SingleCellExperiment)
 })
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+
 
 # Set up optparse options
 option_list <- list(
   make_option(
-    opt_str = c("--sce_dir"),
+    opt_str = c("-l", "--library_file"),
     type = "character",
-    default = file.path(project_root, "data", "scib_simulated", "sce"),
-    help = "path to folder where all input and output SCE objects are saved"
+    default = file.path(project_root, "sample-info", "scib-simulated-processed-libraries.tsv"),
+    help = "path to metadata file listing all libraries that are to be converted"
   ),
   make_option(
     opt_str = c("--s3_sce_bucket"),
@@ -49,19 +51,32 @@ option_list <- list(
   )
 )
 
-
-
 # Parse options
 opt <- parse_args(OptionParser(option_list = option_list))
 
+
 # File set up ------------------------------------------------------------------
-total_sim1_batches <- 6 # there are 6 batches in sim1
 
-# Ensure `sim1` files are present. There should be 6 batches.
-sim1_filenames <- list.files(opt$sce_dir, pattern = "^sim1_", full.names=TRUE)
+# check that provided metadata files exist
+if(!file.exists(opt$library_file)){
+  stop("--library_file provided does not exist.")
+}
+library_metadata_df <- readr::read_tsv(opt$library_file)
 
+# Identify sim1 filenames from the library metadata, 
+#  following the file name structure set up in 00b-obtain-sim-sce.R
+library_metadata_df <- library_metadata_df %>%
+  # sim1 only
+  dplyr::filter(stringr::str_starts(library_biomaterial_id, "sim1_")) %>%
+  # first make filename for sce file
+  dplyr::mutate(local_sce_file = paste0(library_biomaterial_id, "_sce.rds"),
+                local_sce_path = file.path(integration_input_dir, local_sce_file))
+
+# Ensure `sim1` files are present.
+sim1_filenames <- library_metadata_df$local_sce_path
+
+# Helper function for checking presence of properly-named sim SCE files
 check_sim_files <- function(filename) {
-  # Helper function for checking presence of properly-named sim SCE files
   if (!file.exists(file.path(filename))) {
     stop(glue::glue("Missing {filename}. Cannot subset `sim1` data. 
                     Make sure `00b-obtain-sim.R has been successfully run.")
@@ -71,6 +86,12 @@ check_sim_files <- function(filename) {
 purrr::walk(sim1_filenames, check_sim_files)
 
 
+# Directory where SCE files live:
+sce_dir <- unique(library_metadata_df$integration_input_dir)
+if (length(sce_dir) != 1) {
+  stop("There should only be a single `integration_input_dir` value for simulated data.
+       If something has changed, code needs re-factoring.")
+}
   
 ## Define cell group subsets ----------------------------------------
 
@@ -124,7 +145,7 @@ all_filenames <- basename( c(sim1a_filenames, sim1b_filenames, sim1c_filenames) 
 if(!is.null(opt$copy_s3)){
   # copy over any existing SCEs
   aws_includes <- paste("--include '", all_filenames, "'", sep = '', collapse = ' ')
-  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_dir,
+  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, sce_dir,
                      '--exclude "*"', aws_includes, sep = " ")
   system(sync_call, ignore.stdout = TRUE)
   
@@ -187,7 +208,7 @@ purrr::walk2(sim1_filenames, missing_sim1c, subset_export_sce, sim1c_retain_cell
 # Copy back to S3
 all_written_files <- c(missing_sim1a, missing_sim1b, missing_sim1c)
 aws_includes <- paste("--include '", all_written_files, "'", sep = '', collapse = ' ')
-sync_call <- paste('aws s3 sync', opt$sce_dir, opt$s3_sce_bucket, 
+sync_call <- paste('aws s3 sync', sce_dir, opt$s3_sce_bucket, 
                        '--exclude "*"', aws_includes, sep = " ")
 system(sync_call, ignore.stdout = TRUE)
 

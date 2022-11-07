@@ -26,6 +26,7 @@ suppressPackageStartupMessages({
   library(optparse)
   library(SingleCellExperiment) 
 })
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
 
 # Load helper functions
 source(
@@ -118,9 +119,7 @@ if(!(stringr::str_ends(opt$output_sce_file, ".rds"))){
 
 # Check that directory for output file exists
 integrated_sce_dir <- dirname(opt$output_sce_file)
-if(!dir.exists(integrated_sce_dir)){
-  dir.create(integrated_sce_dir, recursive = TRUE)
-}
+create_dir(integrated_sce_dir)
 
 # Anndata to SCE post-processing -----------------------------------------------
 
