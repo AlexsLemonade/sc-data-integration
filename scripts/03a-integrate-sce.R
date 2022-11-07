@@ -229,10 +229,7 @@ if(!(grepl("\\.rds$", opt$input_sce_file, ignore.case = TRUE)) ||
 
 # Check that directory for output file exists and the specified file is an RDS file
 integrated_sce_dir <- dirname(opt$output_sce_file)
-if(!dir.exists(integrated_sce_dir)){
-  dir.create(integrated_sce_dir, recursive = TRUE)
-}
-
+create_dir(integrated_sce_dir)
 
 
 # Read in SCE file -----------------------------

@@ -17,7 +17,6 @@
 #   in the conversion from hdf5 to SCE. This file must contain the 
 #   `library_biomaterial_id` and `hdf5_filename` column
 # --h5_dir: Path to the folder where all hdf5 files should be stored locally 
-# --sce_output_dir: Path to the folder where all SCE objects should be saved locally 
 # --s3_h5_bucket: Bucket on S3 where hdf5 data can be found 
 # --s3_sce_bucket: Bucket on S3 where SCE objects are stored
 # --h5_group_column: Column name in colData of the AnnData/SCE object that will be used to split 
@@ -37,6 +36,8 @@ suppressPackageStartupMessages({
   library(optparse)
   library(SingleCellExperiment)
 })
+source(file.path(project_root, "scripts", "utils", "integration-helpers.R"))
+
 
 # Set up optparse options
 option_list <- list(
@@ -57,12 +58,6 @@ option_list <- list(
     type = "character",
     default = "s3://sc-data-integration/scib_simulated_data/hdf5",
     help = "Bucket on s3 where hdf5 data is stored"
-  ),
-  make_option(
-    opt_str = c("--sce_output_dir"),
-    type = "character",
-    default = file.path(project_root, "data", "scib_simulated", "sce"),
-    help = "path to folder where all output sce objects should be stored"
   ),
   make_option(
     opt_str = c("--s3_sce_bucket"),
@@ -100,28 +95,34 @@ if(!file.exists(opt$library_file)){
   stop("--library_file provided does not exist.")
 }
 
-# create directories if they don't exist 
-if(!dir.exists(opt$h5_dir)){
-  dir.create(opt$h5_dir, recursive = TRUE)
-}
-
-if(!dir.exists(opt$sce_output_dir)){
-  dir.create(opt$sce_output_dir, recursive = TRUE)
-}
-
+# create h5 directory if it doesn't exist
+create_dir(opt$h5_dir)
 
 # identify datasets to be converted
 # will need both library ID and h5 filename
-library_metadata_df <- readr::read_tsv(opt$library_file)
+library_metadata_df <- readr::read_tsv(opt$library_file) %>%
+  # only use rows where `scib_original` is TRUE so that 
+  #  sim1a/b/c are not included
+  dplyr::filter(scib_original == TRUE)
+  
 library_id <- library_metadata_df %>%
   dplyr::pull(library_biomaterial_id)
+
+# Make output directory(ies) if doesn't exist
+# This should always be a single directory:
+sce_output_dir <- unique(library_metadata_df$integration_input_dir)
+if (length(sce_output_dir) != 1) {
+  stop("There should only be a single `integration_input_dir` value for simulated data.
+       If something has changed, code needs re-factoring.")
+}
+create_dir(sce_output_dir)
 
 # get a metadata with just libraries to be processed
 # add file info for sce filepaths
 library_metadata_df <- library_metadata_df %>%
   # first make filename for sce file
   dplyr::mutate(local_sce_file = paste0(library_biomaterial_id, "_sce.rds"),
-                local_sce_path = file.path(opt$sce_output_dir, local_sce_file))
+                local_sce_path = file.path(integration_input_dir, local_sce_file))
 
 
 # Functions for converting hdf5 files -------------------------------------------
@@ -225,7 +226,7 @@ hdf5_to_sce <- function(h5_file,
 if(!is.null(opt$copy_s3)){
   # grab all library ID's that should have SCE's copied over
   libraries_include <- paste("--include '", "*", library_id,"'", "*", sep = '', collapse = ' ')
-  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, opt$sce_output_dir,
+  sync_call <- paste('aws s3 cp', opt$s3_sce_bucket, sce_output_dir,
                      '--exclude "*"', libraries_include, '--recursive', sep = " ")
   system(sync_call, ignore.stdout = TRUE)
   
@@ -295,7 +296,7 @@ if(length(missing_sce_files) != 0){
   # sync sce output to S3 
   all_sce_files <- unique(library_metadata_df$local_sce_file)
   aws_includes <- paste("--include '", all_sce_files, "'", sep = '', collapse = ' ')
-  sync_call <- paste('aws s3 sync', opt$sce_output_dir, opt$s3_sce_bucket, 
+  sync_call <- paste('aws s3 sync', sce_output_dir, opt$s3_sce_bucket, 
                      '--exclude "*"', aws_includes, sep = " ")
   system(sync_call, ignore.stdout = TRUE)
   
