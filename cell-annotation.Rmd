@@ -2,6 +2,7 @@
 params:
   seed: 2022
   library_file: !r file.path("sample-info", "scpca-processed-libraries.tsv")
+  reference: "hpca"
 title: "Cell type annotation exploration"
 author: "Data Lab"
 date: "`r params$date`"
@@ -11,6 +12,8 @@ output:
     toc_depth: 3
     toc_float: true
     number_sections: true
+editor_options: 
+  chunk_output_type: console
 ---
 
 This notebook explores the use of [`SingleR`](https://bioconductor.org/books/release/SingleRBook/) to perform cell-type annotation on datasets from the ScPCA project SCPCP000007 (Gawad lab data).
@@ -19,25 +22,21 @@ This notebook explores the use of [`SingleR`](https://bioconductor.org/books/rel
 
 ## Set Up
 
-```{r}
+```{r setup, eval=TRUE}
+knitr::opts_chunk$set(eval=FALSE) 
 # load the R project
 project_root <- here::here()
 renv::load(project_root)
-```
 
-
-```{r}
 suppressPackageStartupMessages({
   library(SingleCellExperiment)
   library(SingleR)
   library(celldex)
+  library(ggplot2)
 })
-
+theme_set(theme_bw())
 set.seed(params$seed) # unclear if this is doing anything? probably not. but maybe later!
-```
 
-
-```{r setup}
 utils_dir <- file.path(project_root, "scripts", "utils")
 
 # source the helper functions to grab the integration method check
@@ -49,7 +48,7 @@ sce_file_suffix <- "processed_citeseq.rds"
 
 Read in the data:
 
-```{r}
+```{r, eval=TRUE}
 library_metadata_df <- readr::read_tsv(params$library_file)
 
 # Define the SCE filenames
@@ -257,8 +256,86 @@ preds_df_harmonized %>%
   dplyr::arrange(-n)
 
 ```
+
+## Let's get to it
+
+
+Now, let's do cell type annotation with the given reference in `params$reference` on each of the Gawad libraries and look at their UMAPs colored by celltype.
+
+```{r, eval=TRUE}
+if (params$reference == "hpca") {
+  ref_data <- celldex::HumanPrimaryCellAtlasData(ensembl = TRUE)
+} else if (params$reference == "blueprint_encode") {
+  ref_data <- celldex::BlueprintEncodeData(ensembl = TRUE)
+} else {
+  stop("Bad reference parameter; either 'hpca' or 'blueprint_encode'.")
+}
+
+
+annotate_SingleR <- function(sce, ref_data) {
+  # return updated sce and the predictions themselves
+  
+  preds <- SingleR::SingleR(
+    test = sce, 
+    ref = ref_data,
+    labels = ref_data$label.main
+  )
+  
+  # Add `pruned.labels`, where low-confidence annotations are NA, to sce
+   sce$SingleR_annotations <- preds$pruned.labels
+   
+   return(
+     list(
+       sce = sce,
+       preds = preds
+       )
+   )
+}
+
+plot_SingleR <- function(annotation_output) {
+  # annotation_output: list of sce and preds
+  # Make a heatmap and UMAP and print out
+  
+  heatmap <- SingleR::plotScoreHeatmap(annotation_output[["preds"]], 
+                                       # default but let's be explicit
+                                       show.pruned = FALSE)
+
+  
+  umap_df <- tibble::as_tibble(reducedDim(annotation_output[["sce"]], "UMAP")) %>%
+    dplyr::select(UMAP1 = V1, UMAP2 = V2) %>%
+    dplyr::mutate(celltypes = annotation_output[["sce"]]$SingleR_annotations)
+  
+  # We would probably like a more principled approach to colors that is
+  #  actually based on biological information about celltypes
+  plot_colors <- rainbow( length(unique(umap_df$celltypes[!(is.na(umap_df$celltypes))])))
+  
+  umap <- ggplot(umap_df) + 
+    aes(x = UMAP1, y = UMAP2, color = celltypes) +
+    geom_point(size = 0.2, alpha = 0.5) + 
+    scale_color_manual(values = plot_colors)
+  
+  print(heatmap)
+  print(umap)
+  
+}
+
+run_SingleR <- function(sce_path) {
+  print(sce_path)
+  sce <- readr::read_rds(sce_path)
+  annotate_SingleR(sce, ref_data) %>%
+    plot_SingleR()
+}
+```
+
+Here we go!
+
+```{r, eval=TRUE}
+purrr::walk(sce_file_paths, run_SingleR)
+```
+
+
 ## Session Info
 
-```{r session_info}
+```{r session_info, eval=TRUE}
 sessionInfo()
 ```
