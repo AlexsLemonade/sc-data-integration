@@ -2,18 +2,19 @@
 params:
   seed: 2022
   library_file: !r file.path("sample-info", "scpca-processed-libraries.tsv")
+  project_id: "SCPCP000007"
   reference: "hpca"
+  integrated_sce_dir: !r file.path("results", "scpca", "integrated_sce")
+  integration_method: "fastmnn"
 title: "Cell type annotation exploration"
 author: "Data Lab"
 date: "`r params$date`"
 output:
-  html_document:
+  html_notebook:
     toc: true
     toc_depth: 3
     toc_float: true
     number_sections: true
-editor_options: 
-  chunk_output_type: console
 ---
 
 This notebook explores the use of [`SingleR`](https://bioconductor.org/books/release/SingleRBook/) to perform cell-type annotation on datasets from the ScPCA project SCPCP000007 (Gawad lab data).
@@ -41,8 +42,13 @@ utils_dir <- file.path(project_root, "scripts", "utils")
 # source the helper functions to grab the integration method check
 source(file.path(utils_dir, "integration-helpers.R"))
 
-gawad_project_id <- "SCPCP000007"
 sce_file_suffix <- "processed_citeseq.rds"
+integrated_sce_file <- file.path(params$integrated_sce_dir, paste0(
+  params$project_id, "_integrated_", params$integration_method, "_sce.rds"
+))
+if (!file.exists(integrated_sce_file)){
+  stop("Integrated SCE file could not be found.")
+}
 ```
 
 Read in the data:
@@ -50,17 +56,243 @@ Read in the data:
 ```{r}
 library_metadata_df <- readr::read_tsv(params$library_file)
 
-# Define the SCE filenames
+integrated_sce <- readr::read_rds(integrated_sce_file)
+
+# Define the unintegrated SCE filenames
 sce_file_paths <- library_metadata_df %>%
-  dplyr::filter(project_name == gawad_project_id) %>%
+  dplyr::filter(project_name == params$project_id) %>%
   dplyr::mutate(sce_file_path = file.path(
     integration_input_dir, sample_biomaterial_id, glue::glue("{library_biomaterial_id}_{sce_file_suffix}")
   )) %>%
   dplyr::pull(sce_file_path)
+
+
 ```
 
 
-## Initial exploration
+## `SingleR` annotation
+
+Here we performn celltype annotation with the given reference in `params$reference` on each of the Gawad libraries and look at their UMAPs colored by celltype.
+
+```{r}
+if (params$reference == "hpca") {
+  ref_data <- celldex::HumanPrimaryCellAtlasData(ensembl = TRUE)
+} else if (params$reference == "blueprint_encode") {
+  ref_data <- celldex::BlueprintEncodeData(ensembl = TRUE)
+} else {
+  stop("Bad reference parameter; either 'hpca' or 'blueprint_encode'.")
+}
+
+
+annotate_SingleR <- function(sce, ref_data) {
+  # return updated sce and the predictions themselves
+  
+  preds <- SingleR::SingleR(
+    test = sce, 
+    ref = ref_data,
+    labels = ref_data$label.main
+  )
+  
+  # Add `pruned.labels`, where low-confidence annotations are NA, to sce
+   sce$SingleR_annotations <- preds$pruned.labels
+   
+   return(
+     list(
+       sce = sce,
+       preds = preds
+       )
+   )
+}
+
+plot_SingleR <- function(annotation_output) {
+  # annotation_output: list of sce and preds
+  # Make a heatmap and UMAP and print out
+  
+  heatmap <- SingleR::plotScoreHeatmap(annotation_output[["preds"]], 
+                                       # default but let's be explicit
+                                       show.pruned = FALSE)
+
+  
+  umap_df <- tibble::as_tibble(reducedDim(annotation_output[["sce"]], "UMAP")) %>%
+    dplyr::select(UMAP1 = V1, UMAP2 = V2) %>%
+    dplyr::mutate(celltypes = annotation_output[["sce"]]$SingleR_annotations)
+  
+  # We would probably like a more principled approach to colors that is
+  #  actually based on biological information about celltypes
+  plot_colors <- rainbow( length(unique(umap_df$celltypes[!(is.na(umap_df$celltypes))])))
+  
+  umap <- ggplot(umap_df) + 
+    aes(x = UMAP1, y = UMAP2, color = celltypes) +
+    geom_point(size = 0.2, alpha = 0.5) + 
+    scale_color_manual(values = plot_colors)
+  
+  print(heatmap)
+  print(umap)
+  
+}
+
+# Function to run and plot SingleR
+# Return SCE with annotations `SingleR_annotations` column
+run_SingleR <- function(sce, viz = TRUE) {
+  # Print out the library
+  print(unique( metadata(sce)$library ))
+  
+  # Run and plot (if TRUE) annotations
+  anno <- annotate_SingleR(sce, ref_data)
+  if (viz) {
+    # there is no interesting color palette harmonization among library colors here!
+    plot_SingleR(anno)
+  }
+  return(anno[["sce"]])
+}
+```
+
+Here we go!
+
+```{r}
+
+# Read in all SCE files
+sce_list <- purrr::map(
+  sce_file_paths, 
+  readr::read_rds
+)
+
+# Annotate them all, popping out some viz along the way
+sce_list_annotated <- purrr::map(sce_list, run_SingleR, viz = TRUE)
+
+# for sanity during dev:
+readr::write_rds(sce_list_annotated, "sce_list_annotated.rds")
+```
+
+
+
+Now let's plot, to start, the fastMNN UMAP but with celltype annotations from individual libraries.
+As is deeply commented all over the place, we definitely need to infuse palettes with biology!
+
+```{r}
+# helper to count the number of celltypes across all libraries
+count_celltypes <- function(sce) {
+ tibble::tibble(celltype = colData(sce)$SingleR_annotations ) %>%
+    dplyr::count(celltype) %>%
+    dplyr::arrange(-n) %>%
+    tidyr::drop_na() 
+}
+
+# Celltype order based on **overall** counts for all pooled annotations 
+celltype_order <- purrr::map_df(sce_list_annotated, count_celltypes) %>%
+  dplyr::group_by(celltype) %>%
+  dplyr::summarize(celltype_counts = sum(n)) %>%
+  dplyr::arrange(-celltype_counts) %>%
+  dplyr::pull(celltype)
+
+
+# Again we'd eventually like some biology to go into the color choices!
+cell_colors <- rainbow(length(celltype_order))
+
+
+
+# Find all the annotations for a combined color palette:
+# This function is also used later for ADT extraction
+extract_annotation <- function(sce, annotation_column_name) {
+ tibble::tibble(batch = unique(metadata(sce)$library),
+                celltype = colData(sce)[,annotation_column_name], 
+                cell_barcode = rownames(colData(sce))) %>%
+    dplyr::mutate(cell_name = paste(cell_barcode, batch, sep = "-"))
+}
+
+
+# integrated UMAP with individual library cell annotations colored
+purrr::map_df(sce_list_annotated, extract_annotation, "SingleR_annotations") %>%
+  dplyr::inner_join(
+    tibble::as_tibble(colData(integrated_sce), rownames = "cell_name")
+  ) %>%
+  dplyr::bind_cols(
+    as.data.frame(reducedDim(integrated_sce, paste0(params$integration_method, "_UMAP")))
+  ) %>%
+  dplyr::mutate(UMAP1 = V1, UMAP2 = V2) %>%
+  # And let's make a UMAP!
+  ggplot() +
+  aes(x = UMAP1, y = UMAP2, color = celltype) + 
+  geom_point(size = 0.2, alpha = 0.3) + 
+  # we definitely want some biology here!
+  scale_color_manual(values = cell_colors)
+```
+
+
+
+## ADTs
+
+After annotating, we'd like to validate with ADTs.
+
+```{r}
+find_max_adt <- function(sce) {
+  max_adt_indices <- apply(
+    logcounts(altExp(sce)),
+    2,
+    which.max
+  )
+  # associated rownames which are the ADT names
+  max_adt <- rownames(altExp(sce))[max_adt_indices]
+  
+  # add back to sce and return
+  sce$max_adt <- max_adt
+  return(sce)
+}
+
+
+sce_list_adt <- purrr::map(sce_list_annotated, find_max_adt)
+
+
+# What are the unique ADTs for each library?
+purrr::map(
+  lapply(sce_list_adt, `[[`, "max_adt"), 
+  unique
+)
+
+# What are the ADT distributions for each library?
+purrr::map(
+  lapply(sce_list_adt, `[[`, "max_adt"), 
+  table
+)
+
+# What's the most common ADT distributions for each library?
+most_common <- function(a_list) {
+  sort(table(a_list), decreasing = TRUE)[1] %>%
+    names()
+}
+purrr::map(
+  lapply(sce_list_adt, `[[`, "max_adt"), 
+  most_common
+)
+
+```
+
+- "CD33...is a transmembrane receptor expressed on cells of myeloid lineage. It is usually considered myeloid-specific, but it can also be found on some lymphoid cells." [source](https://en.wikipedia.org/wiki/CD33)
+- "CD45 is a type I transmembrane protein that is present in various isoforms on all differentiated hematopoietic cells (except erythrocytes and plasma cells)." [source](https://en.wikipedia.org/wiki/CD45)
+- "The interleukin-3 receptor (CD123) is a molecule found on cells which helps transmit the signal of interleukin-3, a soluble cytokine important in the immune system....The receptor, found on pluripotent progenitor cells, induces tyrosine phosphorylation within the cell and promotes proliferation and differentiation within the hematopoietic cell lines. It can be found on basophils and pDCs as well as some cDCs among peripheral blood mononuclear cells....CD123 is expressed across acute myeloid leukemia (AML) subtypes, including leukemic stem cells." [source](https://en.wikipedia.org/wiki/Interleukin-3_receptor)
+
+
+UMAP of the ADTs:
+
+```{r}
+purrr::map_df(sce_list_adt, extract_annotation, "max_adt") %>%
+  dplyr::inner_join(
+    tibble::as_tibble(colData(integrated_sce), rownames = "cell_name")
+  ) %>%
+  dplyr::bind_cols(
+    as.data.frame(reducedDim(integrated_sce, paste0(params$integration_method, "_UMAP")))
+  ) %>%
+  dplyr::mutate(UMAP1 = V1, UMAP2 = V2) %>%
+  # And let's make a UMAP!
+  ggplot() +
+  aes(x = UMAP1, y = UMAP2, color = celltype) + 
+  geom_point(size = 0.2, alpha = 0.3)
+```
+
+
+
+
+## Unevaluated initial exploration
 
 > Currently the code chunks in this section are not evaluated, but remain here for now for posterity.
 
@@ -260,157 +492,6 @@ preds_df_harmonized %>%
   dplyr::arrange(-n)
 
 ```
-
-## Let's get to it!
-
-
-Now, let's do cell type annotation with the given reference in `params$reference` on each of the Gawad libraries and look at their UMAPs colored by celltype.
-
-```{r}
-if (params$reference == "hpca") {
-  ref_data <- celldex::HumanPrimaryCellAtlasData(ensembl = TRUE)
-} else if (params$reference == "blueprint_encode") {
-  ref_data <- celldex::BlueprintEncodeData(ensembl = TRUE)
-} else {
-  stop("Bad reference parameter; either 'hpca' or 'blueprint_encode'.")
-}
-
-
-annotate_SingleR <- function(sce, ref_data) {
-  # return updated sce and the predictions themselves
-  
-  preds <- SingleR::SingleR(
-    test = sce, 
-    ref = ref_data,
-    labels = ref_data$label.main
-  )
-  
-  # Add `pruned.labels`, where low-confidence annotations are NA, to sce
-   sce$SingleR_annotations <- preds$pruned.labels
-   
-   return(
-     list(
-       sce = sce,
-       preds = preds
-       )
-   )
-}
-
-plot_SingleR <- function(annotation_output) {
-  # annotation_output: list of sce and preds
-  # Make a heatmap and UMAP and print out
-  
-  heatmap <- SingleR::plotScoreHeatmap(annotation_output[["preds"]], 
-                                       # default but let's be explicit
-                                       show.pruned = FALSE)
-
-  
-  umap_df <- tibble::as_tibble(reducedDim(annotation_output[["sce"]], "UMAP")) %>%
-    dplyr::select(UMAP1 = V1, UMAP2 = V2) %>%
-    dplyr::mutate(celltypes = annotation_output[["sce"]]$SingleR_annotations)
-  
-  # We would probably like a more principled approach to colors that is
-  #  actually based on biological information about celltypes
-  plot_colors <- rainbow( length(unique(umap_df$celltypes[!(is.na(umap_df$celltypes))])))
-  
-  umap <- ggplot(umap_df) + 
-    aes(x = UMAP1, y = UMAP2, color = celltypes) +
-    geom_point(size = 0.2, alpha = 0.5) + 
-    scale_color_manual(values = plot_colors)
-  
-  print(heatmap)
-  print(umap)
-  
-}
-
-# Function to run and plot SingleR
-# Return SCE with annotations `SingleR_annotations` column
-run_SingleR <- function(sce, viz = TRUE) {
-  # Print out the library
-  print(unique( metadata(sce)$library ))
-  
-  # Run and plot (if TRUE) annotations
-  anno <- annotate_SingleR(sce, ref_data)
-  if (viz) {
-    # there is no interesting color palette harmonization among library colors here!
-    plot_SingleR(anno)
-  }
-  return(anno[["sce"]])
-}
-```
-
-Here we go!
-
-```{r}
-
-# Read in all SCE files
-sce_list <- purrr::map(
-  sce_file_paths, 
-  readr::read_rds
-)
-
-# Annotate them all, popping out some viz along the way
-singler_sce_list <- purrr::map(sce_list, run_SingleR, viz = TRUE)
-```
-
-
-
-Now let's plot, to start, the fastMNN UMAP but with celltype annotations from individual libraries.
-As is deeply commented all over the place, we definitely need to infuse palettes with biology!
-
-```{r}
-# helper to count the number of celltypes across all libraries
-count_celltypes <- function(sce) {
- tibble::tibble(celltype = colData(sce)$SingleR_annotations ) %>%
-    dplyr::count(celltype) %>%
-    dplyr::arrange(-n) %>%
-    tidyr::drop_na() 
-}
-
-# Celltype order based on **overall** counts for all pooled annotations 
-celltype_order <- purrr::map_df(singler_sce_list, count_celltypes) %>%
-  dplyr::group_by(celltype) %>%
-  dplyr::summarize(celltype_counts = sum(n)) %>%
-  dplyr::arrange(-celltype_counts) %>%
-  dplyr::pull(celltype)
-
-
-# Again we'd eventually like some biology to go into the color choices!
-cell_colors <- rainbow(length(celltype_order))
-
-# Read in an integrated SCE just to start getting a sense
-fastmnn <- readr::read_rds(file.path("results", "scpca", "integrated_sce", 
-                                     paste0(gawad_project_id, "_integrated_fastmnn_sce.rds" ))
-)
-
-
-# Find all the celltype annotations for a combined color palette:
-extract_celltypes <- function(sce) {
- tibble::tibble(batch = unique(metadata(sce)$library),
-                celltype = colData(sce)$SingleR_annotations, 
-                cell_barcode = rownames(colData(sce))) %>%
-    dplyr::mutate(cell_name = paste(cell_barcode, batch, sep = "-"))
-}
-
-# fastMNN UMAP with individual library cell annotations colored
-purrr::map_df(singler_sce_list, extract_celltypes) %>%
-  dplyr::inner_join(
-    tibble::as_tibble(colData(fastmnn), rownames = "cell_name")
-  ) %>%
-  dplyr::bind_cols(
-    as.data.frame(reducedDim(fastmnn, "fastmnn_UMAP"))
-  ) %>%
-  dplyr::mutate(UMAP1 = V1, UMAP2 = V2) %>%
-  # And let's make a UMAP!
-  ggplot() +
-  aes(x = UMAP1, y = UMAP2, color = celltype) + 
-  geom_point(size = 0.2, alpha = 0.3) + 
-  # we definitely want some biology here!
-  scale_color_manual(values = cell_colors)
-```
-
-
-
 
 ## Session Info
 
