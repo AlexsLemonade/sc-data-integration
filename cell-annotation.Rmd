@@ -6,6 +6,7 @@ params:
   reference: "hpca"
   integrated_sce_dir: !r file.path("results", "scpca", "integrated_sce")
   integration_method: "fastmnn"
+  max_celltypes: 5
 title: "Cell type annotation exploration"
 author: "Data Lab"
 date: "`r params$date`"
@@ -38,11 +39,10 @@ theme_set(theme_bw())
 set.seed(params$seed) # unclear if this is doing anything? probably not. but maybe later!
 
 utils_dir <- file.path(project_root, "scripts", "utils")
-
-# source the helper functions to grab the integration method check
 source(file.path(utils_dir, "integration-helpers.R"))
 
 sce_file_suffix <- "processed_citeseq.rds"
+
 integrated_sce_file <- file.path(params$integrated_sce_dir, paste0(
   params$project_id, "_integrated_", params$integration_method, "_sce.rds"
 ))
@@ -95,7 +95,7 @@ annotate_SingleR <- function(sce, ref_data) {
   
   # Add `pruned.labels`, where low-confidence annotations are NA, to sce
    sce$SingleR_annotations <- preds$pruned.labels
-   
+  
    return(
      list(
        sce = sce,
@@ -104,8 +104,9 @@ annotate_SingleR <- function(sce, ref_data) {
    )
 }
 
-plot_SingleR <- function(annotation_output) {
+plot_SingleR <- function(annotation_output, colname) {
   # annotation_output: list of sce and preds
+  # colname: column name to plot
   # Make a heatmap and UMAP and print out
   
   heatmap <- SingleR::plotScoreHeatmap(annotation_output[["preds"]], 
@@ -113,18 +114,23 @@ plot_SingleR <- function(annotation_output) {
                                        show.pruned = FALSE)
 
   
+  # In case, for `levels()` below.
+  colData(annotation_output[["sce"]])[,colname] <- as.factor(colData(annotation_output[["sce"]])[,colname])
+  
   umap_df <- tibble::as_tibble(reducedDim(annotation_output[["sce"]], "UMAP")) %>%
     dplyr::select(UMAP1 = V1, UMAP2 = V2) %>%
-    dplyr::mutate(celltypes = annotation_output[["sce"]]$SingleR_annotations)
+    dplyr::mutate(celltypes = colData(annotation_output[["sce"]])[,colname])
   
   # We would probably like a more principled approach to colors that is
   #  actually based on biological information about celltypes
-  plot_colors <- rainbow( length(unique(umap_df$celltypes[!(is.na(umap_df$celltypes))])))
+  plot_colors <- rainbow( length(levels(umap_df$celltypes)) )
   
   umap <- ggplot(umap_df) + 
     aes(x = UMAP1, y = UMAP2, color = celltypes) +
     geom_point(size = 0.2, alpha = 0.5) + 
-    scale_color_manual(values = plot_colors)
+    scale_color_manual(values = plot_colors) +
+    guides(color = guide_legend(override.aes = list(size=3))) +
+    ggtitle(glue::glue("UMAP with top {params$max_celltypes} celltypes shown"))
   
   print(heatmap)
   print(umap)
@@ -133,15 +139,25 @@ plot_SingleR <- function(annotation_output) {
 
 # Function to run and plot SingleR
 # Return SCE with annotations `SingleR_annotations` column
-run_SingleR <- function(sce, viz = TRUE) {
+run_SingleR <- function(sce, 
+                        max_celltypes = params$max_celltypes, 
+                        viz = TRUE) {
   # Print out the library
   print(unique( metadata(sce)$library ))
   
-  # Run and plot (if TRUE) annotations
+  # Run annotations
   anno <- annotate_SingleR(sce, ref_data)
+  
+  # Create an additional column `SingleR_annotations_collapsed` with only max_celltypes
+  anno[["sce"]]$SingleR_annotations_collapsed <- forcats::fct_lump_n(
+    anno[["sce"]]$SingleR_annotations, 
+    max_celltypes
+  )
+  
+  # plot if TRUE
   if (viz) {
     # there is no interesting color palette harmonization among library colors here!
-    plot_SingleR(anno)
+    plot_SingleR(anno, "SingleR_annotations_collapsed")
   }
   return(anno[["sce"]])
 }
@@ -150,7 +166,6 @@ run_SingleR <- function(sce, viz = TRUE) {
 Here we go!
 
 ```{r}
-
 # Read in all SCE files
 sce_list <- purrr::map(
   sce_file_paths, 
