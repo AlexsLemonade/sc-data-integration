@@ -16,8 +16,6 @@ output:
     toc_depth: 3
     toc_float: true
     number_sections: true
-editor_options: 
-  chunk_output_type: inline
 ---
 
 This notebook explores the use of [`SingleR`](https://bioconductor.org/books/release/SingleRBook/) to perform cell-type annotation on datasets from the ScPCA project SCPCP000007 (Gawad lab data).
@@ -25,6 +23,12 @@ This notebook explores the use of [`SingleR`](https://bioconductor.org/books/rel
 **Note:** The first time you run this code it may take a few more minutes due to reference downloads, but they will be cached for faster future execution.
 
 ## Set Up
+
+Use this code to obtain the PBMC reference from Zenodo: https://zenodo.org/record/4546839#.Y3PZ5oLMJhE
+```{sh, eval=FALSE}
+wget https://zenodo.org/record/4546839/files/ref.Rds
+```
+
 
 ```{r setup}
 # load the R project
@@ -45,9 +49,10 @@ source(file.path(utils_dir, "integration-helpers.R"))
 
 sce_file_suffix <- "processed_citeseq.rds"
 
-integrated_sce_file <- file.path(params$integrated_sce_dir, paste0(
-  params$project_id, "_integrated_", params$integration_method, "_sce.rds"
-))
+integrated_sce_file <- file.path(project_root, 
+                                 params$integrated_sce_dir, 
+                                 paste0(params$project_id, "_integrated_", params$integration_method, "_sce.rds")
+                                 )
 if (!file.exists(integrated_sce_file)){
   stop("Integrated SCE file could not be found.")
 }
@@ -56,7 +61,7 @@ if (!file.exists(integrated_sce_file)){
 Read in the data:
 
 ```{r}
-library_metadata_df <- readr::read_tsv(params$library_file)
+library_metadata_df <- readr::read_tsv(file.path(project_root, params$library_file))
 
 integrated_sce <- readr::read_rds(integrated_sce_file)
 
@@ -64,18 +69,20 @@ integrated_sce <- readr::read_rds(integrated_sce_file)
 sce_file_paths <- library_metadata_df %>%
   dplyr::filter(project_name == params$project_id) %>%
   dplyr::mutate(sce_file_path = file.path(
-    integration_input_dir, sample_biomaterial_id, glue::glue("{library_biomaterial_id}_{sce_file_suffix}")
+    project_root, 
+    integration_input_dir, 
+    sample_biomaterial_id, 
+    glue::glue("{library_biomaterial_id}_{sce_file_suffix}")
   )) %>%
   dplyr::pull(sce_file_path)
-
-
 ```
 
 
 ## `SingleR` annotation
 
-Here we performn celltype annotation with the given reference in `params$reference` on each of the Gawad libraries and look at their UMAPs colored by celltype.
+Here we perform celltype annotation with the given reference in `params$reference` on each of the Gawad libraries and look at their UMAPs colored by celltype.
 
+First, set the reference:
 ```{r}
 if (params$reference == "hpca") {
   ref_data <- celldex::HumanPrimaryCellAtlasData(ensembl = TRUE)
@@ -84,15 +91,21 @@ if (params$reference == "hpca") {
 } else {
   stop("Bad reference parameter; either 'hpca' or 'blueprint_encode'.")
 }
+```
 
-
-annotate_SingleR <- function(sce, ref_data) {
-  # return updated sce and the predictions themselves
+Define some functions:
+```{r}
+annotate_SingleR <- function(sce, ref_data, label_name = "label.main") {
+  # label_name is either "label.main" or "label.fine" to label with reference
+  #  broad or fine-grained celltypes, respectively
   
+  #label_name <- "label.fine"
+  # return updated sce and the predictions themselves
   preds <- SingleR::SingleR(
     test = sce, 
     ref = ref_data,
-    labels = ref_data$label.main
+    labels = colData(ref_data)[,label_name], 
+    BPPARAM = BiocParallel::MulticoreParam(4)
   )
   
   # Add `pruned.labels`, where low-confidence annotations are NA, to sce
@@ -109,7 +122,7 @@ annotate_SingleR <- function(sce, ref_data) {
 plot_SingleR <- function(annotation_output, colname) {
   # annotation_output: list of sce and preds
   # colname: column name to plot
-  # Make a heatmap and UMAP and print out
+  # Make a heatmap and UMAP and print them out
   
   heatmap <- SingleR::plotScoreHeatmap(annotation_output[["preds"]], 
                                        # default but let's be explicit
@@ -123,8 +136,6 @@ plot_SingleR <- function(annotation_output, colname) {
     dplyr::select(UMAP1 = V1, UMAP2 = V2) %>%
     dplyr::mutate(celltypes = colData(annotation_output[["sce"]])[,colname])
   
-  # We would probably like a more principled approach to colors that is
-  #  actually based on biological information about celltypes
   plot_colors <- rainbow( length(levels(umap_df$celltypes)) )
   
   umap <- ggplot(umap_df) + 
@@ -174,34 +185,45 @@ sce_list <- purrr::map(
   readr::read_rds
 )
 
-# Annotate them all, popping out some viz along the way
+# Annotate them all, popping out some viz along the way if specified
 sce_list_annotated <- purrr::map(sce_list, run_SingleR, viz = TRUE)
-
-# for sanity during dev:
-readr::write_rds(sce_list_annotated, "sce_list_annotated.rds")
 ```
 
+## UMAPs
 
+This section has some UMAPs:
 
-Now let's plot, to start, the fastMNN UMAP but with celltype annotations from individual libraries.
-As is deeply commented all over the place, we definitely need to infuse palettes with biology!
+- Celltype annotations from individual libraries applied to the integrated UMAP
+- ADT levels on the integrated UMAP for some proteins of interest: `CD123` (leukemia marker) and `CD3` (T-cell marker)
+
 
 ```{r}
-# Find all the annotations
-# This function is also used later for ADT extraction
-extract_annotation <- function(sce, annotation_column_name) {
- tibble::tibble(batch = unique(metadata(sce)$library),
-                celltype = colData(sce)[,annotation_column_name], 
-                cell_barcode = rownames(colData(sce))) %>%
-    dplyr::mutate(cell_name = paste(cell_barcode, batch, sep = "-"))
+# First let's create a df of celltypes and ADTs:
+extract_celltypes_adts <- function(sce) {
+  # data frame of ADT counts
+  adt_df <- logcounts(altExp(sce)) %>%
+    as.matrix() %>%
+    t() %>%
+    tibble::as_tibble(rownames = "cell_barcode") %>%
+    tidyr::pivot_longer(dplyr::starts_with("CD"),
+                        names_to = "ADT", 
+                        values_to = "logcounts")
+  
+  # Combine with data frame of annotations
+  tibble::tibble(celltype = sce$SingleR_annotations, 
+                 cell_barcode = rownames(colData(sce)),
+                 library = metadata(sce)$library) %>%
+    dplyr::inner_join(adt_df) %>%
+    dplyr::mutate(cell_name = paste(cell_barcode, library, sep = "-"))
 }
+
+celltype_adt_df <- purrr::map_df(sce_list_annotated, extract_celltypes_adts)
 
 
 # integrated UMAP with individual library cell annotations colored
-umap_df <- purrr::map_df(sce_list_annotated, extract_annotation, "SingleR_annotations") %>%
-  dplyr::inner_join(
-    tibble::as_tibble(colData(integrated_sce), rownames = "cell_name")
-  ) %>%
+umap_df <- celltype_adt_df %>%
+  dplyr::select(celltype, cell_name, library) %>%
+  dplyr::distinct() %>%
   dplyr::bind_cols(
     as.data.frame(reducedDim(integrated_sce, paste0(params$integration_method, "_UMAP")))
   ) %>%
@@ -223,291 +245,140 @@ rna_umap +
   lims(
     x = c(-6, 4), 
     y = c(-5, 5.5)
-  )
+  ) +
+  ggtitle("The above UMAP, zoomed in")
 ```
 
 
-## ADTs
-
-After annotating, we'd like to validate with ADTs.
-
 ```{r}
-find_max_adt <- function(sce) {
-  max_adt_indices <- apply(
-    logcounts(altExp(sce)),
-    2,
-    which.max
-  )
-  # associated rownames which are the ADT names
-  max_adt <- rownames(altExp(sce))[max_adt_indices]
+# function to make UMAPs colored by ADT
+make_adt_umap <- function(celltype_adt_df, adt_name) {
   
-  # add back to sce and return
-  sce$max_adt <- max_adt
-  return(sce)
+  umap_df <- celltype_adt_df %>%
+    dplyr::select(cell_name, ADT, logcounts) %>%
+    dplyr::filter(ADT %in% adt_name) %>%
+    dplyr::bind_cols(
+      as.data.frame(reducedDim(integrated_sce, paste0(params$integration_method, "_UMAP")))
+    ) %>%
+    dplyr::rename(UMAP1 = V1, 
+                  UMAP2 = V2)
+  
+  ggplot(umap_df) + 
+    aes(x = UMAP1, y = UMAP2, color = logcounts) + 
+    geom_point(size = 0.3, alpha = 0.4) +
+    scale_color_viridis_c() + 
+    labs(
+      title = glue::glue("{adt_name} expression"),
+      color = "Normalized expression")
 }
 
-
-sce_list_adt <- purrr::map(sce_list_annotated, find_max_adt)
-
-
-# What are the unique ADTs for each library?
-purrr::map(
-  lapply(sce_list_adt, `[[`, "max_adt"), 
-  unique
-)
-
-# What are the ADT distributions for each library?
-purrr::map(
-  lapply(sce_list_adt, `[[`, "max_adt"), 
-  table
-)
-
-# What's the most common ADT distributions for each library?
-most_common <- function(a_list) {
-  sort(table(a_list), decreasing = TRUE)[1] %>%
-    names()
-}
-purrr::map(
-  lapply(sce_list_adt, `[[`, "max_adt"), 
-  most_common
-)
+make_adt_umap(celltype_adt_df, "CD3") # bottom left corner tiny dots!
+make_adt_umap(celltype_adt_df, "CD123") # everything is tumor
+make_adt_umap(celltype_adt_df, "CD45") # should be on all differentiated cells more or less\
+make_adt_umap(celltype_adt_df, "CD19") # b cells
 
 ```
 
-- "CD33...is a transmembrane receptor expressed on cells of myeloid lineage. It is usually considered myeloid-specific, but it can also be found on some lymphoid cells." [source](https://en.wikipedia.org/wiki/CD33)
-- "CD45 is a type I transmembrane protein that is present in various isoforms on all differentiated hematopoietic cells (except erythrocytes and plasma cells)." [source](https://en.wikipedia.org/wiki/CD45)
-- "The interleukin-3 receptor (CD123) is a molecule found on cells which helps transmit the signal of interleukin-3, a soluble cytokine important in the immune system....The receptor, found on pluripotent progenitor cells, induces tyrosine phosphorylation within the cell and promotes proliferation and differentiation within the hematopoietic cell lines. It can be found on basophils and pDCs as well as some cDCs among peripheral blood mononuclear cells....CD123 is expressed across acute myeloid leukemia (AML) subtypes, including leukemic stem cells." [source](https://en.wikipedia.org/wiki/Interleukin-3_receptor)
 
+## Comparing references
 
-UMAP of the top `params$max_celltypes` ADTs:
+To build a sense of how different references perform, let's just look at one SCE (arbitrarily chosen as the first):
 
 ```{r}
-umap_df <- purrr::map_df(sce_list_adt, extract_annotation, "max_adt") %>%
-  dplyr::inner_join(
-    tibble::as_tibble(colData(integrated_sce), rownames = "cell_name")
-  ) %>%
-  dplyr::bind_cols(
-    as.data.frame(reducedDim(integrated_sce, paste0(params$integration_method, "_UMAP")))
-  ) %>%
-  dplyr::mutate(UMAP1 = V1, 
-                UMAP2 = V2,
-                celltype = forcats::fct_lump_n(celltype, params$max_celltypes))
-
-
-adt_umap <- ggplot(umap_df) +
-  aes(x = UMAP1, y = UMAP2, color = celltype) + 
-  geom_point(size = 0.2, alpha = 0.3) +
-  guides(color = guide_legend(override.aes = list(size=3))) +
-  ggtitle(glue::glue("Integrated UMAP with top {params$max_celltypes} ADTs shown"))
-adt_umap
-```
-
-Let's hone in on most of the cells:
-```{r}
-adt_umap +
-  lims(
-    x = c(-6, 4), 
-    y = c(-5, 5.5)
-  )
-```
-
-## Initial exploration
-
-> Currently the code chunks in this section are not evaluated, but remain here for now for posterity.
-
-To build an initial sense of what we can expect annotating with `SingleR`, let's just look at one SCE (arbitrarily chosen as the first):
-
-```{r, eval=T}
-# For now let's just explore one!
 sce <- sce_list[[1]]
 ```
 
 
-The `celldex` package contains bulk RNA-Seq datasets for use as reference.
-Since this is AML data, we'll want a reference that has a lot of blood information.
-According to the [`celldex`](https://bioconductor.org/packages/release/data/experiment/vignettes/celldex/inst/doc/userguide.html), the `Human Primary Cell Atlas` data will be our closest match.
+Functions for comparing references:
+```{r}
+# Return a tibble of predictions from the two references
+
+# Define outside of function to avoid rerunning over and over and over AND OVER.
+hpca_ref <- celldex::HumanPrimaryCellAtlasData(ensembl = TRUE)
+blueprint_encode_ref <- celldex::BlueprintEncodeData(ensembl = TRUE)
+
+compare_predictions <- function(sce, 
+                                label_name) {
+  
+  # HPCA prediction
+  preds_hpca <- SingleR::SingleR(
+    test = sce, 
+    ref = hpca_ref,
+    labels = colData(hpca_ref)[,label_name], 
+    BPPARAM = BiocParallel::MulticoreParam(4)
+  )
+  
+  # Blueprint/ENCODE prediction
+  preds_be <- SingleR::SingleR(
+    test = sce, 
+    ref = blueprint_encode_ref,
+    labels = colData(blueprint_encode_ref)[,label_name], 
+    BPPARAM = BiocParallel::MulticoreParam(4)
+  )
+  
+  # Combine results into a wide tibble:
+  preds_df <- tibble::tibble(
+    hpca = preds_hpca$labels, 
+    cell_barcode = rownames(preds_hpca)) %>%
+    dplyr::inner_join(
+      tibble::tibble(
+        blueprint_encode = preds_be$labels, 
+        cell_barcode = rownames(preds_be)) 
+    )
+
+  return(preds_df)
+}
+```
+
+The [`celldex`]((https://bioconductor.org/packages/release/data/experiment/vignettes/celldex/inst/doc/userguide.html)) package contains bulk RNA-Seq datasets for use as reference.
+These two are likely most useful:
 
 > The HPCA reference consists of publicly available microarray datasets derived from human primary cells (Mabbott et al. 2013). Most of the labels refer to blood subpopulations but cell types from other tissues are also available.
 
 
-```{r, eval=T}
-# define reference with ensembl IDs to match our IDs
-ref_se <- celldex::HumanPrimaryCellAtlasData(ensembl = TRUE)
-
-# Predict cell types
-#  If we change to `labels = ref_se$label.fine`, we'll get more 
-#  fine-grained annotations with subtypes etc.
-preds_hpca <- SingleR::SingleR(
-  # dataset we want to annotate
-  test = sce, 
-  # reference dataset
-  ref = ref_se,
-  # label.main is broad 
-  labels = ref_se$label.main)
-
-
-# Results into a tibble:
-preds_df <- tibble::as_tibble(preds_hpca$labels) %>%
-  dplyr::rename(celltype = value) %>%
-  dplyr::mutate(cell_barcode = rownames(preds_hpca),
-                reference = "hpca")
-
-# Save the celltypes:
-hpca_celltypes <- unique(ref_se$label.main)
-```
-
-And a heatmap version, showing all celltypes. 
-The bar the top shows the final assignment, which are the rows with highest scores.
-
-```{r, eval=F, fig.width = 8, fig.height = 5}
-SingleR::plotScoreHeatmap(preds_hpca)
-```
-
-But can't hurt to see how this compares to the `Blueprint/ENCODE` reference:
-
 > The Blueprint/ENCODE reference consists of bulk RNA-seq data for pure stroma and immune cells generated by Blueprint (Martens and Stunnenberg 2013) and ENCODE projects (The ENCODE Project Consortium 2012).
 
 
-```{r, eval=T, fig.width = 8, fig.height = 5}
-# define reference with ensembl IDs to match our IDs
-ref_se <- celldex::BlueprintEncodeData(ensembl = TRUE)
 
-# Predict cell types, broadly
-preds_blue_enc <- SingleR::SingleR(
-  # dataset we want to annotate
-  test = sce, 
-  # reference dataset
-  ref = ref_se,
-  # label.main is broad 
-  labels = ref_se$label.main)
+```{r}
+main_labels_df <- compare_predictions(sce, "label.main")
+fine_labels_df <- compare_predictions(sce, "label.fine")
 
+```
 
-# Results into a tibble:
-preds_df <- preds_df %>%
-  dplyr::bind_rows(
-    tibble::as_tibble(preds_blue_enc$labels) %>%
-    dplyr::rename(celltype = value) %>%
-    dplyr::mutate(cell_barcode = rownames(preds_blue_enc),
-                  reference = "blueprint_encode")
-  )
+How do these predictions compare?
+Note that these references often use different labels for the same cell type so we shouldn't expect a perfect diagonal below:
 
-# Save the celltypes:
-blueprint_celltypes <- unique(ref_se$label.main)
+```{r}
+#function for making comparison heatmaps
+make_comparison_heatmap <- function(df) {
+  df %>%
+    dplyr::mutate(
+      hpca = forcats::fct_rev(forcats::fct_infreq(hpca)),
+      blueprint_encode = forcats::fct_rev(forcats::fct_infreq(blueprint_encode))
+    ) %>%
+    dplyr::count(hpca, blueprint_encode) %>%
+  ggplot() + 
+  aes(x = blueprint_encode, y = hpca, fill = n) + 
+  geom_tile(color = "black") + 
+  geom_text(aes(label = n)) + 
+  scale_fill_distiller(palette = "RdYlBu", name = "Num. cells") + 
+  # background grid from theme_bw does not match up with rectangles.
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+}
+```
 
-# And the heatmap:
-SingleR::plotScoreHeatmap(preds_blue_enc)
+```{r fig.height=3, fig.width=5}
+make_comparison_heatmap(main_labels_df) + ggtitle("Broad label comparison")
+```
+
+```{r fig.height=6, fig.width=8}
+make_comparison_heatmap(fine_labels_df) + ggtitle("Fine label comparison")
 ```
 
 
-What did the references predict?
 
-
-```{r, eval=T}
-# How many of each celltype?
-preds_df %>%
-  dplyr::filter(reference == "hpca") %>%
-  dplyr::count(celltype) %>%
-  dplyr::arrange(-n)
-
-
-preds_df %>%
-  dplyr::filter(reference == "blueprint_encode") %>%
-  dplyr::count(celltype) %>%
-  dplyr::arrange(-n)
-```
-
-We'll have to harmonize the celltype names between references to do a robust comparison, but from a _very_ quick glance, overlap is thinner than one might like.
-That said, we don't necessarily expect Blueprint/ENCODE to do particularly well anyways!
-
-
-For a clearer comparison, we'll harmonize predicted celltypes, but let's just focus on exactly matching celltypes as a start - 
-```{r, eval=T}
-# Let's see what we have here:
-sort(hpca_celltypes)
-sort(blueprint_celltypes)
-
-# Manually compiled data rame of celltypes roughly present in BOTH references
-#  for now leaving the Pre/Pro B-cells out
-shared_celltypes_df <- tibble::tribble(
-  ~hpca_celltype, ~blueprint_celltype,
-  # Both references have it:
-  "Astrocyte", "Astrocytes",
-  "B_cell", "B-cells",
-  "Chondrocytes","Chondrocytes",
-  "DC", "DC", 
-  "Endothelial_cells", "Endothelial cells", 
-  "Epithelial_cells", "Epithelial cells", 
-  "Fibroblasts", "Fibroblasts", 
-  "Keratinocytes", "Keratinocytes", 
-  "Macrophage", "Macrophages", 
-  "Monocyte", "Monocytes", 
-  "Neurons", "Neurons", 
-  "Neutrophils", "Neutrophils", 
-  "NK_cell", "NK cells", 
-  "Smooth_muscle_cells", "Smooth muscle", 
-  # two groups - collapse back to overall T cells
-  "T_cells", "CD8+ T-cells",
-  "T_cells", "CD4+ T-cells",
-  # two groups of HSCs, again, collapse back to overall
-  "HSC_-G-CSF", "HSC", 
-  "HSC_CD34+", "HSC"
-) %>%
-  dplyr::mutate(harmonized_celltype = ifelse(blueprint_celltype == "HSC",
-                                             blueprint_celltype, 
-                                             hpca_celltype))
-
-harmonize_celltypes <- function(preds_df, reference_name) {
-  if (reference_name == "hpca") {
-    shared_celltypes_colname <- rlang::sym("hpca_celltype")
-  } else {
-    shared_celltypes_colname <- rlang::sym("blueprint_celltype")
-  }
-  
-  filtered_preds_df <- preds_df %>%
-    dplyr::filter(reference == reference_name) 
-  
-  sym_reference_name <- rlang::sym(reference_name)
-  filtered_preds_df %>%
-    dplyr::inner_join(
-      dplyr::select(
-        shared_celltypes_df, 
-        celltype = {{shared_celltypes_colname}},
-        harmonized_celltype
-      )
-    ) %>% 
-    dplyr::select(cell_barcode, {{sym_reference_name}} := harmonized_celltype) %>%
-    dplyr::right_join(filtered_preds_df) %>%
-    dplyr::mutate({{reference_name}} := dplyr::if_else(
-      {{sym_reference_name}} %in% shared_celltypes_df$harmonized_celltype,
-      {{sym_reference_name}},
-      celltype
-    )) %>% 
-    dplyr::select(-celltype, -reference)
-  }
-  
-preds_df_harmonized <- harmonize_celltypes(preds_df, "blueprint_encode") %>%
-  dplyr::left_join(
-    harmonize_celltypes(preds_df, "hpca")  
-  )
-
-# How often do they match?
-
-preds_df_harmonized %>%
-  dplyr::summarize(percent_same = sum(blueprint_encode == hpca) / dplyr::n() )
-
-
-# Where do they not match?
-preds_df_harmonized %>%
-  dplyr::filter(hpca != blueprint_encode)
-  
-# Are there specific combinations that get differently annotated?
-preds_df_harmonized %>%
-  dplyr::filter(hpca != blueprint_encode) %>%
-  dplyr::select(-cell_barcode) %>%
-  dplyr::count(blueprint_encode, hpca) %>%
-  dplyr::arrange(-n)
-
-```
 
 ## Session Info
 
