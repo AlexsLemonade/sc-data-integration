@@ -4,6 +4,7 @@ params:
   library_file: !r file.path("sample-info", "scpca-processed-libraries.tsv")
   project_id: "SCPCP000007"
   reference: "hpca"
+  cores: 4
   integrated_sce_dir: !r file.path("results", "scpca", "integrated_sce")
   integration_method: "fastmnn"
   max_celltypes: 5
@@ -18,9 +19,10 @@ output:
     number_sections: true
 ---
 
-This notebook explores the use of [`SingleR`](https://bioconductor.org/books/release/SingleRBook/) to perform cell-type annotation on datasets from the ScPCA project SCPCP000007 (Gawad lab data).
+This notebook explores the use of [`SingleR`](https://bioconductor.org/books/release/SingleRBook/) to perform cell-type annotation on datasets from the ScPCA project SCPCP000007 (Gawad lab data), which also features CITE-Seq ADT counts for validation.
 
 **Note:** The first time you run this code it may take a few more minutes due to reference downloads, but they will be cached for faster future execution.
+
 
 ## Set Up
 
@@ -105,7 +107,7 @@ annotate_SingleR <- function(sce, ref_data, label_name = "label.main") {
     test = sce, 
     ref = ref_data,
     labels = colData(ref_data)[,label_name], 
-    BPPARAM = BiocParallel::MulticoreParam(4)
+    BPPARAM = BiocParallel::MulticoreParam(params$cores)
   )
   
   return(preds)
@@ -194,7 +196,11 @@ sce_list <- purrr::map(
 )
 
 # Annotate them all, popping out some viz along the way if specified
-sce_list_annotated <- purrr::map(sce_list, run_SingleR, viz = FALSE)
+sce_list_annotated <- purrr::map(sce_list, run_SingleR, viz = TRUE)
+
+# Remove `ref_data` and `sce_list` which are large
+rm(ref_data)
+rm(sce_list)
 ```
 
 ## UMAPs
@@ -237,6 +243,11 @@ celltype_adt_df <- purrr::map_df(sce_list_annotated, extract_celltypes_adts) %>%
       dplyr::rename(UMAP1 = V1, UMAP2 = V2)
   ) %>%
   dplyr::select(-cell_barcode)
+
+# We can now remove the large `sce_list_annotated`
+rm(sce_list_annotated)
+
+# See df:
 celltype_adt_df
 ```
 
@@ -360,7 +371,7 @@ adt_celltype_violin(celltype_adt_df, celltype_collapsed, "CD123")
 To build a sense of how different references perform, let's just look at one SCE (arbitrarily chosen as the first):
 
 ```{r}
-sce <- sce_list[[1]]
+sce <- readr::read_rds(sce_file_paths[[1]])
 ```
 
 
@@ -380,7 +391,7 @@ compare_predictions <- function(sce,
     test = sce, 
     ref = hpca_ref,
     labels = colData(hpca_ref)[,label_name], 
-    BPPARAM = BiocParallel::MulticoreParam(4)
+    BPPARAM = BiocParallel::MulticoreParam(params$cores)
   )
   
   # Blueprint/ENCODE prediction
@@ -388,7 +399,7 @@ compare_predictions <- function(sce,
     test = sce, 
     ref = blueprint_encode_ref,
     labels = colData(blueprint_encode_ref)[,label_name], 
-    BPPARAM = BiocParallel::MulticoreParam(4)
+    BPPARAM = BiocParallel::MulticoreParam(params$cores)
   )
   
   # Combine results into a wide tibble:
@@ -418,6 +429,10 @@ These two are likely most useful:
 ```{r}
 main_labels_df <- compare_predictions(sce, "label.main")
 fine_labels_df <- compare_predictions(sce, "label.fine")
+
+# remove refs which are large
+rm(hpca_ref)
+rm(blueprint_encode_ref)
 
 ```
 
