@@ -108,33 +108,30 @@ annotate_SingleR <- function(sce, ref_data, label_name = "label.main") {
     BPPARAM = BiocParallel::MulticoreParam(4)
   )
   
-  # Add `pruned.labels`, where low-confidence annotations are NA, to sce
-   sce$SingleR_annotations <- preds$pruned.labels
-  
-   return(
-     list(
-       sce = sce,
-       preds = preds
-       )
-   )
+  return(preds)
 }
 
-plot_SingleR <- function(annotation_output, colname) {
-  # annotation_output: list of sce and preds
-  # colname: column name to plot
-  # Make a heatmap and UMAP and print them out
+plot_SingleR_heatmap <- function(SingleR_annotations) {
+  # SingleR_annotations: result object from running SingleR::SingleR
+  # Make and print a heatmap 
   
-  heatmap <- SingleR::plotScoreHeatmap(annotation_output[["preds"]], 
-                                       # default but let's be explicit
-                                       show.pruned = FALSE)
+  heatmap <- SingleR::plotScoreHeatmap(SingleR_annotations, 
+                            # this is default but let's be explicit
+                            show.pruned = FALSE)
+  
+  print(heatmap)
+}
 
+plot_SingleR_UMAP <- function(sce, colname, legend_ncol = 1) {
+  # sce: SCE object containing a column `colname` with celltype predictions
+  # colname: Name of column with celltypes
   
-  # In case, for `levels()` below.
-  colData(annotation_output[["sce"]])[,colname] <- as.factor(colData(annotation_output[["sce"]])[,colname])
+  # Ensure this is a factor 
+  colData(sce)[,colname] <- as.factor(colData(sce)[,colname])
   
-  umap_df <- tibble::as_tibble(reducedDim(annotation_output[["sce"]], "UMAP")) %>%
+  umap_df <- tibble::as_tibble(reducedDim(sce, "UMAP")) %>%
     dplyr::select(UMAP1 = V1, UMAP2 = V2) %>%
-    dplyr::mutate(celltypes = colData(annotation_output[["sce"]])[,colname])
+    dplyr::mutate(celltypes = colData(sce)[,colname])
   
   plot_colors <- rainbow( length(levels(umap_df$celltypes)) )
   
@@ -142,37 +139,48 @@ plot_SingleR <- function(annotation_output, colname) {
     aes(x = UMAP1, y = UMAP2, color = celltypes) +
     geom_point(size = 0.2, alpha = 0.5) + 
     scale_color_manual(values = plot_colors) +
-    guides(color = guide_legend(override.aes = list(size=3))) +
-    ggtitle(glue::glue("UMAP with top {params$max_celltypes} celltypes shown"))
+    guides(color = guide_legend(override.aes = list(size=3),
+                                ncol = legend_ncol)) +
+    ggtitle(glue::glue("Library UMAP with projected SingleR celltype annotations"))
   
-  print(heatmap)
   print(umap)
   
 }
 
-# Function to run and plot SingleR
-# Return SCE with annotations `SingleR_annotations` column
+# Function to run and optionally plot SingleR
+# Return SCE with annotations `SingleR_annotations` and `SingleR_annotations_collapsed` columns
 run_SingleR <- function(sce, 
                         max_celltypes = params$max_celltypes, 
                         viz = TRUE) {
   # Print out the library
   print(unique( metadata(sce)$library ))
   
-  # Run annotations
-  anno <- annotate_SingleR(sce, ref_data)
+  # Run SingleR
+  SingleR_results <- annotate_SingleR(sce, ref_data)
   
+  # Add annotations into sce as a frequency-ordered factor
+  sce$SingleR_annotations <- forcats::fct_infreq(SingleR_results$pruned.labels)
+   
   # Create an additional column `SingleR_annotations_collapsed` with only max_celltypes
-  anno[["sce"]]$SingleR_annotations_collapsed <- forcats::fct_lump_n(
-    anno[["sce"]]$SingleR_annotations, 
+  # This will automatically create an "Other" group with the remaining non-top-max_celltypes celltypes
+  sce$SingleR_annotations_collapsed <- forcats::fct_lump_n(
+    sce$SingleR_annotations, 
     max_celltypes
   )
   
   # plot if TRUE
   if (viz) {
-    # there is no interesting color palette harmonization among library colors here!
-    plot_SingleR(anno, "SingleR_annotations_collapsed")
+    
+    # Plot heatmap
+    plot_SingleR_heatmap(SingleR_results)
+    
+    # Plot two UMAPs: with all celltypes and with max_celltypes
+    plot_SingleR_UMAP(sce, "SingleR_annotations", legend_ncol=2)
+    plot_SingleR_UMAP(sce, "SingleR_annotations_collapsed")
   }
-  return(anno[["sce"]])
+  
+  # Return the updated SCE object
+  return(sce)
 }
 ```
 
@@ -186,7 +194,7 @@ sce_list <- purrr::map(
 )
 
 # Annotate them all, popping out some viz along the way if specified
-sce_list_annotated <- purrr::map(sce_list, run_SingleR, viz = TRUE)
+sce_list_annotated <- purrr::map(sce_list, run_SingleR, viz = FALSE)
 ```
 
 ## UMAPs
@@ -210,38 +218,70 @@ extract_celltypes_adts <- function(sce) {
                         values_to = "logcounts")
   
   # Combine with data frame of annotations
-  tibble::tibble(celltype = sce$SingleR_annotations, 
-                 cell_barcode = rownames(colData(sce)),
-                 library = metadata(sce)$library) %>%
+  adt_df_anno <- tibble::tibble(
+      celltype = sce$SingleR_annotations, 
+      celltype_collapsed = sce$SingleR_annotations_collapsed,
+      cell_barcode = rownames(colData(sce)),
+      library = metadata(sce)$library
+    ) %>%
     dplyr::inner_join(adt_df) %>%
     dplyr::mutate(cell_name = paste(cell_barcode, library, sep = "-"))
 }
 
-celltype_adt_df <- purrr::map_df(sce_list_annotated, extract_celltypes_adts)
-
-
-# integrated UMAP with individual library cell annotations colored
-umap_df <- celltype_adt_df %>%
-  dplyr::select(celltype, cell_name, library) %>%
-  dplyr::distinct() %>%
-  dplyr::bind_cols(
-    as.data.frame(reducedDim(integrated_sce, paste0(params$integration_method, "_UMAP")))
+# This df is generally used below:
+celltype_adt_df <- purrr::map_df(sce_list_annotated, extract_celltypes_adts) %>%
+  # And join in UMAPs:
+  dplyr::inner_join(
+    reducedDim(integrated_sce, paste0(params$integration_method, "_UMAP")) %>%
+      tibble::as_tibble(rownames = "cell_name") %>%
+      dplyr::rename(UMAP1 = V1, UMAP2 = V2)
   ) %>%
-  dplyr::mutate(UMAP1 = V1, 
-                UMAP2 = V2,
-                celltype = forcats::fct_lump_n(celltype, params$max_celltypes))
+  dplyr::select(-cell_barcode)
+celltype_adt_df
+```
 
-# And let's make a UMAP!
-rna_umap <- ggplot(umap_df) +
+
+```{r}
+# RNA UMAP:
+all_celltypes_rna_umap <- celltype_adt_df %>%
+  dplyr::select(UMAP1, UMAP2, celltype) %>%
+  dplyr::distinct() %>%
+  ggplot() +
   aes(x = UMAP1, y = UMAP2, color = celltype) + 
   geom_point(size = 0.3, alpha = 0.4) + 
   guides(color = guide_legend(override.aes = list(size=3))) +
-  ggtitle(glue::glue("Integrated UMAP with top {params$max_celltypes} SingleR-annotated celltypes shown"))
+  ggtitle(glue::glue("Integrated UMAP with all SingleR-annotated celltypes shown"))
 
-rna_umap
+all_celltypes_rna_umap
 ```
 ```{r}
-rna_umap +
+all_celltypes_rna_umap +
+  lims(
+    x = c(-6, 4), 
+    y = c(-5, 5.5)
+  ) +
+  ggtitle("The above UMAP, zoomed in")
+```
+
+
+```{r}
+# RNA UMAP:
+max_celltypes_rna_umap <- celltype_adt_df %>%
+  dplyr::select(UMAP1, UMAP2, celltype_collapsed) %>%
+  dplyr::distinct() %>%
+  ggplot() +
+  aes(x = UMAP1, y = UMAP2, color = celltype_collapsed) + 
+  geom_point(size = 0.3, alpha = 0.4) + 
+  guides(color = guide_legend(override.aes = list(size=3))) +
+  labs(
+    title = glue::glue("Integrated UMAP with top {params$max_celltypes} SingleR-annotated celltypes shown"), 
+    color = glue::glue("Top {params$max_celltypes} celltypes"))
+
+max_celltypes_rna_umap
+```
+
+```{r}
+max_celltypes_rna_umap +
   lims(
     x = c(-6, 4), 
     y = c(-5, 5.5)
@@ -253,17 +293,10 @@ rna_umap +
 ```{r}
 # function to make UMAPs colored by ADT
 make_adt_umap <- function(celltype_adt_df, adt_name) {
-  
-  umap_df <- celltype_adt_df %>%
-    dplyr::select(cell_name, ADT, logcounts) %>%
-    dplyr::filter(ADT %in% adt_name) %>%
-    dplyr::bind_cols(
-      as.data.frame(reducedDim(integrated_sce, paste0(params$integration_method, "_UMAP")))
-    ) %>%
-    dplyr::rename(UMAP1 = V1, 
-                  UMAP2 = V2)
-  
-  ggplot(umap_df) + 
+
+  celltype_adt_df %>%
+    dplyr::filter(ADT == adt_name) %>%
+    ggplot() + 
     aes(x = UMAP1, y = UMAP2, color = logcounts) + 
     geom_point(size = 0.3, alpha = 0.4) +
     scale_color_viridis_c() + 
@@ -277,6 +310,48 @@ make_adt_umap(celltype_adt_df, "CD123") # everything is tumor
 make_adt_umap(celltype_adt_df, "CD45") # should be on all differentiated cells more or less\
 make_adt_umap(celltype_adt_df, "CD19") # b cells
 
+```
+
+## ADT distributions
+
+This section explores ADT counts across predicted celltypes.
+
+
+```{r fig.height=4, fig.width=6}
+
+adt_celltype_violin <- function(df, celltype_column, adt_name) {
+  
+  # colors, using dplyr since tidyeval land
+  fill_vector <- df %>%
+    dplyr::pull({{celltype_column}}) %>%
+    unique() %>%
+    length() %>%
+    rainbow()
+
+  celltype_adt_df %>%
+    dplyr::filter(ADT == adt_name) %>%
+    dplyr::mutate(celltype_plot_column = forcats::fct_reorder({{celltype_column}}, logcounts)) %>%
+    ggplot() + 
+    aes(x = celltype_plot_column,
+        y = logcounts, 
+        fill = celltype_plot_column) + 
+    geom_violin(alpha = 0.7) + 
+    stat_summary() + 
+    scale_fill_manual(values = fill_vector, 
+                      name = "Celltypes") +
+    ggtitle(glue::glue("{adt_name} normalized expression across celltypes"))
+
+}
+
+## CD19
+adt_celltype_violin(celltype_adt_df, celltype, "CD19") + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+adt_celltype_violin(celltype_adt_df, celltype_collapsed, "CD19")
+
+## CD123
+adt_celltype_violin(celltype_adt_df, celltype, "CD123") + 
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+adt_celltype_violin(celltype_adt_df, celltype_collapsed, "CD123")
 ```
 
 
