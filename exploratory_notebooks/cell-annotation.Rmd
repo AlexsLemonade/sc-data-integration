@@ -325,24 +325,15 @@ This section explores ADT counts across predicted celltypes.
 
 ```{r fig.height=4, fig.width=6}
 adt_celltype_violin <- function(df, celltype_column, adt_name) {
-  
-  # colors, using dplyr since tidyeval land
-  fill_vector <- df %>%
-    dplyr::pull({{celltype_column}}) %>%
-    unique() %>%
-    length() %>%
-    rainbow()
 
   celltype_adt_df %>%
     dplyr::filter(ADT == adt_name) %>%
     dplyr::mutate(celltype_plot_column = forcats::fct_reorder({{celltype_column}}, logcounts)) %>%
     ggplot() + 
     aes(x = celltype_plot_column,
-        y = logcounts, 
-        fill = celltype_plot_column) + 
+        y = logcounts) + 
     geom_violin(alpha = 0.7) + 
     stat_summary() + 
-    scale_fill_manual(values = fill_vector) +
     labs(
       title = glue::glue("{adt_name} normalized expression across celltypes"), 
       x = "Celltypes", 
@@ -453,8 +444,9 @@ make_comparison_heatmap <- function(df) {
     dplyr::count(hpca, blueprint_encode) %>%
   ggplot() + 
   aes(x = blueprint_encode, y = hpca, fill = n) + 
-  geom_tile(color = "black") + 
-  geom_text(aes(label = n), size = rel(1.2)) + 
+  geom_tile(color = "black") +
+  # future coders, tweak size here for your heatmap needs!
+  geom_text(aes(label = n)) + 
   scale_fill_distiller(palette = "RdYlBu", name = "Num. cells") + 
   # background grid from theme_bw does not match up with rectangles.
   theme_classic() +
