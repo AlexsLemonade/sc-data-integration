@@ -26,12 +26,6 @@ This notebook explores the use of [`SingleR`](https://bioconductor.org/books/rel
 
 ## Set Up
 
-Use this code to obtain the PBMC reference from Zenodo: https://zenodo.org/record/4546839#.Y3PZ5oLMJhE
-```{sh, eval=FALSE}
-wget https://zenodo.org/record/4546839/files/ref.Rds
-```
-
-
 ```{r setup}
 # load the R project
 project_root <- here::here()
@@ -39,8 +33,6 @@ renv::load(project_root)
 
 suppressPackageStartupMessages({
   library(SingleCellExperiment)
-  library(SingleR)
-  library(celldex)
   library(ggplot2)
 })
 theme_set(theme_bw())
@@ -226,7 +218,6 @@ extract_celltypes_adts <- function(sce) {
   # Combine with data frame of annotations
   adt_df_anno <- tibble::tibble(
       celltype = sce$SingleR_annotations, 
-      celltype_collapsed = sce$SingleR_annotations_collapsed,
       cell_barcode = rownames(colData(sce)),
       library = metadata(sce)$library
     ) %>%
@@ -242,10 +233,14 @@ celltype_adt_df <- purrr::map_df(sce_list_annotated, extract_celltypes_adts) %>%
       tibble::as_tibble(rownames = "cell_name") %>%
       dplyr::rename(UMAP1 = V1, UMAP2 = V2)
   ) %>%
-  dplyr::select(-cell_barcode)
+  dplyr::select(-cell_barcode) %>%
+  # remake `celltype_collapsed` so that it's the top params$max_celltypes 
+  #  considering all libraries pooled
+  dplyr::mutate(celltype_collapsed = forcats::fct_lump(celltype, params$max_celltypes))
 
-# We can now remove the large `sce_list_annotated`
+# We can now remove the large `sce_list_annotated` and `integrated_sce`
 rm(sce_list_annotated)
+rm(integrated_sce)
 
 # See df:
 celltype_adt_df
@@ -329,7 +324,6 @@ This section explores ADT counts across predicted celltypes.
 
 
 ```{r fig.height=4, fig.width=6}
-
 adt_celltype_violin <- function(df, celltype_column, adt_name) {
   
   # colors, using dplyr since tidyeval land
@@ -348,20 +342,29 @@ adt_celltype_violin <- function(df, celltype_column, adt_name) {
         fill = celltype_plot_column) + 
     geom_violin(alpha = 0.7) + 
     stat_summary() + 
-    scale_fill_manual(values = fill_vector, 
-                      name = "Celltypes") +
-    ggtitle(glue::glue("{adt_name} normalized expression across celltypes"))
+    scale_fill_manual(values = fill_vector) +
+    labs(
+      title = glue::glue("{adt_name} normalized expression across celltypes"), 
+      x = "Celltypes", 
+      y = "Normalized expression"
+    ) + 
+    theme(legend.position = "none", 
+          axis.text.x = element_text(angle = 30, 
+                                     hjust = 1, 
+                                     size = rel(0.8)))
 
 }
 
+## CD3
+adt_celltype_violin(celltype_adt_df, celltype, "CD3") 
+adt_celltype_violin(celltype_adt_df, celltype_collapsed, "CD3")
+
 ## CD19
-adt_celltype_violin(celltype_adt_df, celltype, "CD19") + 
-  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+adt_celltype_violin(celltype_adt_df, celltype, "CD19") 
 adt_celltype_violin(celltype_adt_df, celltype_collapsed, "CD19")
 
 ## CD123
-adt_celltype_violin(celltype_adt_df, celltype, "CD123") + 
-  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+adt_celltype_violin(celltype_adt_df, celltype, "CD123") 
 adt_celltype_violin(celltype_adt_df, celltype_collapsed, "CD123")
 ```
 
@@ -451,7 +454,7 @@ make_comparison_heatmap <- function(df) {
   ggplot() + 
   aes(x = blueprint_encode, y = hpca, fill = n) + 
   geom_tile(color = "black") + 
-  geom_text(aes(label = n)) + 
+  geom_text(aes(label = n), size = rel(1.2)) + 
   scale_fill_distiller(palette = "RdYlBu", name = "Num. cells") + 
   # background grid from theme_bw does not match up with rectangles.
   theme_classic() +
@@ -459,11 +462,11 @@ make_comparison_heatmap <- function(df) {
 }
 ```
 
-```{r fig.height=3, fig.width=5}
+```{r fig.height=5, fig.width=8}
 make_comparison_heatmap(main_labels_df) + ggtitle("Broad label comparison")
 ```
 
-```{r fig.height=6, fig.width=8}
+```{r fig.height=8, fig.width=10}
 make_comparison_heatmap(fine_labels_df) + ggtitle("Fine label comparison")
 ```
 
