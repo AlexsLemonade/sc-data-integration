@@ -1,0 +1,472 @@
+---
+params:
+  seed: 2022
+  library_file: !r file.path("sample-info", "scpca-processed-libraries.tsv")
+  project_id: "SCPCP000007"
+  reference: "hpca"
+  cores: 4
+  integrated_sce_dir: !r file.path("results", "scpca", "integrated_sce")
+  integration_method: "fastmnn"
+  max_celltypes: 5
+title: "Cell type annotation exploration"
+author: "Data Lab"
+date: "`r params$date`"
+output:
+  html_notebook:
+    toc: true
+    toc_depth: 3
+    toc_float: true
+    number_sections: true
+---
+
+This notebook explores the use of [`SingleR`](https://bioconductor.org/books/release/SingleRBook/) to perform cell-type annotation on datasets from the ScPCA project SCPCP000007 (Gawad lab data), which also features CITE-Seq ADT counts for validation.
+
+**Note:** The first time you run this code it may take a few more minutes due to reference downloads, but they will be cached for faster future execution.
+
+
+## Set Up
+
+```{r setup}
+# load the R project
+project_root <- here::here()
+renv::load(project_root)
+
+suppressPackageStartupMessages({
+  library(SingleCellExperiment)
+  library(ggplot2)
+})
+theme_set(theme_bw())
+set.seed(params$seed) # unclear if this is doing anything? probably not. but maybe later!
+
+utils_dir <- file.path(project_root, "scripts", "utils")
+source(file.path(utils_dir, "integration-helpers.R"))
+
+sce_file_suffix <- "processed_citeseq.rds"
+
+integrated_sce_file <- file.path(project_root, 
+                                 params$integrated_sce_dir, 
+                                 paste0(params$project_id, "_integrated_", params$integration_method, "_sce.rds")
+                                 )
+if (!file.exists(integrated_sce_file)){
+  stop("Integrated SCE file could not be found.")
+}
+```
+
+Read in the data:
+
+```{r}
+library_metadata_df <- readr::read_tsv(file.path(project_root, params$library_file))
+
+integrated_sce <- readr::read_rds(integrated_sce_file)
+
+# Define the unintegrated SCE filenames
+sce_file_paths <- library_metadata_df %>%
+  dplyr::filter(project_name == params$project_id) %>%
+  dplyr::mutate(sce_file_path = file.path(
+    project_root, 
+    integration_input_dir, 
+    sample_biomaterial_id, 
+    glue::glue("{library_biomaterial_id}_{sce_file_suffix}")
+  )) %>%
+  dplyr::pull(sce_file_path)
+```
+
+
+## `SingleR` annotation
+
+Here we perform celltype annotation with the given reference in `params$reference` on each of the Gawad libraries and look at their UMAPs colored by celltype.
+
+First, set the reference:
+```{r}
+if (params$reference == "hpca") {
+  ref_data <- celldex::HumanPrimaryCellAtlasData(ensembl = TRUE)
+} else if (params$reference == "blueprint_encode") {
+  ref_data <- celldex::BlueprintEncodeData(ensembl = TRUE)
+} else {
+  stop("Bad reference parameter; either 'hpca' or 'blueprint_encode'.")
+}
+```
+
+Define some functions:
+```{r}
+annotate_SingleR <- function(sce, ref_data, label_name = "label.main") {
+  # label_name is either "label.main" or "label.fine" to label with reference
+  #  broad or fine-grained celltypes, respectively
+  
+  #label_name <- "label.fine"
+  # return updated sce and the predictions themselves
+  preds <- SingleR::SingleR(
+    test = sce, 
+    ref = ref_data,
+    labels = colData(ref_data)[,label_name], 
+    BPPARAM = BiocParallel::MulticoreParam(params$cores)
+  )
+  
+  return(preds)
+}
+
+plot_SingleR_heatmap <- function(SingleR_annotations) {
+  # SingleR_annotations: result object from running SingleR::SingleR
+  # Make and print a heatmap 
+  
+  heatmap <- SingleR::plotScoreHeatmap(SingleR_annotations, 
+                            # this is default but let's be explicit
+                            show.pruned = FALSE)
+  
+  print(heatmap)
+}
+
+plot_SingleR_UMAP <- function(sce, colname, legend_ncol = 1) {
+  # sce: SCE object containing a column `colname` with celltype predictions
+  # colname: Name of column with celltypes
+  
+  # Ensure this is a factor 
+  colData(sce)[,colname] <- as.factor(colData(sce)[,colname])
+  
+  umap_df <- tibble::as_tibble(reducedDim(sce, "UMAP")) %>%
+    dplyr::select(UMAP1 = V1, UMAP2 = V2) %>%
+    dplyr::mutate(celltypes = colData(sce)[,colname])
+  
+  plot_colors <- rainbow( length(levels(umap_df$celltypes)) )
+  
+  umap <- ggplot(umap_df) + 
+    aes(x = UMAP1, y = UMAP2, color = celltypes) +
+    geom_point(size = 0.2, alpha = 0.5) + 
+    scale_color_manual(values = plot_colors) +
+    guides(color = guide_legend(override.aes = list(size=3),
+                                ncol = legend_ncol)) +
+    ggtitle(glue::glue("Library UMAP with projected SingleR celltype annotations"))
+  
+  print(umap)
+  
+}
+
+# Function to run and optionally plot SingleR
+# Return SCE with annotations `SingleR_annotations` and `SingleR_annotations_collapsed` columns
+run_SingleR <- function(sce, 
+                        max_celltypes = params$max_celltypes, 
+                        viz = TRUE) {
+  # Print out the library
+  print(unique( metadata(sce)$library ))
+  
+  # Run SingleR
+  SingleR_results <- annotate_SingleR(sce, ref_data)
+  
+  # Add annotations into sce as a frequency-ordered factor
+  sce$SingleR_annotations <- forcats::fct_infreq(SingleR_results$pruned.labels)
+   
+  # Create an additional column `SingleR_annotations_collapsed` with only max_celltypes
+  # This will automatically create an "Other" group with the remaining non-top-max_celltypes celltypes
+  sce$SingleR_annotations_collapsed <- forcats::fct_lump_n(
+    sce$SingleR_annotations, 
+    max_celltypes
+  )
+  
+  # plot if TRUE
+  if (viz) {
+    
+    # Plot heatmap
+    plot_SingleR_heatmap(SingleR_results)
+    
+    # Plot two UMAPs: with all celltypes and with max_celltypes
+    plot_SingleR_UMAP(sce, "SingleR_annotations", legend_ncol=2)
+    plot_SingleR_UMAP(sce, "SingleR_annotations_collapsed")
+  }
+  
+  # Return the updated SCE object
+  return(sce)
+}
+```
+
+Here we go!
+
+```{r}
+# Read in all SCE files
+sce_list <- purrr::map(
+  sce_file_paths, 
+  readr::read_rds
+)
+
+# Annotate them all, popping out some viz along the way if specified
+sce_list_annotated <- purrr::map(sce_list, run_SingleR, viz = TRUE)
+
+# Remove `ref_data` and `sce_list` which are large
+rm(ref_data)
+rm(sce_list)
+```
+
+## UMAPs
+
+This section has some UMAPs:
+
+- Celltype annotations from individual libraries applied to the integrated UMAP
+- ADT levels on the integrated UMAP for some proteins of interest: `CD123` (leukemia marker) and `CD3` (T-cell marker)
+
+
+```{r}
+# First let's create a df of celltypes and ADTs:
+extract_celltypes_adts <- function(sce) {
+  # data frame of ADT counts
+  adt_df <- logcounts(altExp(sce)) %>%
+    as.matrix() %>%
+    t() %>%
+    tibble::as_tibble(rownames = "cell_barcode") %>%
+    tidyr::pivot_longer(dplyr::starts_with("CD"),
+                        names_to = "ADT", 
+                        values_to = "logcounts")
+  
+  # Combine with data frame of annotations
+  adt_df_anno <- tibble::tibble(
+      celltype = sce$SingleR_annotations, 
+      cell_barcode = rownames(colData(sce)),
+      library = metadata(sce)$library
+    ) %>%
+    dplyr::inner_join(adt_df) %>%
+    dplyr::mutate(cell_name = paste(cell_barcode, library, sep = "-"))
+}
+
+# This df is generally used below:
+celltype_adt_df <- purrr::map_df(sce_list_annotated, extract_celltypes_adts) %>%
+  # And join in UMAPs:
+  dplyr::inner_join(
+    reducedDim(integrated_sce, paste0(params$integration_method, "_UMAP")) %>%
+      tibble::as_tibble(rownames = "cell_name") %>%
+      dplyr::rename(UMAP1 = V1, UMAP2 = V2)
+  ) %>%
+  dplyr::select(-cell_barcode) %>%
+  # remake `celltype_collapsed` so that it's the top params$max_celltypes 
+  #  considering all libraries pooled
+  dplyr::mutate(celltype_collapsed = forcats::fct_lump(celltype, params$max_celltypes))
+
+# We can now remove the large `sce_list_annotated` and `integrated_sce`
+rm(sce_list_annotated)
+rm(integrated_sce)
+
+# See df:
+celltype_adt_df
+```
+
+
+```{r}
+# RNA UMAP:
+all_celltypes_rna_umap <- celltype_adt_df %>%
+  dplyr::select(UMAP1, UMAP2, celltype) %>%
+  dplyr::distinct() %>%
+  ggplot() +
+  aes(x = UMAP1, y = UMAP2, color = celltype) + 
+  geom_point(size = 0.3, alpha = 0.4) + 
+  guides(color = guide_legend(override.aes = list(size=3))) +
+  ggtitle(glue::glue("Integrated UMAP with all SingleR-annotated celltypes shown"))
+
+all_celltypes_rna_umap
+```
+```{r}
+all_celltypes_rna_umap +
+  lims(
+    x = c(-6, 4), 
+    y = c(-5, 5.5)
+  ) +
+  ggtitle("The above UMAP, zoomed in")
+```
+
+
+```{r}
+# RNA UMAP:
+max_celltypes_rna_umap <- celltype_adt_df %>%
+  dplyr::select(UMAP1, UMAP2, celltype_collapsed) %>%
+  dplyr::distinct() %>%
+  ggplot() +
+  aes(x = UMAP1, y = UMAP2, color = celltype_collapsed) + 
+  geom_point(size = 0.3, alpha = 0.4) + 
+  guides(color = guide_legend(override.aes = list(size=3))) +
+  labs(
+    title = glue::glue("Integrated UMAP with top {params$max_celltypes} SingleR-annotated celltypes shown"), 
+    color = glue::glue("Top {params$max_celltypes} celltypes"))
+
+max_celltypes_rna_umap
+```
+
+```{r}
+max_celltypes_rna_umap +
+  lims(
+    x = c(-6, 4), 
+    y = c(-5, 5.5)
+  ) +
+  ggtitle("The above UMAP, zoomed in")
+```
+
+
+```{r}
+# function to make UMAPs colored by ADT
+make_adt_umap <- function(celltype_adt_df, adt_name) {
+
+  celltype_adt_df %>%
+    dplyr::filter(ADT == adt_name) %>%
+    ggplot() + 
+    aes(x = UMAP1, y = UMAP2, color = logcounts) + 
+    geom_point(size = 0.3, alpha = 0.4) +
+    scale_color_viridis_c() + 
+    labs(
+      title = glue::glue("{adt_name} expression"),
+      color = "Normalized expression")
+}
+
+make_adt_umap(celltype_adt_df, "CD3") # bottom left corner tiny dots!
+make_adt_umap(celltype_adt_df, "CD123") # everything is tumor
+make_adt_umap(celltype_adt_df, "CD45") # should be on all differentiated cells more or less\
+make_adt_umap(celltype_adt_df, "CD19") # b cells
+
+```
+
+## ADT distributions
+
+This section explores ADT counts across predicted celltypes.
+
+
+```{r fig.height=4, fig.width=6}
+adt_celltype_violin <- function(df, celltype_column, adt_name) {
+
+  celltype_adt_df %>%
+    dplyr::filter(ADT == adt_name) %>%
+    dplyr::mutate(celltype_plot_column = forcats::fct_reorder({{celltype_column}}, logcounts)) %>%
+    ggplot() + 
+    aes(x = celltype_plot_column,
+        y = logcounts) + 
+    geom_violin(alpha = 0.7) + 
+    stat_summary() + 
+    labs(
+      title = glue::glue("{adt_name} normalized expression across celltypes"), 
+      x = "Celltypes", 
+      y = "Normalized expression"
+    ) + 
+    theme(legend.position = "none", 
+          axis.text.x = element_text(angle = 30, 
+                                     hjust = 1, 
+                                     size = rel(0.8)))
+
+}
+
+## CD3
+adt_celltype_violin(celltype_adt_df, celltype, "CD3") 
+adt_celltype_violin(celltype_adt_df, celltype_collapsed, "CD3")
+
+## CD19
+adt_celltype_violin(celltype_adt_df, celltype, "CD19") 
+adt_celltype_violin(celltype_adt_df, celltype_collapsed, "CD19")
+
+## CD123
+adt_celltype_violin(celltype_adt_df, celltype, "CD123") 
+adt_celltype_violin(celltype_adt_df, celltype_collapsed, "CD123")
+```
+
+
+## Comparing references
+
+To build a sense of how different references perform, let's just look at one SCE (arbitrarily chosen as the first):
+
+```{r}
+sce <- readr::read_rds(sce_file_paths[[1]])
+```
+
+
+Functions for comparing references:
+```{r}
+# Return a tibble of predictions from the two references
+
+# Define outside of function to avoid rerunning over and over and over AND OVER.
+hpca_ref <- celldex::HumanPrimaryCellAtlasData(ensembl = TRUE)
+blueprint_encode_ref <- celldex::BlueprintEncodeData(ensembl = TRUE)
+
+compare_predictions <- function(sce, 
+                                label_name) {
+  
+  # HPCA prediction
+  preds_hpca <- SingleR::SingleR(
+    test = sce, 
+    ref = hpca_ref,
+    labels = colData(hpca_ref)[,label_name], 
+    BPPARAM = BiocParallel::MulticoreParam(params$cores)
+  )
+  
+  # Blueprint/ENCODE prediction
+  preds_be <- SingleR::SingleR(
+    test = sce, 
+    ref = blueprint_encode_ref,
+    labels = colData(blueprint_encode_ref)[,label_name], 
+    BPPARAM = BiocParallel::MulticoreParam(params$cores)
+  )
+  
+  # Combine results into a wide tibble:
+  preds_df <- tibble::tibble(
+    hpca = preds_hpca$labels, 
+    cell_barcode = rownames(preds_hpca)) %>%
+    dplyr::inner_join(
+      tibble::tibble(
+        blueprint_encode = preds_be$labels, 
+        cell_barcode = rownames(preds_be)) 
+    )
+
+  return(preds_df)
+}
+```
+
+The [`celldex`]((https://bioconductor.org/packages/release/data/experiment/vignettes/celldex/inst/doc/userguide.html)) package contains bulk RNA-Seq datasets for use as reference.
+These two are likely most useful:
+
+> The HPCA reference consists of publicly available microarray datasets derived from human primary cells (Mabbott et al. 2013). Most of the labels refer to blood subpopulations but cell types from other tissues are also available.
+
+
+> The Blueprint/ENCODE reference consists of bulk RNA-seq data for pure stroma and immune cells generated by Blueprint (Martens and Stunnenberg 2013) and ENCODE projects (The ENCODE Project Consortium 2012).
+
+
+
+```{r}
+main_labels_df <- compare_predictions(sce, "label.main")
+fine_labels_df <- compare_predictions(sce, "label.fine")
+
+# remove refs which are large
+rm(hpca_ref)
+rm(blueprint_encode_ref)
+
+```
+
+How do these predictions compare?
+Note that these references often use different labels for the same cell type so we shouldn't expect a perfect diagonal below:
+
+```{r}
+#function for making comparison heatmaps
+make_comparison_heatmap <- function(df) {
+  df %>%
+    dplyr::mutate(
+      hpca = forcats::fct_rev(forcats::fct_infreq(hpca)),
+      blueprint_encode = forcats::fct_rev(forcats::fct_infreq(blueprint_encode))
+    ) %>%
+    dplyr::count(hpca, blueprint_encode) %>%
+  ggplot() + 
+  aes(x = blueprint_encode, y = hpca, fill = n) + 
+  geom_tile(color = "black") +
+  # future coders, tweak size here for your heatmap needs!
+  geom_text(aes(label = n)) + 
+  scale_fill_distiller(palette = "RdYlBu", name = "Num. cells") + 
+  # background grid from theme_bw does not match up with rectangles.
+  theme_classic() +
+  theme(axis.text.x = element_text(angle = 30, hjust = 1))
+}
+```
+
+```{r fig.height=5, fig.width=8}
+make_comparison_heatmap(main_labels_df) + ggtitle("Broad label comparison")
+```
+
+```{r fig.height=8, fig.width=10}
+make_comparison_heatmap(fine_labels_df) + ggtitle("Fine label comparison")
+```
+
+
+
+
+## Session Info
+
+```{r session_info}
+sessionInfo()
+```
