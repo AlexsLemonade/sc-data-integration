@@ -52,7 +52,7 @@ Rscript 00-obtain-sce.R --overwrite
 The cell type information for each project obtained from the Human Cell Atlas Data portal is available in its own unique format.
 No two cell type files are alike!
 
-The original, unedited files can be found at `s3://sc-data-integration/human_cell_atlas_data/celltype`, and copied locally using the `00-obtain-sce.R` script with the `--copy_s3` flag as described above.
+The original, unedited files can be found in the private S3 bucket, `s3://sc-data-integration/human_cell_atlas_data/celltype`, and copied locally using the `00-obtain-sce.R` script with the `--copy_s3` flag as described above.
 After these files are available locally in the `data/human_cell_atlas/celltype` folder, they can be reformatted into a single file containing the cell types for all cells across all libraries and projects ([`sample-info/hca-celltype-info.tsv`](../sample-info/hca-celltype-info.tsv)).
 The `00a-reformat-celltype-info.R` script reformats the files from all projects with available cell type information and then combines into a single individual file.
 
@@ -75,7 +75,7 @@ The SRA identifier was searched and matched to the corresponding sample identifi
 The ID submitted by the user in the cell type file was mapped to the `library_biomaterial_id` available in the HCA portal.
 
 
-### Simulation `SingleCellExperiment` objectss
+### Simulation `SingleCellExperiment` objects
 
 We additionally process several simulated datasets, referred to as `scib_simulated`, in the pipeline.
 To prepare simulation data for use in the pipeline, there are two scripts which are run:
@@ -170,10 +170,10 @@ For any SCE files with CITE-Seq data, results will be stored in the local `resul
 ### Preparing SCPCP000005 for data integration
 
 The ScPCA project, `SCPCP000005`, has cell type information available that is already published to be used to evaluate integration([Patel _et al_. 2022](https://doi.org/10.1016/j.devcel.2022.04.003)).
-The cell type information can be found in the metadata of the Seurat objects found in the s3 bucket, `s3://sc-data-integration/scpca/rms-dyer-seurat`.
+The cell type information can be found in the metadata of the Seurat objects found in the private s3 bucket, `s3://sc-data-integration/scpca/rms-dyer-seurat`.
 
 Prior to performing integration with this dataset, the filtered SCE objects (output from `scpca-nf`) are processed through `scpca-downstream-analyses` and then `celltype` is added to the `colData` of the SCE object.
-These processed SCE objects are in the S3 bucket, `s3://sc-data-integration/scpca/scpca-downstream-analyses`.
+These processed SCE objects are in the private S3 bucket, `s3://sc-data-integration/scpca/scpca-downstream-analyses`.
 
 The following commands are used in this order to generate the SCE objects with added celltype information.
 Note that your system must have >=16GB RAM to run the third script, `add-rms-celltypes.R`.
@@ -196,7 +196,7 @@ Rscript add-rms-celltypes.R
 ```
 
 If using the defaults in `add-rms-celltypes.R`, the SCE objects with the new `celltype` column will be stored in `results/scpca/celltype_sce`.
-These can also be found in the S3 bucket, `s3://sc-data-integration/scpca/celltype_sce`.
+These can also be found in the private S3 bucket, `s3://sc-data-integration/scpca/celltype_sce`.
 
 
 ### Generating the mitochondrial gene list

@@ -6,8 +6,9 @@
 - [Environment setup](#environment-setup)
   - [Managing R packages with `renv`](#managing-r-packages-with-renv)
   - [Snakemake/conda setup](#snakemakeconda-setup)
-- [Metadata](#metadata)
-- [Shared data files](#shared-data-files)
+- [Data used for benchmarking integration](#data-used-for-benchmarking-integration)
+  - [Metadata](#metadata)
+  - [Data files present on S3](#data-files-present-on-s3)
   - [Processed SingleCellExperiment objects to use for data integration](#processed-singlecellexperiment-objects-to-use-for-data-integration)
 - [Running the integration workflow](#running-the-integration-workflow)
 
@@ -73,13 +74,19 @@ If there are updates to the `renv.lock` file only, those can be applied with the
 snakemake --use-conda -c2 build_renv
 ```
 
-## Metadata
+## Data used for benchmarking integration
+
+For exploring data integration, we used test datasets that were obtained from the [Human Cell Atlas (HCA) Data Portal](https://data.humancellatlas.org/), the [Single-cell Pediatric Cancer Atlas(ScPCA) Portal](scpca.alexslemonade.org), and simulated single-cell data published in [Luecken _et al.,_ (2022)](https://doi.org/10.1038/s41592-021-01336-8).
+
+All data from the HCA that we are using can be found in the private S3 bucket, `s3://sc-data-integration/human_cell_atlas_data`.
+The simulated data can be downloaded directly from [figshare](https://doi.org/10.6084/m9.figshare.12420968).
+
+All gene expression data used for benchmarking is stored in the private S3 bucket, `s3://sc-data-integration`.
+In order to access these files, you must be a Data Lab staff member and have credentials setup for AWS.
+
+### Metadata
 
 Inside the `sample-info` folder is metadata related to datasets used for testing data integration.
-
-For exploring data integration, we are using test datasets that have been obtained from the [Human Cell Atlas (HCA) Data Portal](https://data.humancellatlas.org/).
-All data from the HCA that we are using can be found in the S3 bucket, `s3://ccdl-scpca-data/human_cell_atlas_data`.
-The following files all contain information related to the test datasets.
 
 1. `<project_name>-project-metadata.tsv`: This file contains information about each of the projects that are being used for testing integration from a given area (e.g., HCA, simulated, ScPCA).
 Each row in this file corresponds to a project, dataset, or group of libraries that should be integrated together.
@@ -127,7 +134,8 @@ This file must contain the following columns, but may also contain additional co
 | `integration_input_dir` | The directory containing the `SingleCellExperiment` objects to be used as input to the data integration snakemake workflow |
 
 
-4. `hca-celltype-info.tsv`: This file contains all available cell type information for projects listed in `hca-project-metadata.tsv`.
+4. `hca-celltype-info.tsv`: *This file is not available on the repo and is stored in the private S3 bucket, `s3://sc-data-integration/sample-info`.*
+This file contains all available cell type information for projects listed in `hca-project-metadata.tsv`.
 This file was created using the `scripts/00a-reformat-celltype-info.R` which takes as input the cell type information available for each project from the Human Cell Atlas Data Portal.
 The cell type information for each project, in its original format, can be stored in `s3://sc-data-integration/human_cell_atlas_data/celltype`.
 Each row corresponds to a single cell and contain the following information:
@@ -141,10 +149,9 @@ Each row corresponds to a single cell and contain the following information:
 | `celltype` | The assigned cell type for a given barcode, obtained from cell type data stored in `s3://sc-data-integration/human_cell_atlas_data/celltype`                        |
 
 
+### Data files present on S3
 
-## Shared data files
-
-Data for this project is stored in the S3 bucket, `s3://sc-data-integration`.
+All data and intermediate files are stored in the private S3 bucket, `s3://sc-data-integration`.
 The following data can be found in the above S3 bucket within the `human_cell_atlas_data` folder:
 
 - The `loom` folder contains the original loom files downloaded from the Human Cell Atlas data portal for each test dataset.
@@ -153,9 +160,14 @@ Here loom files are nested by `tissue_group`, `project_name`, and `bundle_uuid`.
 These `SingleCellExperiment` objects have been converted from the loom files using the `00-obtain-sce.R` script in the `scripts` directory in this repo.
 Here RDS files are nested by `tissue_group` and `project_name`.
 
+The following data can be found in the S3 bucket within the `scib_simulated_data` folder:
+
+- The `hdf5` folder contains the original `hdf5` files for simulated data obtained from [figshare](https://doi.org/10.6084/m9.figshare.12420968).
+- The `sce` folder contains the individual `SingleCellExperiment` objects stored as `rds` files after running `scripts/00b-obtain-sim-sce.R` and `scripts/00c-create-sim1-subsets.R`
+
 A separate `reference-files` folder contains any reference files needed for processing dataset, such as the gtf file needed to generate the mitochondrial gene list found in the `reference-files` folder in the repository.
 
-In order to access these files, you must have credentials setup for AWS.
+In order to access these files, you must be a Data Lab staff member and have credentials set up for AWS.
 Additionally, some of the scripts in this repository require use of AWS command line tools.
 We have previously written up detailed instructions on [installing the AWS command line tools and configuring your credentials](https://github.com/AlexsLemonade/alsf-scpca#aws) that can be used as a reference.
 
