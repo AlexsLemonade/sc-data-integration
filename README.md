@@ -167,7 +167,7 @@ The following data can be found in the S3 bucket within the `scib_simulated_data
 
 A separate `reference-files` folder contains any reference files needed for processing dataset, such as the gtf file needed to generate the mitochondrial gene list found in the `reference-files` folder in the repository.
 
-In order to access these files, you must be a Data Lab staff member and have credentials setup for AWS.
+In order to access these files, you must be a Data Lab staff member and have credentials set up for AWS.
 Additionally, some of the scripts in this repository require use of AWS command line tools.
 We have previously written up detailed instructions on [installing the AWS command line tools and configuring your credentials](https://github.com/AlexsLemonade/alsf-scpca#aws) that can be used as a reference.
 
