@@ -41,12 +41,12 @@ rule merge_sces:
           --library_file "{input.processed_tsv}" \
           --add_celltype {config[add_celltype]} \
           --celltype_info "{config[celltype_file]}" \
-          {config[random_merge]} \
           --grouping_var {config[grouping_var]} \
           --groups_to_integrate "{config[groups_to_integrate]}" \
           --merged_sce_dir "{output}" \
           --num_hvg {config[num_hvg]} \
           --subset_hvg \
+          {config[random_merge]} \
           &> {log}
         """
 
