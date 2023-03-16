@@ -23,3 +23,6 @@ num_latent: 20
 # specify which projects to run through the workflow
 # to run a subset of projects use a python-formatted list '["1M_Immune_Cells", "HumanBrainSubstantiaNigra"]'
 groups_to_integrate: "All"
+
+# randomize merge order prior to integration 
+random_merge: true

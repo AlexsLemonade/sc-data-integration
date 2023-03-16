@@ -21,6 +21,8 @@
 #   Only required if --add_celltype is used.
 # --batch_column: The name of the column in colData that indicates the batches for each cell,
 #   typically this corresponds to the library id. Default is "batch".
+# --random_merge: Used to indicate whether or not to merge SCE objects in a random order. 
+#   Default is FALSE.
 # --subset_hvg: Indicates whether or not to subset the merged SCE object by highly variable genes.
 #   If --subset_hvg is used, the merged SCE object will only contain genes
 #   identified as highly variable genes.
@@ -66,8 +68,7 @@ option_list <- list(
     help = "Groups present in `grouping_var` column of metadata file to create merged SCE objects for.
       Default is 'All' which produces a merged object for each group in the metadata file. 
       Specify groups by using a vector, e.g. c('group1','group2')"
-  )
-  ,
+  ),
   make_option(
     opt_str = c("--add_celltype"),
     action = "store_true",
@@ -88,6 +89,12 @@ option_list <- list(
     default = "batch",
     help = "The name of the column in colData that indicates the batches for each cell,
       typically this corresponds to the library id. Default is 'batch'."
+  ),
+  make_option(
+    opt_str = c("--random_merge"),
+    default = FALSE,
+    action = "store_true",
+    help = "Used to indicate whether or not to merge SCE objects in a random order. Default is FALSE."
   ),
   make_option(
     opt_str = c("--subset_hvg"),
@@ -263,11 +270,12 @@ if(opt$add_celltype){
     purrr::map(create_grouped_sce_list, add_celltype = opt$add_celltype)
 }
 
-
 # create a list of merged SCE objects by group
 #  In this default usage, a batch column named `batch` will get created
 merged_sce_list <- grouped_sce_list %>%
-  purrr::map(combine_sce_objects, preserve_rowdata_columns = c("Gene", "gene_names", "ensembl_ids"))
+  purrr::map(combine_sce_objects, 
+             preserve_rowdata_columns = c("Gene", "gene_names", "ensembl_ids"),
+             random_merge = opt$random_merge)
 
 # HVG and dim reduction --------------------------------------------------------
 
