@@ -41,7 +41,7 @@ rule merge_sces:
           --library_file "{input.processed_tsv}" \
           --add_celltype {config[add_celltype]} \
           --celltype_info "{config[celltype_file]}" \
-          --random_merge {config[random_merge]} \
+          {config[random_merge]} \
           --grouping_var {config[grouping_var]} \
           --groups_to_integrate "{config[groups_to_integrate]}" \
           --merged_sce_dir "{output}" \
