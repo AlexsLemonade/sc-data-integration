@@ -70,6 +70,11 @@ knitr::knit_hooks$set(
      paste('\n\n<div class="alert alert-warning">',
            gsub('##', '\n', gsub('^##\ Warning:', '**Warning**', x)),
            '</div>', sep = '\n')
+   }, 
+   message = function(x, options) {
+     paste('\n\n<div class="alert alert-info">',
+           gsub('##', '\n', x),
+           '</div>', sep = '\n')
    }
 )
 
@@ -330,7 +335,7 @@ if (celltypes_present) {
 # grab merge order from merged sce object
 merge_order <- metadata(sce_list[["unintegrated"]])$merge_order
 
-warning(glue::glue("The libraries in this dataset were merged in the following order: {merge_order}"))
+message(glue::glue("The libraries in this dataset were merged in the following order: {merge_order}"))
 ```
 
 
@@ -339,7 +344,7 @@ if("fastmnn" %in% integration_methods){
   # grab fastmnn auto merge from fastmnn object
   fastmnn_integration_order <- metadata(sce_list[["fastmnn"]])$fastmnn_auto_merge
   
-  warning(glue::glue("The libraries in this dataset were integrated in the following order when integrated with fastmnn: {fastmnn_integration_order}"))
+  message(glue::glue("The libraries in this dataset were integrated in the following order when integrated with fastmnn: {fastmnn_integration_order}"))
   
 }
 ```
