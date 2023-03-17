@@ -25,4 +25,5 @@ num_latent: 20
 groups_to_integrate: "All"
 
 # randomize merge order prior to integration
-random_merge: '--random_merge'
+random_merge: '' # --random_merge
+fastmnn_auto_merge: '' # --fastmnn_auto_merge

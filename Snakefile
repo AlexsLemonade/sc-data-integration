@@ -90,6 +90,7 @@ rule integrate_fastmnn:
           --method fastMNN \
           --seed {config[seed]} \
           --corrected_only \
+          {config[fastmnn_auto_merge]} \
           &> {log}
         """
 

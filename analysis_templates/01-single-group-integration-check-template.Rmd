@@ -23,6 +23,7 @@ output:
     toc_depth: 3
     toc_float: true
     number_sections: true
+    code_folding: hide
 ---
 
 ## Set Up
@@ -319,6 +320,27 @@ if (celltypes_present) {
     count_groups("celltype_plot_names"),
     "celltype_plot_names"
   )
+}
+```
+
+
+## Merging and integration order
+
+```{r, results='asis'}
+# grab merge order from merged sce object
+merge_order <- metadata(sce_list[["unintegrated"]])$merge_order
+
+warning(glue::glue("The libraries in this dataset were merged in the following order: {merge_order}"))
+```
+
+
+```{r, results='asis'}
+if("fastmnn" %in% integration_methods){
+  # grab fastmnn auto merge from fastmnn object
+  fastmnn_integration_order <- metadata(sce_list[["fastmnn"]])$fastmnn_auto_merge
+  
+  warning(glue::glue("The libraries in this dataset were integrated in the following order when integrated with fastmnn: {fastmnn_integration_order}"))
+  
 }
 ```
 
