@@ -46,6 +46,7 @@ rule merge_sces:
           --merged_sce_dir "{output}" \
           --num_hvg {config[num_hvg]} \
           --subset_hvg \
+          --seed {config[seed]} \
           {config[random_merge]} \
           &> {log}
         """

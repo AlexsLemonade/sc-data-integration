@@ -124,6 +124,12 @@ option_list <- list(
     type = "character",
     default = file.path(project_root, "results", "human_cell_atlas", "merged_sce"),
     help = "path to folder where all merged SCE objects files will be saved as RDS files"
+  ),
+  make_option(
+    opt_str = c("--seed"),
+    type = "integer",
+    default = NULL,
+    help = "random seed to set prior to merging"
   )
 )
 
@@ -131,6 +137,8 @@ option_list <- list(
 
 # Parse options
 opt <- parse_args(OptionParser(option_list = option_list))
+
+set.seed(opt$seed)
 
 # check that num genes provided is an integer
 if(!is.integer(opt$num_genes)){
