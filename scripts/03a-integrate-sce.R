@@ -27,6 +27,8 @@
 #   during integration instead of, by default, using only the previously-identified HVGs,
 #   stored in the `variable_genes` column of metadata slot. This argument is ignored if
 #   the provided method is not `fastMNN`.
+# --fastmnn_auto_merge: Indicates whether or not to use the auto.merge option for `fastMNN` integration.
+#   To perform auto.merge, use `--fastmnn_auto_merge`.
 # --seurat_reduction_method: Seurat reduction method to use, either `cca` or `rcpa`.
 #   This argument is ignored if the provided method is not `seurat`. There is no 
 #   default, so this argument is required if the provided method is `seurat`.
@@ -136,6 +138,13 @@ option_list <- list(
     default = FALSE,
     help = "Indicate whether to use all genes instead of only HVGs during `fastMNN` integration.
     To use all genes, use `--fastmnn_use_all_genes`"
+  ),
+  make_option(
+    opt_str = c("--fastmnn_auto_merge"),
+    action = "store_true",
+    default = FALSE,
+    help = "Indicates whether or not to use the auto.merge option for `fastMNN` integration.
+    To perform auto.merge, use `--fastmnn_auto_merge`."
   ),
   make_option(
     opt_str = c("--seurat_reduction_method"),
@@ -252,8 +261,19 @@ if (integration_method == "fastmnn") {
     batch_column = opt$batch_column,
     cosine_norm  = opt$fastmnn_no_cosine,
     gene_list    = fastmnn_gene_list,
-    seed         = opt$seed
+    seed         = opt$seed,
+    auto.merge   = opt$fastmnn_auto_merge
   )
+  
+  # add note about auto merge to metadata of integrated object
+  if(opt$fastmnn_auto_merge){
+    auto_merge <- "auto"
+  } else {
+    auto_merge <- "input"
+  }
+  
+  metadata(integrated_sce_obj)$fastmnn_auto_merge <- auto_merge
+  
 }
 
 # Perform integration with harmony, if specified -------------------------

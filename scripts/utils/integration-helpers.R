@@ -98,6 +98,8 @@ find_input_sce_files <- function(library_ids, sce_dirs) {
 #' @param preserve_rowdata_columns An array of columns that appear in SCE rowData
 #'    which should not be renamed with the given library ID. For example,
 #'    such an array might be: `c("Gene", "ensembl_ids", "gene_names")`
+#' @param random_merge Used to indicate whether or not to merge SCE objects in a random order. 
+#'    Default is FALSE.
 #'
 #' @return The combined SCE object
 #'
@@ -105,7 +107,8 @@ find_input_sce_files <- function(library_ids, sce_dirs) {
 #' combine_sce_objects(sce_list, c("Gene", "ensembl_ids", "gene_names"))
 combine_sce_objects <- function(sce_list = list(),
                                 batch_column = "batch",
-                                preserve_rowdata_columns = NULL) {
+                                preserve_rowdata_columns = NULL,
+                                random_merge = FALSE) {
 
 
   # Ensure `sce_list` is named (according to library IDs) ----------------------
@@ -115,6 +118,14 @@ combine_sce_objects <- function(sce_list = list(),
   # Ensure `sce_list` has >=2 items --------------------------------------------
   if (length(sce_list) < 2) {
     stop("The `sce_list` must contain 2 or more SCE objects to combine.")
+  }
+  
+  # randomize order of SCE objects if specified
+  if(random_merge){
+    sce_list <- sample(sce_list)
+    merge_order <- "random"
+  } else {
+    merge_order <- "input"
   }
 
   # Ensure that colnames of colData match across all SCE objects ---------------
@@ -215,7 +226,9 @@ combine_sce_objects <- function(sce_list = list(),
   retain_pos <- which(names(colData(combined_sce)) %in% retain_cols)
   colData(combined_sce) <- colData(combined_sce)[, retain_pos]
 
-
+  # add a note in the metadata about merge order
+  metadata(combined_sce)$merge_order <- merge_order
+  
   # Return combined SCE object ----------------------------
   return(combined_sce)
 }
