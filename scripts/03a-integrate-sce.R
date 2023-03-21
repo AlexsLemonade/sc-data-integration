@@ -265,7 +265,7 @@ if (integration_method == "fastmnn") {
     auto.merge   = opt$fastmnn_auto_merge
   )
   
-  # add note about auto merge to 
+  # add note about auto merge to metadata of integrated object
   if(opt$fastmnn_auto_merge){
     auto_merge <- "auto"
   } else {

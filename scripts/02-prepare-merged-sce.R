@@ -32,6 +32,7 @@
 # --num_hvg: Number of highly variable genes to select.
 #   Typically this is the output from running scpca-downstream-analyses
 # --merged_sce_dir: Path to folder where all merged SCE objects will be stored
+# --seed: Random seed to set prior to merging
 #
 
 # load the R project by finding the root directory using `here::here()`
