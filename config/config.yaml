@@ -25,5 +25,6 @@ num_latent: 20
 groups_to_integrate: "All"
 
 # randomize merge order prior to integration
-random_merge: '' # --random_merge
-fastmnn_auto_merge: '' # --fastmnn_auto_merge
+random_merge: False
+# automatically determine integration order for fastmnn
+fastmnn_auto_merge: False

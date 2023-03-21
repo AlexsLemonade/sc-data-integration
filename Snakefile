@@ -35,6 +35,8 @@ rule merge_sces:
         directory(os.path.join(config["results_dir"], "merged_sce"))
     log:
         "logs/merge_sce.log"
+    params:
+        random_merge_flag = '--random_merge' if config['random_merge'] else ''
     shell:
         """
         Rscript scripts/02-prepare-merged-sce.R \
@@ -47,7 +49,7 @@ rule merge_sces:
           --num_hvg {config[num_hvg]} \
           --subset_hvg \
           --seed {config[seed]} \
-          {config[random_merge]} \
+          {params.random_merge_flag} \
           &> {log}
         """
 
@@ -83,6 +85,7 @@ rule integrate_fastmnn:
         "logs/{basedir}/{project}/integrate_fastmnn.log"
     params:
         merged_sce_file = "{project}_merged_sce.rds",
+        auto_merge_flag = '--fastmnn_auto_merge' if config['fastmnn_auto_merge'] else ''
     shell:
         """
         Rscript scripts/03a-integrate-sce.R \
@@ -91,7 +94,7 @@ rule integrate_fastmnn:
           --method fastMNN \
           --seed {config[seed]} \
           --corrected_only \
-          {config[fastmnn_auto_merge]} \
+          {params.auto_merge_flag} \
           &> {log}
         """
 
