@@ -107,7 +107,7 @@ calculate_ari <- function(integrated_sce,
 #' @param batch_column The variable in `integrated_sce` indicating the grouping of interest.
 #'  Generally this is either batches or cell types. Default is "batch".
 #'
-#' @return Data frame with two columns: `ari`, the calculated ARI, 
+#' @return Data frame with three columns: `ari`, the calculated ARI, 
 #'   the corresponding `batch_id` found in the `batch_column` 
 #'   for the original SCE object, and the `integration_method`, the provided integration method
 #'
