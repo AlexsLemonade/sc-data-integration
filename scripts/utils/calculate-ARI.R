@@ -150,7 +150,7 @@ calculate_reverse_ari <- function(individual_sce_list,
   # get pcs for individual objects
   ind_pcs <- purrr::map(individual_sce_list, get_individual_pcs)
   
-  # Pull out the PCs or analogous reduction, and remove batch NAs along the way
+  # Pull out the PCs or analogous reduction from integrated object
   integrated_pcs <- reducedDim(integrated_sce, reduced_dim_name)
   
   # cluster integrated pcs only one time
@@ -165,6 +165,7 @@ calculate_reverse_ari <- function(individual_sce_list,
   all_ari <- batch_ids |> 
     purrr::map_chr(\(batch){
       
+      # cluster pc matrix for specified batch
       ind_clustering_result <- bluster::clusterRows(ind_pcs[[batch]],
                                                     bluster::NNGraphParam(cluster.fun = "louvain",
                                                                           type = "jaccard",
@@ -173,6 +174,7 @@ calculate_reverse_ari <- function(individual_sce_list,
       clusters_to_keep <- grep(batch, names(integrated_clustering_result))
       batch_integrated_clusters <- integrated_clustering_result[clusters_to_keep]
       
+      # calculate ari between pre-integrated clustering and post-integrated clustering for the given batch
       ari <- bluster::pairwiseRand(ind_clustering_result, 
                                    batch_integrated_clusters, 
                                    mode = "index")
