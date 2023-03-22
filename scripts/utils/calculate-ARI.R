@@ -151,7 +151,7 @@ calculate_reverse_ari <- function(individual_sce_list,
   
   # Set up parameters
   frac_cells <- 0.8        # fraction of cells to downsample to
-  nreps <- 2              # number of times to repeat sub-sampling procedure
+  nreps <- 20              # number of times to repeat sub-sampling procedure
   
   # perform calculations
   all_ari <- c()
