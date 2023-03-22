@@ -99,9 +99,7 @@ calculate_ari <- function(integrated_sce,
 #'   calculating reverse ARI. Must be the original, pre-merged object.
 #'   The list must be a named list with the batch names.
 #' @param integrated_sce The integrated SCE object
-#' @param num_pcs The number of PCs to use during k-means clustering. Default: 20
 #' @param seed Seed for initializing random sampling and k-means clustering
-#' @param k_range Range of k values to use for k-means clustering. Default: `seq(5, 25, 5)`
 #' @param integration_method The name of the method that was used for integration
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
 #' @param unintegrated Indicates whether the provided data is integrated (`FALSE`; default) or
@@ -109,9 +107,8 @@ calculate_ari <- function(integrated_sce,
 #' @param batch_column The variable in `integrated_sce` indicating the grouping of interest.
 #'  Generally this is either batches or cell types. Default is "batch".
 #'
-#' @return Tibble with five columns: `rep`, representing the given downsampling replicate;
-#'   `k`, the given k for k-means; `ari`, the calculated ARI for the given
-#'   combination of `rep` and `k`; the corresponding `batch_id` found in the `batch_column` 
+#' @return Data frame with two columns: `ari`, the calculated ARI, 
+#'   the corresponding `batch_id` found in the `batch_column` 
 #'   for the original SCE object, and the `integration_method`, the provided integration method
 #'
 calculate_reverse_ari <- function(individual_sce_list,
@@ -185,7 +182,8 @@ calculate_reverse_ari <- function(individual_sce_list,
   # create data frame with ari and batch id
   ari_df <- data.frame(
     ari = all_ari,
-    batch_id = batch_ids
+    batch_id = batch_ids,
+    integration_method = integration_method
   )
 
   return(ari_df)
