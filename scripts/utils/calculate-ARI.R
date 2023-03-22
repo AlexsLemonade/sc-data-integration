@@ -3,9 +3,6 @@ suppressPackageStartupMessages({
   library(SingleCellExperiment)
 })
 
-# bring in any helper functions
-source(file.path("scripts", "utils", "integration-helpers.R"))
-
 #' Function to calculate ARI scores from an integrated SCE object
 #'
 #' This function uses a similar approach as used in this paper:
