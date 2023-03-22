@@ -577,4 +577,41 @@ remove_batch_nas_from_pcs <- function(integrated_pcs, batches) {
     )
   )
 }
+
+
+#' Grab PC matrix from individual SCE object
+#'
+#' @param sce SingleCellExperiment object
+#' @param num_genes Number of highly variable genes to select. Default is set to 2000.
+#'
+#' @return PC matrix
+
+get_individual_pcs <- function(sce,
+                               num_genes = 2000){
+  
+  # check that PC matrix is present in provided in SCE
+  if(!("PCA" %in% reducedDimNames(sce))){
+    
+    # if need to calculate SCE, check that variable genes aren't already present
+    if(is.null(metadata(sce)$variable_genes)){
+      
+      # model gene variance
+      gene_var <- scran::modelGeneVar(sce)
+      
+      # identify subset of variable genes
+      var_genes <- scran::getTopHVGs(gene_var,
+                                     n = num_genes)
+      
+      # add to metadata 
+      metadata(sce)$variable_genes <- var_genes
+    } 
+    
+      # add PC to SCE object
+      sce <- scater::runPCA(sce, subset_row = metadata(sce)$variable_genes)
+  } 
+  
+  # grab pcs 
+  return(reducedDim(sce, "PCA"))
+  
+}
   
