@@ -151,13 +151,14 @@ ind_sce_files <- file.path(
   individual_sce_dir, 
   glue::glue("{sce_ids}_sce.rds")
 )
-individual_sce_list <- purrr::map(ind_sce_files, readr::read_rds) |> 
+individual_sce_list <- ind_sce_files |>
+  purrr::map(readr::read_rds) |> 
   purrr::set_names(sce_ids)
 
 integrated_results_dir <- here::here("results", "scib_simulated", "integrated_sce")
 integrated_sce <- file.path(integrated_results_dir, "sim1_integrated_fastmnn_sce.rds")
 integrated_sce <- readr::read_rds(integrated_sce)
 
-calculate_reverse_ari(individual_sce_list,
-                      integrated_sce,
-                      integration_method = "fastmnn")
+calculate_within_batch_ari(individual_sce_list,
+                           integrated_sce,
+                           integration_method = "fastmnn")

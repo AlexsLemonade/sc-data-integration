@@ -111,12 +111,12 @@ calculate_ari <- function(integrated_sce,
 #'   the corresponding `batch_id` found in the `batch_column` 
 #'   for the original SCE object, and the `integration_method`, the provided integration method
 #'
-calculate_reverse_ari <- function(individual_sce_list,
-                                  integrated_sce,
-                                  seed = NULL,
-                                  integration_method = NULL,
-                                  unintegrated = FALSE,
-                                  batch_column = "batch"){
+calculate_within_batch_ari <- function(individual_sce_list,
+                                       integrated_sce,
+                                       seed = NULL,
+                                       integration_method = NULL,
+                                       unintegrated = FALSE,
+                                       batch_column = "batch"){
   set.seed(seed)
   
   # check that list of SCE objects is named
@@ -125,7 +125,10 @@ calculate_reverse_ari <- function(individual_sce_list,
     stop("Must provide a named list of SCE objects.")
   } else {
     # make sure the batch ids provided match between the list and the integrated object 
-    if(!(identical(sort(batch_ids), sort(unique(colData(integrated_sce)[, batch_column]))))){
+    if(!(identical(
+      sort(batch_ids), 
+      sort(unique(colData(integrated_sce)[, batch_column]))))
+    ){
       stop("Names of provided SCE objects included in the individual SCE object 
            do not match batch IDs present in the batch_column of the integrated object")
     }
@@ -155,7 +158,9 @@ calculate_reverse_ari <- function(individual_sce_list,
   
   # cluster integrated pcs only one time
   integrated_clustering_result <- integrated_pcs |> 
-    bluster::clusterRows(bluster::NNGraphParam(cluster.fun = "louvain", type = "jaccard")) |> 
+    bluster::clusterRows(
+      bluster::NNGraphParam(cluster.fun = "louvain", type = "jaccard")
+    ) |> 
     set_names(rownames(integrated_pcs)) # make sure to set the names with the batch ids
   
   
@@ -165,7 +170,9 @@ calculate_reverse_ari <- function(individual_sce_list,
       
       # cluster pc matrix for specified batch
       ind_clustering_result <- ind_pcs[[batch]] |>
-        bluster::clusterRows(bluster::NNGraphParam(cluster.fun = "louvain", type = "jaccard"))
+        bluster::clusterRows(
+          bluster::NNGraphParam(cluster.fun = "louvain", type = "jaccard")
+        )
       
       # extract clusters from integrated clustering for batch 
       clusters_to_keep <- grep(batch, names(integrated_clustering_result))
@@ -181,11 +188,11 @@ calculate_reverse_ari <- function(individual_sce_list,
     })
   
   # create tibble with ari and batch id
-  ari_tibble <- tibble::tibble(
+  within_batch_ari_tibble <- tibble::tibble(
     ari = all_ari,
     batch_id = batch_ids,
     integration_method = integration_method
   )
 
-  return(ari_tibble)
+  return(within_batch_ari_tibble)
 }
