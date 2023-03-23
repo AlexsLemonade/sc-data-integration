@@ -99,7 +99,7 @@ calculate_ari <- function(integrated_sce,
 #'   calculating reverse ARI. Must be the original, pre-merged object.
 #'   The list must be a named list with the batch names.
 #' @param integrated_sce The integrated SCE object
-#' @param seed Seed for initializing random sampling and k-means clustering
+#' @param seed Seed for initializing random sampling and clustering
 #' @param integration_method The name of the method that was used for integration
 #'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
 #' @param unintegrated Indicates whether the provided data is integrated (`FALSE`; default) or
@@ -107,7 +107,7 @@ calculate_ari <- function(integrated_sce,
 #' @param batch_column The variable in `integrated_sce` indicating the grouping of interest.
 #'  Generally this is either batches or cell types. Default is "batch".
 #'
-#' @return Data frame with three columns: `ari`, the calculated ARI, 
+#' @return Tibble with three columns: `ari`, the calculated ARI, 
 #'   the corresponding `batch_id` found in the `batch_column` 
 #'   for the original SCE object, and the `integration_method`, the provided integration method
 #'
@@ -125,7 +125,7 @@ calculate_reverse_ari <- function(individual_sce_list,
     stop("Must provide a named list of SCE objects.")
   } else {
     # make sure the batch ids provided match between the list and the integrated object 
-    if(!all(batch_ids %in% unique(colData(integrated_sce)[, batch_column]))){
+    if(!(identical(sort(batch_ids), sort(unique(colData(integrated_sce)[, batch_column]))))){
       stop("Names of provided SCE objects included in the individual SCE object 
            do not match batch IDs present in the batch_column of the integrated object")
     }
@@ -154,10 +154,8 @@ calculate_reverse_ari <- function(individual_sce_list,
   integrated_pcs <- reducedDim(integrated_sce, reduced_dim_name)
   
   # cluster integrated pcs only one time
-  integrated_clustering_result <- bluster::clusterRows(integrated_pcs, 
-                                                       bluster::NNGraphParam(cluster.fun = "louvain",
-                                                                             type = "jaccard",
-                                                                             k = k)) |> 
+  integrated_clustering_result <- integrated_pcs |> 
+    bluster::clusterRows(bluster::NNGraphParam(cluster.fun = "louvain", type = "jaccard")) |> 
     set_names(rownames(integrated_pcs)) # make sure to set the names with the batch ids
   
   
@@ -166,10 +164,9 @@ calculate_reverse_ari <- function(individual_sce_list,
     purrr::map_dbl(\(batch){
       
       # cluster pc matrix for specified batch
-      ind_clustering_result <- bluster::clusterRows(ind_pcs[[batch]],
-                                                    bluster::NNGraphParam(cluster.fun = "louvain",
-                                                                          type = "jaccard",
-                                                                          k = k))
+      ind_clustering_result <- ind_pcs[[batch]] |>
+        bluster::clusterRows(bluster::NNGraphParam(cluster.fun = "louvain", type = "jaccard"))
+      
       # extract clusters from integrated clustering for batch 
       clusters_to_keep <- grep(batch, names(integrated_clustering_result))
       batch_integrated_clusters <- integrated_clustering_result[clusters_to_keep]
@@ -179,14 +176,16 @@ calculate_reverse_ari <- function(individual_sce_list,
                                    batch_integrated_clusters, 
                                    mode = "index")
       
+      ari
+      
     })
   
-  # create data frame with ari and batch id
-  ari_df <- data.frame(
+  # create tibble with ari and batch id
+  ari_tibble <- tibble::tibble(
     ari = all_ari,
     batch_id = batch_ids,
     integration_method = integration_method
   )
 
-  return(ari_df)
+  return(ari_tibble)
 }
