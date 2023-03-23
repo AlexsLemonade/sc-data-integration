@@ -31,7 +31,7 @@ option_list <- list(
   make_option(
     opt_str = c("--output_prefix"),
     type = "character",
-    default = "non-immune",
+    default = "no_immune",
     help = "prefix to add to the new output files with the removed cell types."
   ),
   make_option(
@@ -53,11 +53,11 @@ if(!dir.exists(opt$ref_dir)){
 }
 
 # create file names from provided refnames 
-ref_filenames <- glue::glue("celldex-{opt$ref_names}.rds") |>
+ref_filenames <- glue::glue("celldex-{opt$ref_names}.rds")
   
 
 # output file names 
-output_filenames <- glue::glue("{opt$output_prefix}-celldex-{opt$ref_names}.rds")
+output_filenames <- glue::glue("celldex-{opt$output_prefix}-{opt$ref_names}.rds")
 output_filepaths <- file.path(opt$ref_dir, output_filenames)
 
 # check that input list of cell types to remove has been provided 
@@ -99,7 +99,7 @@ subset_ref_list <- purrr::walk2(ref_list, output_filepaths,
                                 \(ref, output_file){
                                   
                                   # grab index of cells to remove 
-                                  removed_cell_idx <- grep(immune_celltypes, ref$label.main)
+                                  removed_cell_idx <- grep(celltype_remove_pattern, ref$label.main)
                                   
                                   # subset reference and write out to new file
                                   subset_ref <- ref[, -removed_cell_idx] |>
