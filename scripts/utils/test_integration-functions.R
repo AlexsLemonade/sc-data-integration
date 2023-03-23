@@ -138,16 +138,21 @@ calculate_batch_ari(combined_sce, unintegrated=TRUE)
 calculate_lisi(combined_sce, unintegrated=TRUE)
 
 # Test reverse ARI 
-individual_sce_dir <- "data/scib_simulated/sce"
+individual_sce_dir <- here::here("data", "scib_simulated", "sce")
 sce_ids <- c(
   "sim1_Batch1",
-  "sim1_Batch2"
+  "sim1_Batch2",
+  "sim1_Batch3",
+  "sim1_Batch4",
+  "sim1_Batch5",
+  "sim1_Batch6"
 )
 ind_sce_files <- glue::glue("{individual_sce_dir}/{sce_ids}_sce.rds")
 individual_sce_list <- purrr::map(ind_sce_files, readr::read_rds) |> 
   purrr::set_names(sce_ids)
 
-integrated_sce <- "results/scib_simulated/integrated_sce/sim1_integrated_fastmnn_sce.rds"
+integrated_results_dir <- here::here("results", "scib_simulated", "integrated_sce")
+integrated_sce <- file.path(integrated_results_dir, "sim1_integrated_fastmnn_sce.rds")
 integrated_sce <- readr::read_rds(integrated_sce)
 
 calculate_reverse_ari(individual_sce_list,
