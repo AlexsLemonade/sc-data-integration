@@ -579,7 +579,8 @@ remove_batch_nas_from_pcs <- function(integrated_pcs, batches) {
 }
 
 
-#' Grab PC matrix from individual SCE object
+#' Grab PC matrix, or create if not present, from individual SCE object. 
+#' This function should not be used when batch-weighted PCs are desired.
 #'
 #' @param sce SingleCellExperiment object
 #' @param num_genes Number of highly variable genes to select. Default is set to 2000.

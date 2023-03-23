@@ -163,7 +163,7 @@ calculate_reverse_ari <- function(individual_sce_list,
   
   # for every batch id, cluster and then calculate ari for that batch 
   all_ari <- batch_ids |> 
-    purrr::map_chr(\(batch){
+    purrr::map_dbl(\(batch){
       
       # cluster pc matrix for specified batch
       ind_clustering_result <- bluster::clusterRows(ind_pcs[[batch]],
