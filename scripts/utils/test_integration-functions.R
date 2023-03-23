@@ -147,7 +147,10 @@ sce_ids <- c(
   "sim1_Batch5",
   "sim1_Batch6"
 )
-ind_sce_files <- glue::glue("{individual_sce_dir}/{sce_ids}_sce.rds")
+ind_sce_files <- file.path(
+  individual_sce_dir, 
+  glue::glue("{sce_ids}_sce.rds")
+)
 individual_sce_list <- purrr::map(ind_sce_files, readr::read_rds) |> 
   purrr::set_names(sce_ids)
 

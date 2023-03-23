@@ -176,7 +176,7 @@ calculate_reverse_ari <- function(individual_sce_list,
                                    batch_integrated_clusters, 
                                    mode = "index")
       
-      ari
+      return(ari)
       
     })
   
