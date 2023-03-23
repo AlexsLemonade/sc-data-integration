@@ -92,3 +92,107 @@ calculate_ari <- function(integrated_sce,
   return(ari_tibble)
 
 }
+
+#' Calculate Reverse ARI to compare clustering pre and post integration
+#'
+#' @param individual_sce_list List of SCE objects containing all batches to use for 
+#'   calculating reverse ARI. Must be the original, pre-merged object.
+#'   The list must be a named list with the batch names.
+#' @param integrated_sce The integrated SCE object
+#' @param seed Seed for initializing random sampling and clustering
+#' @param integration_method The name of the method that was used for integration
+#'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
+#' @param unintegrated Indicates whether the provided data is integrated (`FALSE`; default) or
+#'   integrated (`TRUE`).
+#' @param batch_column The variable in `integrated_sce` indicating the grouping of interest.
+#'  Generally this is either batches or cell types. Default is "batch".
+#'
+#' @return Tibble with three columns: `ari`, the calculated ARI, 
+#'   the corresponding `batch_id` found in the `batch_column` 
+#'   for the original SCE object, and the `integration_method`, the provided integration method
+#'
+calculate_within_batch_ari <- function(individual_sce_list,
+                                       integrated_sce,
+                                       seed = NULL,
+                                       integration_method = NULL,
+                                       unintegrated = FALSE,
+                                       batch_column = "batch"){
+  set.seed(seed)
+  
+  # check that list of SCE objects is named
+  batch_ids <- names(individual_sce_list)
+  if(is.null(batch_ids)){
+    stop("Must provide a named list of SCE objects.")
+  } else {
+    # make sure the batch ids provided match between the list and the integrated object 
+    if(!(identical(
+      sort(batch_ids), 
+      sort(unique(colData(integrated_sce)[, batch_column]))))
+    ){
+      stop("Names of provided SCE objects included in the individual SCE object 
+           do not match batch IDs present in the batch_column of the integrated object")
+    }
+  }
+  
+  # Settings depending on whether data is integrated or not
+  if (unintegrated){
+    # In the end, we'll return "unintegrated" in the data frame for integration method
+    integration_method <- "unintegrated"
+    
+    # use simply "PCA" for reduced dimensions
+    reduced_dim_name <- "PCA"
+  } else {
+    # Check integration method
+    integration_method <- check_integration_method(integration_method)
+    
+    # Get name for reduced dimensions
+    reduced_dim_name <- get_reduced_dim_name(integration_method)
+  }
+
+  
+  # get pcs for individual objects
+  ind_pcs <- purrr::map(individual_sce_list, get_individual_pcs)
+  
+  # Pull out the PCs or analogous reduction from integrated object
+  integrated_pcs <- reducedDim(integrated_sce, reduced_dim_name)
+  
+  # cluster integrated pcs only one time
+  integrated_clustering_result <- integrated_pcs |> 
+    bluster::clusterRows(
+      bluster::NNGraphParam(cluster.fun = "louvain", type = "jaccard")
+    ) |> 
+    set_names(rownames(integrated_pcs)) # make sure to set the names with the batch ids
+  
+  
+  # for every batch id, cluster and then calculate ari for that batch 
+  all_ari <- batch_ids |> 
+    purrr::map_dbl(\(batch){
+      
+      # cluster pc matrix for specified batch
+      ind_clustering_result <- ind_pcs[[batch]] |>
+        bluster::clusterRows(
+          bluster::NNGraphParam(cluster.fun = "louvain", type = "jaccard")
+        )
+      
+      # extract clusters from integrated clustering for batch 
+      clusters_to_keep <- grep(batch, names(integrated_clustering_result))
+      batch_integrated_clusters <- integrated_clustering_result[clusters_to_keep]
+      
+      # calculate ari between pre-integrated clustering and post-integrated clustering for the given batch
+      ari <- bluster::pairwiseRand(ind_clustering_result, 
+                                   batch_integrated_clusters, 
+                                   mode = "index")
+      
+      return(ari)
+      
+    })
+  
+  # create tibble with ari and batch id
+  within_batch_ari_tibble <- tibble::tibble(
+    ari = all_ari,
+    batch_id = batch_ids,
+    integration_method = integration_method
+  )
+
+  return(within_batch_ari_tibble)
+}
