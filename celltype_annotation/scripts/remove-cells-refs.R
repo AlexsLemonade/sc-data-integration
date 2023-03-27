@@ -18,9 +18,9 @@ option_list <- list(
   make_option(
     opt_str = c("--celltypes_to_remove"),
     type = "character",
-    default = file.path(project_root, "celltype_annotation", "immune_celltype_patterns.txt"),
-    help = "Path to a txt file containing a list of cell types or patterns present in the `label.main` column of the 
-      provided references to remove from the reference. One cell type should be listed per line."
+    default = file.path(project_root, "celltype_annotation", "immune_celltypes.txt"),
+    help = "Path to a tsv file containing a table of references and corresponding cell types 
+      to remove from the reference using the `label.main` column."
   ),
   make_option(
     opt_str = c("--ref_dir"),
@@ -65,7 +65,7 @@ if(!file.exists(opt$celltypes_to_remove)){
   stop("Must provide a txt file containing a list of cell types to remove.")
 }
 
-celltypes_to_remove <- readLines(opt$celltypes_to_remove)
+celltypes_to_remove <- readr::read_tsv(opt$celltypes_to_remove)
 
 # Sync and read in ref files ---------------------------------------------------
 
@@ -86,7 +86,8 @@ if(length(missing_ref_files)){
 
 # read in ref
 ref_list <- local_ref_filepaths |> 
-  purrr::map(readr::read_rds)
+  purrr::map(readr::read_rds) |>
+  setNames(opt$ref_names)
 
 # Remove cell types from refs --------------------------------------------------
 
@@ -95,17 +96,21 @@ celltype_remove_pattern <- celltypes_to_remove |>
   paste(collapse = "|")
 
 # subset and remove desired cell types
-subset_ref_list <- purrr::walk2(ref_list, output_filepaths, 
-                                \(ref, output_file){
-                                  
-                                  # grab index of cells to remove 
-                                  removed_cell_idx <- grep(celltype_remove_pattern, ref$label.main)
-                                  
-                                  # subset reference and write out to new file
-                                  subset_ref <- ref[, -removed_cell_idx] |>
-                                    readr::write_rds(output_file)
-
-                                })
+purrr::pwalk(list(ref_list, names(ref_list), output_filepaths), 
+             \(ref, ref_name, output_file){
+               
+               # subset to reference specific cell types
+               ref_specific_celltypes <- celltypes_to_remove |> 
+                 dplyr::filter(reference == ref_name)
+               
+               # vector of which cells to remove
+               removed_cells <- !(ref$label.main %in% ref_specific_celltypes$celltype)
+               
+               # subset reference and write out to new file
+               subset_ref <- ref[, removed_cells] |>
+                 readr::write_rds(output_file)
+               
+             })
 
 # Sync modified refs back to S3 ------------------------------------------------
 
