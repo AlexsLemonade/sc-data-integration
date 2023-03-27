@@ -1,0 +1,64 @@
+---
+title: "SingleR cell type exploration"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+params:
+  s3_data_dir: "s3://nextflow-ccdl-results/scpca/processed/results/SCPCP000007" 
+  local_data_dir: "../data"
+  library_metadata: "../../sample-info/scpca-processed-libraries.tsv"
+  project: "SCPCP000007"
+---
+
+```{r}
+# load the R project
+project_root <- here::here()
+renv::load(project_root)
+```
+
+```{r}
+suppressPackageStartupMessages({
+ library(SingleCellExperiment)
+ library(ggplot2)
+})
+theme_set(theme_bw())
+```
+
+```{r}
+if(!file.exists(params$library_metadata)){
+  stop("Provided library_metadata does not exist.")
+}
+
+# make local data directory if it doesn't exist
+if(!dir.exists(params$local_data_dir)){
+  dir.create(params$local_data_dir, recursive = TRUE)
+}
+
+# read in metadata
+library_metadata <- readr::read_tsv(params$library_metadata) |> 
+  # filter to provided project
+  dplyr::filter(project_name == params$project) |> 
+  # build file path to annotated sce files sample_id/library_id_annotated.rds
+  dplyr::mutate(annotated_sce_files = glue::glue("{library_biomaterial_id}_annotated.rds"),
+                local_annotated_sce_files = file.path(sample_biomaterial_id,
+                                                      annotated_sce_files))
+
+# get full path to local files 
+local_annotated_sce_files <- file.path(params$local_data_dir,
+                                       library_metadata$local_annotated_sce_files)
+
+if(!(all(file.exists(local_annotated_sce_files)))){
+  # sync annotated SCE files 
+  aws_includes <- glue::glue('--include "*/{library_metadata$annotated_sce_files}"') |>
+    glue::glue_collapse(sep = ' ')
+  
+  sync_call <- glue::glue('aws s3 sync {params$s3_data_dir} {params$local_data_dir} --exclude "*" {aws_includes}')
+  system(sync_call, ignore.stdout = TRUE) 
+}
+```
+
+```{r}
+
+```
+
