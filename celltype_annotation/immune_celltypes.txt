@@ -1,0 +1,36 @@
+reference	celltype
+BlueprintEncodeData	B-cells
+BlueprintEncodeData	CD4+ T-cells
+BlueprintEncodeData	CD8+ T-cells
+BlueprintEncodeData	DC
+BlueprintEncodeData	Eosinophils
+BlueprintEncodeData	Erythrocytes
+BlueprintEncodeData	HSC
+BlueprintEncodeData	Macrophages
+BlueprintEncodeData	Monocytes
+BlueprintEncodeData	NK cells
+BlueprintEncodeData	Neutrophils
+BlueprintEncodeData	Pericytes
+HumanPrimaryCellAtlasData	B_cell
+HumanPrimaryCellAtlasData	BM
+HumanPrimaryCellAtlasData	BM & Prog.
+HumanPrimaryCellAtlasData	CMP
+HumanPrimaryCellAtlasData	DC
+HumanPrimaryCellAtlasData	Embryonic_stem_cells
+HumanPrimaryCellAtlasData	Erythroblast
+HumanPrimaryCellAtlasData	GMP
+HumanPrimaryCellAtlasData	HSC_G-CSF
+HumanPrimaryCellAtlasData	HSC_CD34+
+HumanPrimaryCellAtlasData	iPS_cells
+HumanPrimaryCellAtlasData	Macrophage
+HumanPrimaryCellAtlasData	MEP
+HumanPrimaryCellAtlasData	Monocyte
+HumanPrimaryCellAtlasData	MSC
+HumanPrimaryCellAtlasData	Myelocyte
+HumanPrimaryCellAtlasData	Neutrophils
+HumanPrimaryCellAtlasData	NK_cell
+HumanPrimaryCellAtlasData	Platelets
+HumanPrimaryCellAtlasData	Pre-B_cell_CD34-
+HumanPrimaryCellAtlasData	Pro-B_cell_CD34+
+HumanPrimaryCellAtlasData	Pro-Myelocyte
+HumanPrimaryCellAtlasData	T_cells

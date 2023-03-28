@@ -28,4 +28,7 @@ __pycache__/
 analysis_templates/*.html
 analysis_templates/*.html.zip
 
+# celltype references 
+celltype_annotation/references*
+
 
