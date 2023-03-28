@@ -62,7 +62,7 @@ output_filepaths <- file.path(opt$ref_dir, output_filenames)
 
 # check that input list of cell types to remove has been provided 
 if(!file.exists(opt$celltypes_to_remove)){
-  stop("Must provide a txt file containing a list of cell types to remove.")
+  stop("Must provide a tsv file containing a table of cell types to remove.")
 }
 
 celltypes_to_remove <- readr::read_tsv(opt$celltypes_to_remove)
@@ -87,13 +87,10 @@ if(length(missing_ref_files)){
 # read in ref
 ref_list <- local_ref_filepaths |> 
   purrr::map(readr::read_rds) |>
-  setNames(opt$ref_names)
+  purrr::set_names(opt$ref_names)
 
 # Remove cell types from refs --------------------------------------------------
 
-# create a regex from the list of celltypes/patterns to remove
-celltype_remove_pattern <- celltypes_to_remove |> 
-  paste(collapse = "|")
 
 # subset and remove desired cell types
 purrr::pwalk(list(ref_list, names(ref_list), output_filepaths), 
@@ -104,10 +101,10 @@ purrr::pwalk(list(ref_list, names(ref_list), output_filepaths),
                  dplyr::filter(reference == ref_name)
                
                # vector of which cells to remove
-               removed_cells <- !(ref$label.main %in% ref_specific_celltypes$celltype)
+               removed_cells <- which(ref$label.main %in% ref_specific_celltypes$celltype)
                
                # subset reference and write out to new file
-               subset_ref <- ref[, removed_cells] |>
+               subset_ref <- ref[, -removed_cells] |>
                  readr::write_rds(output_file)
                
              })
