@@ -1,0 +1,463 @@
+---
+title: "SingleR cell type exploration - comparison of references with and without immune cells"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+params:
+  s3_data_dir: "s3://nextflow-ccdl-results/scpca/processed/results/SCPCP000007" 
+  local_data_dir: "../data"
+  library_metadata: "../../sample-info/scpca-processed-libraries.tsv"
+  project: "SCPCP000007"
+---
+
+## Set Up
+
+```{r}
+# load the R project
+project_root <- here::here()
+renv::load(project_root)
+```
+
+```{r}
+suppressPackageStartupMessages({
+  library(SingleCellExperiment)
+  library(ggplot2)
+})
+theme_set(theme_bw())
+```
+
+```{r}
+if(!file.exists(params$library_metadata)){
+  stop("Provided library_metadata does not exist.")
+}
+
+# make local data directory if it doesn't exist
+if(!dir.exists(params$local_data_dir)){
+  dir.create(params$local_data_dir, recursive = TRUE)
+}
+
+# read in metadata
+library_metadata <- readr::read_tsv(params$library_metadata) |> 
+  # filter to provided project
+  dplyr::filter(project_name == params$project) |> 
+  # build file path to annotated sce files sample_id/library_id_annotated.rds
+  dplyr::mutate(annotated_sce_files = glue::glue("{library_biomaterial_id}_annotated.rds"),
+                local_annotated_sce_files = file.path(sample_biomaterial_id,
+                                                      annotated_sce_files))
+
+# get full path to local files 
+local_annotated_sce_files <- file.path(params$local_data_dir,
+                                       library_metadata$local_annotated_sce_files)
+
+# if missing any of the annotated sce files, grab them from S3
+if(!(all(file.exists(local_annotated_sce_files)))){
+  # sync annotated SCE files 
+  aws_includes <- glue::glue('--include "*/{library_metadata$annotated_sce_files}"') |>
+    glue::glue_collapse(sep = ' ')
+  
+  sync_call <- glue::glue('aws s3 sync {params$s3_data_dir} {params$local_data_dir} --exclude "*" {aws_includes}')
+  system(sync_call, ignore.stdout = TRUE) 
+}
+```
+
+```{r}
+# read in all annotated sces as a named list 
+library_ids <- library_metadata$library_biomaterial_id
+sce_list <- local_annotated_sce_files |>
+  purrr::map(readr::read_rds) |>
+  purrr::set_names(library_ids)
+```
+
+## Celltype Assignments 
+
+The first thing we will look at is what cell types were assigned for each reference for a given library. 
+We will focus on the top 10 most represented cell types so we don't over crowd the plot.
+This can show us if there are any common assignments across references. 
+
+```{r fig.height=8, fig.width=8}
+plot_celltypes <- function(sce,
+                           library_id){
+  
+  coldata_df <- colData(sce) |>
+    as.data.frame() |>
+    tidyr::pivot_longer(cols = starts_with("label.main"),
+                        names_to = "reference",
+                        values_to = "celltype") |>
+    # do some string replacements to deal with a few similar assignments across references
+    dplyr::mutate(celltype = stringr::str_replace(celltype, "Monocytes", "Monocyte"),
+                  celltype = stringr::str_replace(celltype, "Endothelial_cells", "Endothelial cells"),
+                  celltype_top = forcats::fct_lump_n(celltype, 10))
+  
+  ggplot(coldata_df, aes(x = reference, fill = celltype_top)) + 
+    geom_bar(position = "fill", color = "black", size = 0.2) +
+    labs(
+      x = "Reference",
+      y = "Proportion of cells", 
+      fill = "Cell type",
+      title = library_id
+    ) +
+    theme_bw() +
+    theme(axis.text.x = element_text(angle = 90))
+}
+
+purrr::imap(sce_list,
+             \(sce, library_id) plot_celltypes(sce, library_id))
+
+
+```
+
+It looks like for the first library (SCPCL000295) we have a lot of agreement that there's a group of monocytes present in the data. 
+For the rest of the libraries we see a similar pattern where Blueprint Encode categorizes most cells as HSC's, the Immune Cell Expression reference categorizes most cells as monocytes, the HPCA reference categorizes cells as a mix of CMP and GMP, and then the Monaco reference categorizes cells as progenitors. 
+
+One thing to consider is what options are available for annotations in the reference: 
+
+- The CMP and GMP cells labeled in the HPCA dataset are part of a larger progenitor class 
+- The Monaco reference only contains a Progenitor label and does not further classify stem cells or progenitors
+- The Immune Cell Expression reference only contains B cells, Monocytes, NK Cells, and T cell labels 
+
+So it's likely that not all of these references are appropriate for this dataset, which does appear to have mostly HSC and progenitor like cells.
+
+For the rest of this notebook, I'm going to focus on looking at the labels assigned when using the two references that we have reference datasets with all cells and without immune cells. 
+Then in a separate notebook, we can work on comparing across references and identifying what might be the "best" reference dataset. 
+We also might want to think about the idea of combining references prior to annotation and following [approaches mentioned in the `SingleR` book](http://bioconductor.org/books/release/SingleRBook/using-multiple-references.html). 
+
+## Evaluating SingleR Score 
+
+We will make a heatmap to look at all the cells in the dataset and the scores assigned for each cell type label and compare scores for cell types assigned with the full reference vs. the reference without immune cell types. 
+
+### Blueprint Encode
+
+```{r}
+# first just grab the singleR objects so we can directly use those as input to the plotScoreHeatmap function
+# get list of just blueprint label.main singleR objects  
+blueprint_results <- sce_list |> 
+  purrr::map(\(sce){
+   singler_result <- metadata(sce)$singler_results$label.main_BlueprintEncodeData
+  })
+
+
+# get list of just no immune blueprint label.main singleR objects 
+no_immune_blueprint_results <- sce_list |> 
+  purrr::map(\(sce){
+   singler_result <- metadata(sce)$singler_results$`label.main_no_immune-BlueprintEncodeData`
+  })
+```
+
+
+```{r fig.height=8, fig.width=8}
+# loop over singleR results for both all cells and no immune cells and create a combined heatmap
+comparison_heatmaps <- purrr::pmap(list(blueprint_results, 
+                                        no_immune_blueprint_results,
+                                        names(blueprint_results)),
+                                   \(all_result, no_immune_result, library_id) {
+                                     
+                                     # plot for the all cells reference score
+                                     all_plot <- SingleR::plotScoreHeatmap(all_result,
+                                                                           fontsize = 8,
+                                                                           main = "All cells",
+                                                                           silent = TRUE)
+                                     
+                                     # plot for the no immune cells reference score
+                                     no_immune_plot <- SingleR::plotScoreHeatmap(no_immune_result,
+                                                                                 fontsize = 8, 
+                                                                                 main = "No immune",
+                                                                                 silent = TRUE)
+                                    
+                                     # combine into one plot before returning the object
+                                     combined_plot <- patchwork::wrap_plots(
+                                       list(all_plot$gtable, no_immune_plot$gtable), nrow = 2
+                                     ) +
+                                       patchwork::plot_annotation(title = library_id)
+                                     
+                                     return(combined_plot)
+                                     })
+# print out all the plots 
+comparison_heatmaps
+```
+
+It looks like with all cells most of the libraries are composed of a combination of HSCs and Monocytes.
+However, without immune cells, SingleR is still able to assign most of those cells but mostly as a mix of Endothelial cells and Adipocytes.
+
+Let's do the same thing but now comparing cell type assignments with the HPCA reference with and without immune cells. 
+
+### HPCA  
+
+```{r}
+# get list of just blueprint label.main singleR objects  
+hpca_results <- sce_list |> 
+  purrr::map(\(sce){
+   singler_result <- metadata(sce)$singler_results$label.main_HumanPrimaryCellAtlasData
+  })
+
+
+# get list of just no immune blueprint label.main singleR objects 
+no_immune_hpca_results <- sce_list |> 
+  purrr::map(\(sce){
+   singler_result <- metadata(sce)$singler_results$`label.main_no_immune-HumanPrimaryCellAtlasData`
+  })
+```
+
+
+```{r fig.height=8, fig.width=8}
+hpca_comparison_heatmaps <- purrr::pmap(list(hpca_results, 
+                                             no_immune_hpca_results,
+                                             names(hpca_results)),
+                                        \(all_result, no_immune_result, library_id) {
+                                          
+                                          all_plot <- SingleR::plotScoreHeatmap(all_result,
+                                                                                fontsize = 8,
+                                                                                main = "All cells",
+                                                                                silent = TRUE)
+                                          
+                                          no_immune_plot <- SingleR::plotScoreHeatmap(no_immune_result,
+                                                                                      fontsize = 8, 
+                                                                                      main = "No immune",
+                                                                                      silent = TRUE)
+                                          
+                                          combined_plot <- patchwork::wrap_plots(
+                                            list(all_plot$gtable, no_immune_plot$gtable), nrow = 2
+                                          ) +
+                                            patchwork::plot_annotation(title = library_id)
+                                          
+                                          return(combined_plot)
+                                        })
+
+hpca_comparison_heatmaps
+```
+
+## Delta Score
+
+Next we will look at the delta score which is calculated by determining the difference between the score for the assigned label (prior to fine tuning) and the median score across all labels for each cell. 
+The delta score is less likely to be affected by batch effects, such as library size, and is a more robust measurement to use to compare differences across cells and samples. 
+
+```{r}
+# pick out the top labeled cell types from blueprint and HPCA to plot deltas
+top_labels <- c(
+  "Adipocytes",
+  "CMP",
+  "Endothelial cells",
+  "Endothelial_cells",
+  "GMP",
+  "HSC",
+  "Monocytes",
+  "Monocyte",
+  "Neurons"
+)
+```
+
+
+```{r}
+# make a plot of the per cell deltas comparing the delta scores for each cell type 
+# using the reference with all cells and the reference with immune cells removed 
+make_delta_plot <- function(all_cells_singler_results,
+                            no_immune_singler_results,
+                            library_id,
+                            top_labels = top_labels){
+  
+  # make data frames from the singleR results for each reference
+  delta_df <- all_cells_singler_results |>
+    as.data.frame() |>
+    dplyr::select(labels, delta.next, pruned.labels) 
+  
+  no_immune_delta_df <- no_immune_singler_results |> 
+    as.data.frame() |>
+    dplyr::select(labels, delta.next, pruned.labels)
+  
+  # first create a list of dataframes and then join into one and add a new reference column
+  all_delta_df <- list(
+    all_cells = delta_df, 
+    no_immune = no_immune_delta_df
+  ) |>
+    dplyr::bind_rows(.id = "reference") |>
+    # only plot the top labels that we care about 
+    dplyr::filter(labels %in% top_labels)
+  
+  # faceted sina plot with each celltype in a column comparing the deltas in each reference on the x axis
+  ggplot(all_delta_df, aes(x = reference, y = delta.next, color = reference)) +
+    ggforce::geom_sina(size = 0.1) +
+    theme(axis.text.x = element_text(angle = 90)) +
+    facet_grid(cols = vars(labels)) +
+    stat_summary(
+        aes(group = labels),
+        color = "black",
+        # median and quartiles for point range
+        fun = "mean",
+        fun.min = function(x) {
+          quantile(x, 0.25)
+        },
+        fun.max = function(x) {
+          quantile(x, 0.75)
+        },
+        geom = "pointrange",
+        position = position_dodge(width = 0.7),
+        size = 0.2,
+        shape = 21
+      ) +
+    labs(title = library_id)
+  
+}
+```
+
+
+```{r}
+purrr::pmap(list(blueprint_results, no_immune_blueprint_results, library_ids), make_delta_plot)
+```
+
+```{r}
+purrr::pmap(list(hpca_results, no_immune_hpca_results, library_ids), make_delta_plot)
+```
+
+Interestingly, there are only a few examples where the delta for the cell types identified in the reference using all cells is higher than the delta for the cell types identified in the reference without immune cells. 
+Initially I would expect that SingleR would have trouble assigning cells when the reference dataset does not contain cell types that are found in your data, but it looks like it has no problem assigning cells to things like Endothelial cells and adipocytes. 
+Both of those celltypes are likely to be in the blood, but based on the initial annotation with the full reference dataset, I doubt that many cells should actually be annotated that way. 
+
+
+## Changes in marker genes across references
+
+My next hypothesis would be that by removing the immune cells we are now changing the marker genes that are associated with each of the cell types.
+Therefore, it's likely that there are now genes present in the marker gene list for either Adipoctyes or Endothelial cells (or other cell types that we haven't looked at), that could be highly correlated with genes expressed in cells found in our dataset that weren't there previously.
+Because SingleR is looking for the highest correlation values, if those new marker genes are highly correlated and nothing else is showing correlation, then perhaps that is why SingleR is now able to assign these cells. 
+This would especially be true, if the genes that are now marker genes for Adipocytes or Endothelial cells in the immune removed reference were also found to be marker genes for HSCs or Monocytes in the original full datasets. 
+
+Here we will create upset plots to look at the overlap between each marker gene set found in the full reference dataset to the marker gene sets of interest in the no immune reference dataset. 
+For simplicity, I will only look at one library right now and then look at the each marker gene list from the full reference separately, rather than all possible interactions.
+
+```{r}
+# first let's get the list of all markers for each reference which is stored in the `de.genes` slot 
+all_markers <- metadata(blueprint_results$SCPCL000295)$de.genes
+all_non_immune_markers <- metadata(no_immune_blueprint_results$SCPCL000295)$de.genes
+
+# list of all cell types for each 
+all_celltypes <- names(all_markers)
+all_non_immune_celltypes <- names(all_non_immune_markers)
+```
+
+```{r}
+# small function to get the unique markers for each celltype in `de.genes`
+get_celltype_markers <- function(celltype,
+                                 de.genes){
+  
+  unique_markers <- unique(unlist(de.genes[[celltype]]))
+  return(unique_markers)
+}
+```
+
+```{r}
+# we are only going to focus on the celltypes that are annotated the most in this library
+celltypes_to_keep <- c(
+  "Adipocytes",
+  "Endothelial cells",
+  "HSC",
+  "Monocytes"
+)
+
+# first grab the unique markers for each celltype of interest for the full reference dataset
+all_celltypes <- all_celltypes[which(all_celltypes %in% celltypes_to_keep)] 
+all_celltype_markers <- all_celltypes |> 
+  purrr::map(\(celltype) get_celltype_markers(celltype, all_markers)) |>
+  purrr::set_names(all_celltypes)
+
+
+# now grab the unique markers for each celltype of interest for the non immune reference dataset
+all_non_immune_celltypes <- all_non_immune_celltypes[which(all_non_immune_celltypes %in% celltypes_to_keep)]
+no_immune_celltype_markers <- all_non_immune_celltypes |> 
+  purrr::map(\(celltype) get_celltype_markers(celltype, all_markers = all_non_immune_markers)) |>
+  purrr::set_names(all_non_immune_celltypes) |> 
+  # stack into a dataframe with celltype and gene id columns
+  stack() |> 
+  dplyr::rename("celltype" = "ind",
+                "gene_id" = "values") |> 
+  # add a column to indicate which reference these markers are coming from
+  dplyr::mutate(reference = "no_immune")
+
+```
+
+```{r}
+library(ggupset)
+
+# function to use for making upset plots to look at intersection between a 
+# single marker gene set from the full reference dataset and 
+# all gene sets of interest from the non immune reference dataset
+make_upset_plot <- function(celltype_markers, # a single list of marker genes
+                            celltype, # celltype corresponding to marker genes
+                            # dataframe containing all marker gene sets to use for comparing 
+                            no_immune_celltypes_df = no_immune_celltype_markers){
+  
+  # create a matching data frame from the input list of celltype_markers and join
+  # with the non immune markers
+  grouped_markers <- data.frame(
+    gene_id = celltype_markers,
+    celltype = celltype,
+    reference = "all_cells"
+  ) |> 
+    dplyr::bind_rows(no_immune_celltypes_df) |>
+    # combine celltype and reference column so marker genes can be mapped back to both with one column
+    dplyr::mutate(celltype_ref = glue::glue("{celltype}_{reference}")) |>
+    dplyr::group_by(gene_id) |>
+    # identify shared marker genes across gene lists
+    dplyr::summarise(marker_lists = list(unique(celltype_ref)))
+  
+  ggplot(grouped_markers, aes(x = marker_lists)) +
+    geom_bar() +
+    scale_x_upset() +
+    labs(title = celltype)
+  
+}
+
+# for all celltypes of interest in the all cells reference, make an upset plot
+purrr::imap(all_celltype_markers, 
+            \(celltype_markers, celltype) 
+            {make_upset_plot(celltype_markers = celltype_markers,
+                             celltype = celltype)})
+
+```
+
+Most of the cells in this library were categorized as Monocytes using the all cells reference. 
+If you look at the Monocyte upset plot, there are a number of genes that are unique to Monocytes, but there is also a group of genes that are shared between Monocytes and Adipocytes from the non immune reference. 
+We can look at the overall gene expression patterns of these groups of genes in this library to see if the presence of those overlapping genes may be responsible for driving up the SingleR score for adipocytes in the absence of immune cells. 
+
+```{r}
+# get some lists of marker genes we are interested in that we can plot on a heatmap 
+
+# first all the markers from the adipocytes from the non immune ref
+non_immune_adipocyte_markers <- no_immune_celltype_markers$gene_id[which(no_immune_celltype_markers$celltype == "Adipocytes")]
+
+# intersect with the monocyte markers 
+shared_mono_adipocyte_markers <- intersect(all_celltype_markers$Monocytes,
+                                          non_immune_adipocyte_markers)
+# markers specific to the adipocytes in the non immune ref
+non_immune_only_markers <- setdiff(non_immune_adipocyte_markers,
+                                   all_celltype_markers$Monocytes)
+# markers specific to the monocytes and not found in the adipocytes
+all_cells_only_markers <- setdiff(all_celltype_markers$Monocytes,
+                                  non_immune_adipocyte_markers)
+
+# make heatmaps of each of these gene sets 
+scater::plotHeatmap(sce_list$SCPCL000295,
+                    order_columns_by = "label.main_no_immune.BlueprintEncodeData",
+                    features = shared_mono_adipocyte_markers,
+                    show_rownames = FALSE,
+                    main = "Shared")
+
+scater::plotHeatmap(sce_list$SCPCL000295,
+                    order_columns_by = "label.main_no_immune.BlueprintEncodeData",
+                    features = non_immune_only_markers,
+                    show_rownames = FALSE,
+                    main = "No Immune only")
+
+scater::plotHeatmap(sce_list$SCPCL000295,
+                    order_columns_by = "label.main_BlueprintEncodeData",
+                    features = all_cells_only_markers,
+                    show_rownames = FALSE,
+                    main = "Full ref only")
+```
+The shared plot indicates that there may be a group of genes that are highly expressed across all the cells, which are all labeled as Adipocytes. 
+If you look at the same labeling but now the genes that are only found in the non immune cell reference, it looks like there is little to no expression of those marker genes, so it is likely that the group of genes that are shared with Monocyte markers from the full ref could be driving annotation of these cells as Adipocytes in the absence of immune cells. 
+Looking at the genes that are specific to the full reference, there is also what seems like a clear expression pattern across all cells, and then what looks like a small group of genes near the bottom of the plot that is more highly expressed specifically in Monocytes. 
+
+```{r}
+sessionInfo()
+```
+
+
