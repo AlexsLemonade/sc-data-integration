@@ -311,7 +311,7 @@ purrr::pmap(list(blueprint_results, no_immune_blueprint_results, library_ids),
 ```
 
 ```{r}
-purrr::pmap(list(hpca_results, no_immune_blueprint_results, library_ids), 
+purrr::pmap(list(hpca_results, no_immune_hpca_results, library_ids), 
             \(hpca, no_immune, library_id) {
               make_delta_plot(all_cells_singler_results = hpca,
                               no_immune_singler_results = no_immune,
@@ -367,14 +367,18 @@ celltypes_to_keep <- c(
 # first grab the unique markers for each celltype of interest for the full reference dataset
 all_celltypes <- all_celltypes[which(all_celltypes %in% celltypes_to_keep)] 
 all_celltype_markers <- all_celltypes |> 
-  purrr::map(\(celltype) get_celltype_markers(celltype, all_markers)) |>
+  purrr::map(\(celltype) 
+             get_celltype_markers(celltype = celltype, 
+                                  de.genes = all_markers)) |>
   purrr::set_names(all_celltypes)
 
 
 # now grab the unique markers for each celltype of interest for the non immune reference dataset
 all_non_immune_celltypes <- all_non_immune_celltypes[which(all_non_immune_celltypes %in% celltypes_to_keep)]
 no_immune_celltype_markers <- all_non_immune_celltypes |> 
-  purrr::map(\(celltype) get_celltype_markers(celltype, all_markers = all_non_immune_markers)) |>
+  purrr::map(\(celltype) 
+             get_celltype_markers(celltype = celltype, 
+                                  de.genes = all_non_immune_markers)) |>
   purrr::set_names(all_non_immune_celltypes) |> 
   # stack into a dataframe with celltype and gene id columns
   stack() |> 
