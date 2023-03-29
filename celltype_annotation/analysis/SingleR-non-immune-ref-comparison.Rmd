@@ -253,7 +253,7 @@ top_labels <- c(
 make_delta_plot <- function(all_cells_singler_results,
                             no_immune_singler_results,
                             library_id,
-                            top_labels = top_labels){
+                            top_labels){
   
   # make data frames from the singleR results for each reference
   delta_df <- all_cells_singler_results |>
@@ -301,11 +301,23 @@ make_delta_plot <- function(all_cells_singler_results,
 
 
 ```{r}
-purrr::pmap(list(blueprint_results, no_immune_blueprint_results, library_ids), make_delta_plot)
+purrr::pmap(list(blueprint_results, no_immune_blueprint_results, library_ids), 
+            \(blueprint, no_immune, library_id) {
+              make_delta_plot(all_cells_singler_results = blueprint,
+                              no_immune_singler_results = no_immune,
+                              library_id = library_id, 
+                              top_labels = top_labels)
+              })
 ```
 
 ```{r}
-purrr::pmap(list(hpca_results, no_immune_hpca_results, library_ids), make_delta_plot)
+purrr::pmap(list(hpca_results, no_immune_blueprint_results, library_ids), 
+            \(hpca, no_immune, library_id) {
+              make_delta_plot(all_cells_singler_results = hpca,
+                              no_immune_singler_results = no_immune,
+                              library_id = library_id, 
+                              top_labels = top_labels)
+              })
 ```
 
 Interestingly, there are only a few examples where the delta for the cell types identified in the reference using all cells is higher than the delta for the cell types identified in the reference without immune cells. 
