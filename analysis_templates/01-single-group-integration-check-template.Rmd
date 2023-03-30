@@ -1,6 +1,6 @@
 ---
 params:
-  group_name: "sim1a"
+  group_name: "sim1"
   merged_sce_dir: "../results/scib_simulated/merged_sce"
   integrated_sce_dir: "../results/scib_simulated/integrated_sce"
   integration_methods: !r as.vector(c("fastmnn", "harmony", "cca", "rpca"))
@@ -579,6 +579,7 @@ within_batch_ari <- set_integration_order(within_batch_ari)
 
 # plot within batch ARI by integration method
 ggplot(within_batch_ari, aes_string(x = "integration_method_factor" , y = "ari")) +
+  geom_point() +
   ggforce::geom_sina() +
   # add median point to plot
   stat_summary(
