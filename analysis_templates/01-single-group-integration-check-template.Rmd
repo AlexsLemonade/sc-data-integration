@@ -1,6 +1,6 @@
 ---
 params:
-  group_name: "sim1"
+  group_name: "sim1a"
   merged_sce_dir: "../results/scib_simulated/merged_sce"
   integrated_sce_dir: "../results/scib_simulated/integrated_sce"
   integration_methods: !r as.vector(c("fastmnn", "harmony", "cca", "rpca"))
@@ -552,17 +552,24 @@ if (celltypes_present) {
 
 ### Within batch ARI
 
+Here we calculate the what we will refer to as the within bath ARI. 
+The goal of this metric is to measure how well a given integration method preserves biological heterogeneity by comparing clustering assignments from pre integration to post integration for each library. 
+This function takes each original SCE object, prior to any merging, and performs graph based clustering. 
+The same clustering is then performed on the integrated object.
+For each library that is present in the integrated object, the original cluster assignments are compared to the new cluster assignments for those cells post integration by calculating the ARI between the cluster assignments. 
+Within batch ARI values close to 1 indicate that biological heterogeneity has been preserved. 
+
 ```{r}
-# purrr across the list of integrated sce objects to compare against the integrated objects 
+# purrr across the list of integrated sce objects to compare against the individual objects 
 within_batch_ari <- purrr::imap(sce_list, 
                                 \(sce, int_method){
                                   calculate_within_batch_ari(individual_sce_list,
                                                              sce,
                                                              seed = params$seed,
                                                              integration_method = int_method,
-                                                             unintegrated = FALSE,
                                                              batch_column = params$batch_column)
                                 }) |>
+  # combine results into one dataframe
   dplyr::bind_rows()
 ```
 
@@ -572,24 +579,24 @@ within_batch_ari <- set_integration_order(within_batch_ari)
 
 # plot within batch ARI by integration method
 ggplot(within_batch_ari, aes_string(x = "integration_method_factor" , y = "ari")) +
-    ggforce::geom_sina() +
-    # add median point to plot
-    stat_summary(
-      color = "red",
-      fun = "median",
-      fun.min = function(x) {
-        quantile(x, 0.25)
-      },
-      fun.max = function(x) {
-        quantile(x, 0.75)
-      },
-      geom = "pointrange",
-      size = 0.5
-    ) +
-    labs(
-      x = "Integration method",
-      y = "ARI"
-    )
+  ggforce::geom_sina() +
+  # add median point to plot
+  stat_summary(
+    color = "red",
+    fun = "median",
+    fun.min = function(x) {
+      quantile(x, 0.25)
+    },
+    fun.max = function(x) {
+      quantile(x, 0.75)
+    },
+    geom = "pointrange",
+    size = 0.5
+  ) +
+  labs(
+    x = "Integration method",
+    y = "ARI"
+  )
 ```
 
 ### Batch ASW
