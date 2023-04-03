@@ -235,7 +235,7 @@ rule generate_report:
                                           merged_sce_dir = '{workflow.basedir}/{input.merged_sce_dir}', \
                                           integrated_sce_dir = '{workflow.basedir}/{params.integrated_sce_dir}', \
                                           integration_methods = '{config[integration_methods]}', \
-                                          library_metadata = '{config["processed_tsv"]}' , \
+                                          library_metadata = '{workflow.basedir}/{config[processed_tsv]}' , \
                                           max_celltypes = {config[max_celltypes]}))" \
         &> {log}
         """
