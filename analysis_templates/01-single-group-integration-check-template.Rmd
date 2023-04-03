@@ -106,6 +106,7 @@ if(!file.exists(merged_sce_path)){
 }
 ```
 
+Read in integrated SCE objects.
 
 ```{r}
 # find all integrated SCE files for given project
@@ -140,6 +141,8 @@ all_sce_files <- c(merged_sce_path, integrated_sce_files)
 sce_list <- purrr::map(all_sce_files, readr::read_rds) %>%
   set_names(c("unintegrated", integration_methods))
 ```
+
+Read in pre-integrated SCE objects.
 
 ```{r}
 # find all pre-integrated sce files for a project and create a list 
@@ -183,6 +186,7 @@ individual_sce_list <- individual_sce_files |>
   purrr::map(readr::read_rds)
 ```
 
+Check contents of SCE objects.
 
 ```{r sce-checks}
 # check that batch column is found in colData of both merged and integrated sce objects
@@ -556,7 +560,7 @@ Here we calculate the what we will refer to as the within-batch ARI.
 The metric measures how well a given integration method preserves biological heterogeneity by comparing pre- and post-intergration clustering assignments for each library. 
 This function takes each original SCE object, prior to any merging, and performs graph-based clustering. 
 The same clustering is then performed on the integrated object.
-For each library that is present in the integrated object, the original cluster assignments are compared to the new cluster assignments for those cells post integration by calculating the ARI between the cluster assignments. 
+For each library that is present in the integrated object, the original cluster assignments are compared to the cells' new cluster assignments post integration by calculating the ARI between these two cluster assignments. 
 Within-batch ARI values close to 1 indicate that biological heterogeneity has been preserved. 
 
 ```{r}
