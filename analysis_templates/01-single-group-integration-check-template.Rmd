@@ -174,7 +174,7 @@ library_ids <- stringr::str_remove(basename(individual_sce_files), "_sce.rds")
 
 # make sure that all the libraries we expect to be there have a corresponding file
 if(!all(library_ids %in% library_metadata$library_biomaterial_id)){
-  stop("Iindividual SCE objects not present for all libraries in group.")
+  stop("Individual SCE objects not present for all libraries in group.")
 }
 
 # create list of individual sce objects 
@@ -550,17 +550,17 @@ if (celltypes_present) {
 ```
 
 
-### Within batch ARI
+### Within-batch ARI
 
-Here we calculate the what we will refer to as the within bath ARI. 
-The goal of this metric is to measure how well a given integration method preserves biological heterogeneity by comparing clustering assignments from pre integration to post integration for each library. 
-This function takes each original SCE object, prior to any merging, and performs graph based clustering. 
+Here we calculate the what we will refer to as the within-batch ARI. 
+The metric measures how well a given integration method preserves biological heterogeneity by comparing pre- and post-intergration clustering assignments for each library. 
+This function takes each original SCE object, prior to any merging, and performs graph-based clustering. 
 The same clustering is then performed on the integrated object.
 For each library that is present in the integrated object, the original cluster assignments are compared to the new cluster assignments for those cells post integration by calculating the ARI between the cluster assignments. 
-Within batch ARI values close to 1 indicate that biological heterogeneity has been preserved. 
+Within-batch ARI values close to 1 indicate that biological heterogeneity has been preserved. 
 
 ```{r}
-# purrr across the list of integrated sce objects to compare against the individual objects 
+# map across the list of integrated sce objects to compare against the individual objects 
 within_batch_ari <- purrr::imap(sce_list, 
                                 \(sce, int_method){
                                   calculate_within_batch_ari(individual_sce_list,
