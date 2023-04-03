@@ -1,5 +1,5 @@
 ---
-title: "SingleR cell type exploration - comparison of references with and without immune cells"
+title: "SingleR cell type exploration - Comparing references with and without immune cells"
 output: 
   html_notebook:
     toc: true
@@ -89,7 +89,7 @@ One thing to consider when evaluating the cell type assignments is what options 
 
 So it's likely that not all of these references are appropriate for this dataset, which does appear to have mostly HSC and progenitor like cells.
 
-For the rest of this notebook, we will focus on comparing cell type assignments to a complementary reference containing no relevant cells for our sample.
+For the rest of this notebook, we will mostly focus on comparing cell type assignments to a complementary reference containing no relevant cells for our sample.
 We will look at the `BlueprintEncodeData` and the `HumanPrimaryCellAtlasData` with all cell types and with the removal of immune cells and compare scores, deltas, and cell type assignments.
 
 We will make a heatmap to look at all the cells in the dataset and the scores assigned for each cell type label and compare scores for cell types assigned with the full reference vs. the reference without immune cell types. 
@@ -153,6 +153,41 @@ The delta score is less likely to be affected by batch effects, such as library 
 We would expect that references that perform better to have a higher distribution of delta scores than inappropriate references.
 
 ```{r}
+# creates a plot showing the distribution of the desired metric with reference on the x-axis
+# color by whether or not labels are pruned or not
+# facet by label type (main, fine, or ont)
+# we will use this function for looking at delta, median delta, and score distributions
+plot_metric_distribution <- function(all_results,
+                                    metric_type){
+  
+  metric_plot <- ggplot(all_results, aes_string(x = "reference", y = metric_type, group = "reference", color = "pruned")) +
+    ggforce::geom_sina(size = 0.1, alpha = 0.2) +
+    stat_summary(
+      aes(group = reference),
+      color = "black",
+      # median and quartiles for point range
+      fun = "median",
+      fun.min = function(x) {
+        quantile(x, 0.25)
+      },
+      fun.max = function(x) {
+        quantile(x, 0.75)
+      },
+      geom = "pointrange",
+      position = position_dodge(width = 0.9),
+      size = 0.1
+    ) +
+    facet_wrap(vars(label_type))+
+    guides(x = guide_axis(angle = 90),
+           colour = guide_legend(override.aes = list(size = 2, alpha = 1)))
+  
+  return(metric_plot)
+  
+}
+```
+
+
+```{r}
 # create a large dataframe with all singleR results from all reference annotations
 all_results <- singler_results |> 
   purrr::map(as.data.frame) |>
@@ -164,26 +199,7 @@ all_results <- singler_results |>
 
 ```{r fig.height=5}
 # plot the distribution of delta.next for each reference, faceting by label type (main, fine, ont)
-ggplot(all_results, aes(x = reference, y = delta.next, group = reference, color = pruned)) +
-  ggforce::geom_sina(size = 0.1, alpha = 0.5) +
-  stat_summary(
-    aes(group = reference),
-    color = "black",
-    # median and quartiles for point range
-    fun = "median",
-    fun.min = function(x) {
-      quantile(x, 0.25)
-    },
-    fun.max = function(x) {
-      quantile(x, 0.75)
-    },
-    geom = "pointrange",
-    position = position_dodge(width = 0.9),
-    size = 0.1
-  ) +
-  facet_wrap(vars(label_type))+
-  guides(x = guide_axis(angle = 90),
-         colour = guide_legend(override.aes = list(size = 2, alpha = 1)))
+plot_metric_distribution(all_results, "delta.next")
 ```
 
 ```{r fig.height=5}
@@ -212,36 +228,60 @@ ggplot(main_label_results, aes(x = reference, y = delta.next, group = reference,
   guides(x = guide_axis(angle = 90),
          colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
 ```
+In addition to the delta next, which only looks at the difference between the scores of the top two labels, below we will measure the difference between the top score and the median scores. 
+Then we will plot the distribution of this delta as well. 
+
+```{r}
+# function to calculate the median delta for each singleR result
+get_median_delta <- function(singler_result){
+  
+  # grab all the scores
+  scores <- singler_result$scores |>
+    as.matrix()
+  
+  # calculate the median delta (max score - median of all scores) 
+  median_delta <- rowMaxs(scores) - rowMedians(scores)
+  
+  # add median into the singler result and return as data frame
+  median_delta_result <- singler_result |>
+    as.data.frame() |>
+    dplyr::select(labels, delta.next, pruned.labels) |>
+    dplyr::mutate(median_delta = median_delta)
+  
+  return(median_delta_result)
+}
+```
+
+```{r}
+# get the median delta for each singler object and prep combined data frame for plotting distribution
+median_delta_results <- singler_results |> 
+  purrr::map(get_median_delta) |>
+  dplyr::bind_rows(.id = "reference") |>
+  tidyr::separate(reference, into = c("label_type", "reference"), sep = "_", extra = "merge") |>
+  # classify each label as pruned or not
+  dplyr::mutate(pruned = ifelse(is.na(pruned.labels), "Yes", "No"))
+```
+
+```{r, fig.height=5}
+# plot the distribution of delta.next for each reference, faceting by label type (main, fine, ont)
+plot_metric_distribution(median_delta_results, "median_delta")
+```
+
+The delta median appears to show more striking differences between the references containing cells we would expect in our dataset vs. references that are inappropriate. 
+
 ## SingleR Score
 
 We can also make a plot to show the distribution of scores across all cells.
 There is some language in the SingleR book that suggests against comparing scores obtained from different references, so if we did want to go this route, we might consider trying to use the method suggested by [SingleR to combine scores](http://bioconductor.org/books/release/SingleRBook/using-multiple-references.html#combining-inferences-from-individual-references).
 
-```{r}
+```{r, fig.height=5}
+# grab just the scores from the results data frame and rotate for plotting
 scores_results <- all_results |>
   tidyr::pivot_longer(cols = starts_with("scores"),
                       names_to = "celltype_score_column",
                       values_to = "score")
-ggplot(scores_results, aes(x = reference, y = score, group = reference, color = pruned)) +
-  ggforce::geom_sina(size = 0.1, alpha = 0.5) +
-  stat_summary(
-    aes(group = reference),
-    color = "black",
-    # median and quartiles for point range
-    fun = "median",
-    fun.min = function(x) {
-      quantile(x, 0.25)
-    },
-    fun.max = function(x) {
-      quantile(x, 0.75)
-    },
-    geom = "pointrange",
-    position = position_dodge(width = 0.9),
-    size = 0.1
-  ) +
-  facet_wrap(vars(label_type))+
-  guides(x = guide_axis(angle = 90),
-         colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
+
+plot_metric_distribution(scores_results, "score")
 ```
 
 ## Clustering comparison 
@@ -322,15 +362,42 @@ Here we will compare annotations across references.
 We expect that some references will have slightly different annotations, so by looking at all the annotations together we can see how each reference categorizes cells and if they share any similar annotations.
 First we will look at all the references together and all possible cell types. 
 
-```{r}
+```{r, fig.width=8}
 # grab all the pruned.labels that are created with a label.main ref
 pruned_label_main_df <- all_results |>
   dplyr::filter(label_type == "label.main") |>
-  dplyr::select(reference, pruned.labels)
+  dplyr::select(reference, pruned.labels) |>
+  # collapse similar cell types and some sub types 
+  dplyr::mutate(collapsed_labels = forcats::fct_collapse(pruned.labels,
+                                      "Monocyte" = c("Monocyte",
+                                                     "Monocytes"),
+                                      "B-cells" = c("B cells", 
+                                                    "Pre-B_cell_CD34-",
+                                                    "Pro-B_cell_CD34+"),
+                                      "T-cells" = c("T_cells",
+                                                    "CD8+ T-cells",
+                                                    "CD4+ T-cells",
+                                                    "CD8+ T cells",
+                                                    "CD4+ T cells",
+                                                    "T cells",
+                                                    "T cells, CD4+",
+                                                    "T cells, CD8+"),
+                                      "Endothelial cells" = c("Endothelial_cells",
+                                                              "Endothelial cells"),
+                                      "NK cells" = c("NK_cell",
+                                                     "NK cells"),
+                                      "HSC" = c("HSC",
+                                                "HSC_CD34+"),
+                                      "Epithelial cells" = c("Epithelial cells",
+                                                             "Epithelial_cells"),
+                                      "Myelocyte" = c("Myelocyte",
+                                                      "Pro-Myelocyte"),
+                                      "Smooth muscle" = c("Smooth muscle",
+                                                          "Smooth_muscle_cells")))
 
 # build a matrix with reference as the rows and the celltype as the columns
 label_mtx <- table(pruned_label_main_df$reference,
-                   pruned_label_main_df$pruned.labels,
+                   pruned_label_main_df$collapsed_labels,
                    useNA = "ifany") |> 
   log1p() # log transform for visual help
 
@@ -339,7 +406,7 @@ pheatmap::pheatmap(label_mtx,
                    width = 10,
                    fontsize_col = 8)
 ```
-Now we will explicitly cmopare our two references that we have been looking at to see how they annotated each of the cells.
+Now we will explicitly compare our two references that we have been looking at to see how they annotated each of the cells.
 
 ```{r}
 # table of blueprint labels vs. hpca labels
