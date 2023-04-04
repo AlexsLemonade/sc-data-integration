@@ -582,7 +582,7 @@ within_batch_ari <- purrr::imap(sce_list,
 within_batch_ari <- set_integration_order(within_batch_ari)
 
 # plot within batch ARI by integration method
-ggplot(within_batch_ari, aes_string(x = "integration_method_factor" , y = "ari")) +
+ggplot(within_batch_ari, aes(x = integration_method_factor , y = ari)) +
   geom_point() +
   ggforce::geom_sina() +
   # add median point to plot
