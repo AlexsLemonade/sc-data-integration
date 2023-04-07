@@ -101,9 +101,7 @@ calculate_ari <- function(integrated_sce,
 #' @param integrated_sce The integrated SCE object
 #' @param seed Seed for initializing random sampling and clustering
 #' @param integration_method The name of the method that was used for integration
-#'    to create `integrated_sce`. One of: fastMNN, harmony, rpca, cca, scvi, or scanorama
-#' @param unintegrated Indicates whether the provided data is integrated (`FALSE`; default) or
-#'   integrated (`TRUE`).
+#'    to create `integrated_sce`. One of: unintegrated, fastMNN, harmony, rpca, cca, scvi, or scanorama
 #' @param batch_column The variable in `integrated_sce` indicating the grouping of interest.
 #'  Generally this is either batches or cell types. Default is "batch".
 #'
@@ -115,7 +113,6 @@ calculate_within_batch_ari <- function(individual_sce_list,
                                        integrated_sce,
                                        seed = NULL,
                                        integration_method = NULL,
-                                       unintegrated = FALSE,
                                        batch_column = "batch"){
   set.seed(seed)
   
@@ -135,10 +132,7 @@ calculate_within_batch_ari <- function(individual_sce_list,
   }
   
   # Settings depending on whether data is integrated or not
-  if (unintegrated){
-    # In the end, we'll return "unintegrated" in the data frame for integration method
-    integration_method <- "unintegrated"
-    
+  if (integration_method == "unintegrated"){
     # use simply "PCA" for reduced dimensions
     reduced_dim_name <- "PCA"
   } else {
