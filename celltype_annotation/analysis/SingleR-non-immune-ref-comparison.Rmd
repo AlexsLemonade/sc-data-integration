@@ -269,7 +269,7 @@ median_delta_results <- singler_results |>
 plot_metric_distribution(median_delta_results, "median_delta")
 ```
 
-The delta median appears to show more striking differences between the references containing cells we would expect in our dataset vs. references that are inappropriate. 
+The delta median appears to show more noticeable differences between the references containing cells we would expect in our dataset vs. references that are inappropriate. 
 
 ## SingleR Score
 
