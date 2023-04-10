@@ -72,7 +72,7 @@ label_counts_df <- colData(annotated_sce) |>
 ggplot(label_counts_df, aes(x = reference, fill = celltype_top, y = n, label = n)) + 
   geom_bar(position = "stack", stat = "identity") +
   labs(
-    x = "Reference",
+    x = "Reference dataset",
     y = "Number of cells", 
     fill = "Cell type"
   ) +
@@ -91,6 +91,8 @@ So it's likely that not all of these references are appropriate for this dataset
 
 For the rest of this notebook, we will mostly focus on comparing cell type assignments to a complementary reference containing no relevant cells for our sample.
 We will look at the `BlueprintEncodeData` and the `HumanPrimaryCellAtlasData` with all cell types and with the removal of immune cells and compare scores, deltas, and cell type assignments.
+
+## Cell type heatmaps
 
 We will make a heatmap to look at all the cells in the dataset and the scores assigned for each cell type label and compare scores for cell types assigned with the full reference vs. the reference without immune cell types. 
 
@@ -263,7 +265,7 @@ median_delta_results <- singler_results |>
 ```
 
 ```{r, fig.height=5}
-# plot the distribution of delta.next for each reference, faceting by label type (main, fine, ont)
+# plot the distribution of median_delta for each reference, faceting by label type (main, fine, ont)
 plot_metric_distribution(median_delta_results, "median_delta")
 ```
 
