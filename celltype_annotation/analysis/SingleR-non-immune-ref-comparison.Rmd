@@ -1,0 +1,438 @@
+---
+title: "SingleR cell type exploration - Comparing references with and without immune cells"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+params:
+  s3_data_dir: "s3://nextflow-ccdl-results/scpca/processed/results/SCPCP000007" 
+  local_data_dir: "../data"
+  sample_id: "SCPCS000222"
+  library_id: "SCPCL000296"
+---
+
+## Set Up
+
+```{r}
+suppressPackageStartupMessages({
+  library(SingleCellExperiment)
+  library(ggplot2)
+})
+theme_set(theme_bw())
+```
+
+```{r}
+# make local data directory if it doesn't exist
+if(!dir.exists(params$local_data_dir)){
+  dir.create(params$local_data_dir, recursive = TRUE)
+}
+
+# build path to annotated sce file 
+annotated_sce_file <- glue::glue("{params$library_id}_annotated.rds")
+local_annotated_sce_path <- file.path(params$local_data_dir, 
+                                      params$sample_id, 
+                                      annotated_sce_file)
+
+# if missing any of the annotated sce files, grab them from S3
+if(!(file.exists(local_annotated_sce_path))){
+  # sync annotated SCE files 
+  aws_includes <- glue::glue('--include "*/{annotated_sce_file}"')
+  
+  sync_call <- glue::glue('aws s3 sync {params$s3_data_dir} {params$local_data_dir} --exclude "*" {aws_includes}')
+  system(sync_call, ignore.stdout = TRUE) 
+}
+
+# read in all annotated sce 
+annotated_sce <- readr::read_rds(local_annotated_sce_path)
+```
+
+## Overall celltype assignments 
+
+The first thing we will look at is what cell types were assigned for each reference for a given library. 
+We will focus on the top 10 most represented cell types so we don't over crowd the plot.
+This can show us if there are any common assignments across references. 
+
+Here we are showing the **pruned labels**.
+Any cells that do not have labels or have been labeled with `NA` have been removed from the plot.
+
+```{r fig.height=8, fig.width=8}
+label_counts_df <- colData(annotated_sce) |>
+  as.data.frame() |>
+  tidyr::pivot_longer(cols = starts_with("label.main"),
+                      names_to = "reference",
+                      values_to = "celltype") |>
+  # do some string replacements to deal with a few similar assignments across references
+  dplyr::mutate(reference = stringr::str_replace(reference, "label.main_", ""),
+                celltype = stringr::str_replace(celltype, "Monocytes", "Monocyte"),
+                celltype = stringr::str_replace(celltype, "Endothelial_cells", "Endothelial cells"),
+                celltype_top = forcats::fct_lump_n(celltype, 10)) |>
+  dplyr::count(reference, celltype_top) |>
+  tidyr::drop_na()
+
+ggplot(label_counts_df, aes(x = reference, fill = celltype_top, y = n, label = n)) + 
+  geom_bar(position = "stack", stat = "identity") +
+  labs(
+    x = "Reference dataset",
+    y = "Number of cells", 
+    fill = "Cell type"
+  ) +
+  geom_text(size = 3, position = position_stack(vjust = 0.5)) +
+   guides(x = guide_axis(angle = 90))
+
+```
+
+One thing to consider when evaluating the cell type assignments is what options are available for annotations in the reference: 
+
+- The CMP and GMP cells labeled in the HPCA dataset are part of a larger progenitor class 
+- The Monaco reference only contains a Progenitor label and does not further classify stem cells or progenitors
+- The Immune Cell Expression reference only contains B cells, Monocytes, NK Cells, and T cell labels 
+
+So it's likely that not all of these references are appropriate for this dataset, which does appear to have mostly HSC and progenitor like cells.
+
+For the rest of this notebook, we will mostly focus on comparing cell type assignments to a complementary reference containing no relevant cells for our sample.
+We will look at the `BlueprintEncodeData` and the `HumanPrimaryCellAtlasData` with all cell types and with the removal of immune cells and compare scores, deltas, and cell type assignments.
+
+## Cell type heatmaps
+
+We will make a heatmap to look at all the cells in the dataset and the scores assigned for each cell type label and compare scores for cell types assigned with the full reference vs. the reference without immune cell types. 
+
+```{r}
+# function for creating single R heatmaps to look at the labels across references 
+compare_heatmaps <- function(all_cells_result,
+                             no_immune_result){
+  #plot for the all cells reference score
+  all_plot <- SingleR::plotScoreHeatmap(all_cells_result,
+                                        fontsize = 8,
+                                        main = "All cells",
+                                        silent = TRUE)
+  
+  # plot for the no immune cells reference score
+  no_immune_plot <- SingleR::plotScoreHeatmap(no_immune_result,
+                                              fontsize = 8, 
+                                              main = "No immune",
+                                              silent = TRUE)
+  
+  # combine into one plot before returning the object
+  combined_plot <- patchwork::wrap_plots(
+    list(all_plot$gtable, no_immune_plot$gtable), nrow = 2
+  )
+  
+  return(combined_plot)
+  
+}
+```
+
+
+```{r, fig.height=8}
+# first just grab the singleR objects so we can directly use those as input to the plotScoreHeatmap function
+singler_results <- metadata(annotated_sce)$singler_results
+
+# create heatmaps for the blueprint dataset
+blueprint_heatmaps <- compare_heatmaps(
+  all_cells_result = singler_results$label.main_BlueprintEncodeData,
+  no_immune_result = singler_results$`label.main_no_immune-BlueprintEncodeData`
+)
+
+blueprint_heatmaps
+```
+
+```{r, fig.height=8}
+# heatmaps for HPCA dataset
+hpca_heatmaps <- compare_heatmaps(
+  all_cells_result = singler_results$label.main_HumanPrimaryCellAtlasData,
+  no_immune_result = singler_results$`label.main_no_immune-HumanPrimaryCellAtlasData`
+)
+
+hpca_heatmaps
+```
+
+It looks like regardless of reference, SingleR will always try to assign a cell type and using these references, there appears to be a preference for one cell type over other cell types in the references without immune cells, resulting in what appears like high scores even if that cell type is incorrect. 
+
+## Delta Score
+
+Next we will look at the delta score which is calculated by determining the difference between the score for the assigned label (prior to fine tuning) and the next highest score. 
+The delta score is less likely to be affected by batch effects, such as library size, and is a more robust measurement to use to compare differences across cells and samples. 
+We would expect that references that perform better to have a higher distribution of delta scores than inappropriate references.
+
+```{r}
+# creates a plot showing the distribution of the desired metric with reference on the x-axis
+# color by whether or not labels are pruned or not
+# facet by label type (main, fine, or ont)
+# we will use this function for looking at delta, median delta, and score distributions
+plot_metric_distribution <- function(all_results,
+                                    metric_type){
+  
+  metric_plot <- ggplot(all_results, aes_string(x = "reference", y = metric_type, group = "reference", color = "pruned")) +
+    ggforce::geom_sina(size = 0.1, alpha = 0.2) +
+    stat_summary(
+      aes(group = reference),
+      color = "black",
+      # median and quartiles for point range
+      fun = "median",
+      fun.min = function(x) {
+        quantile(x, 0.25)
+      },
+      fun.max = function(x) {
+        quantile(x, 0.75)
+      },
+      geom = "pointrange",
+      position = position_dodge(width = 0.9),
+      size = 0.1
+    ) +
+    facet_wrap(vars(label_type))+
+    guides(x = guide_axis(angle = 90),
+           colour = guide_legend(override.aes = list(size = 2, alpha = 1)))
+  
+  return(metric_plot)
+  
+}
+```
+
+
+```{r}
+# create a large dataframe with all singleR results from all reference annotations
+all_results <- singler_results |> 
+  purrr::map(as.data.frame) |>
+  dplyr::bind_rows(.id = "reference") |>
+  tidyr::separate(reference, into = c("label_type", "reference"), sep = "_", extra = "merge") |>
+  # classify each label as pruned or not
+  dplyr::mutate(pruned = ifelse(is.na(pruned.labels), "Yes", "No"))
+```
+
+```{r fig.height=5}
+# plot the distribution of delta.next for each reference, faceting by label type (main, fine, ont)
+plot_metric_distribution(all_results, "delta.next")
+```
+
+```{r fig.height=5}
+# make the same plot but color by celltypes, looking only at main labels
+main_label_results <- all_results |>
+  dplyr::filter(label_type == "label.main") |> 
+  dplyr::mutate(top_pruned_labels = forcats::fct_lump_n(pruned.labels, 10))
+
+ggplot(main_label_results, aes(x = reference, y = delta.next, group = reference, color = top_pruned_labels)) +
+  ggforce::geom_sina(size = 0.1, alpha = 0.5) +
+  stat_summary(
+    aes(group = reference),
+    color = "black",
+    # median and quartiles for point range
+    fun = "median",
+    fun.min = function(x) {
+      quantile(x, 0.25)
+    },
+    fun.max = function(x) {
+      quantile(x, 0.75)
+    },
+    geom = "pointrange",
+    position = position_dodge(width = 0.9),
+    size = 0.1
+  ) +
+  guides(x = guide_axis(angle = 90),
+         colour = guide_legend(override.aes = list(size = 3, alpha = 1)))
+```
+In addition to the delta next, which only looks at the difference between the scores of the top two labels, below we will measure the difference between the top score and the median scores. 
+Then we will plot the distribution of this delta as well. 
+
+```{r}
+# function to calculate the median delta for each singleR result
+get_median_delta <- function(singler_result){
+  
+  # grab all the scores
+  scores <- singler_result$scores |>
+    as.matrix()
+  
+  # calculate the median delta (max score - median of all scores) 
+  median_delta <- rowMaxs(scores) - rowMedians(scores)
+  
+  # add median into the singler result and return as data frame
+  median_delta_result <- singler_result |>
+    as.data.frame() |>
+    dplyr::select(labels, delta.next, pruned.labels) |>
+    dplyr::mutate(median_delta = median_delta)
+  
+  return(median_delta_result)
+}
+```
+
+```{r}
+# get the median delta for each singler object and prep combined data frame for plotting distribution
+median_delta_results <- singler_results |> 
+  purrr::map(get_median_delta) |>
+  dplyr::bind_rows(.id = "reference") |>
+  tidyr::separate(reference, into = c("label_type", "reference"), sep = "_", extra = "merge") |>
+  # classify each label as pruned or not
+  dplyr::mutate(pruned = ifelse(is.na(pruned.labels), "Yes", "No"))
+```
+
+```{r, fig.height=5}
+# plot the distribution of median_delta for each reference, faceting by label type (main, fine, ont)
+plot_metric_distribution(median_delta_results, "median_delta")
+```
+
+The delta median appears to show more noticeable differences between the references containing cells we would expect in our dataset vs. references that are inappropriate. 
+
+## SingleR Score
+
+We can also make a plot to show the distribution of scores across all cells.
+There is some language in the SingleR book that suggests against comparing scores obtained from different references, so if we did want to go this route, we might consider trying to use the method suggested by [SingleR to combine scores](http://bioconductor.org/books/release/SingleRBook/using-multiple-references.html#combining-inferences-from-individual-references).
+
+```{r, fig.height=5}
+# grab just the scores from the results data frame and rotate for plotting
+scores_results <- all_results |>
+  tidyr::pivot_longer(cols = starts_with("scores"),
+                      names_to = "celltype_score_column",
+                      values_to = "score")
+
+plot_metric_distribution(scores_results, "score")
+```
+
+## Clustering comparison 
+
+Here we will evaluate the agreement between cluster assignments and cell type assignments.
+Although we don't necessarily expect perfect agreement, we do anticipate that any changes in cell type assignment would contribute to the variation present in the dataset.
+We should see some level of correlation between clustering and cell type assignment if the reference used is an appropriate reference. 
+To measure this, we will calculate the adjusted rand index (ARI) between cluster assignments and predicted labels, where 0 indicates no agreement and 1 indicates perfect agreement.
+
+```{r}
+# pull out PCS
+pcs <- reducedDim(annotated_sce, "PCA")
+
+# cluster sce with graph based params and add as column 
+annotated_sce$cluster_assignments <- pcs |> bluster::clusterRows(
+      bluster::NNGraphParam(cluster.fun = "louvain", type = "jaccard")
+    )
+```
+
+```{r}
+# pull out the singleR annotations from the colData
+singler_labels_only <- colData(annotated_sce) |>
+  as.data.frame() |>
+  dplyr::select(starts_with(c("label")))
+
+# for each annotation calculate the ARI between clusters and annotations
+cluster_label_ari <- purrr::map_dbl(singler_labels_only, 
+                                    \(pruned_labels) 
+                                    bluster::pairwiseRand(annotated_sce$cluster_assignments,
+                                                          pruned_labels,
+                                                          mode = "index")) 
+
+# create a data frame of ari, reference names, and label types for plotting
+ari_df <- data.frame(
+  ari = cluster_label_ari,
+  reference = names(cluster_label_ari)
+) |>
+  tidyr::separate(reference, into = c("label_type", "reference"), sep = "_", extra = "merge")
+  
+```
+
+```{r, fig.height=5, fig.width=5}
+# make a simple plot to show the ari for each reference
+ggplot(ari_df, aes(x = reference, y = ari, color = label_type)) +
+  geom_point() +
+   guides(x = guide_axis(angle = 90))
+```
+We can also visualize the agreement of cluster assignments to celltype annotation by plotting UMAPs that are colored by cluster assignment and by annotations.
+
+```{r, fig.height = 10, fig.width=10}
+# for simplicity, we will just look at Blueprint, HPCA has a lot of labels so colors get crazy 
+references <- c("BlueprintEncodeData",
+                "no_immune.BlueprintEncodeData")
+
+# construct a vector of all the label type/ref name combinations
+label_types <- unique(all_results$label_type)
+full_reference_names <- references |>
+  purrr::map(\(ref) glue::glue("{label_types}_{ref}")) |>
+  unlist()
+
+# combine with cluster assignments into one vector of names to annotate UMAPs by 
+all_plot_labels <- c("cluster_assignments", full_reference_names)
+
+# list of UMAPs colored by clusters and all references 
+umaps <- all_plot_labels |> 
+  purrr::map(\(label) scater::plotReducedDim(annotated_sce,
+                                             dimred = "UMAP",
+                                             colour_by = label,
+                                             point_size = 0.5,
+                                             point_alpha = 0.4))
+patchwork::wrap_plots(umaps, ncol = 2)
+
+```
+
+## Comparison across references 
+
+Here we will compare annotations across references.
+We expect that some references will have slightly different annotations, so by looking at all the annotations together we can see how each reference categorizes cells and if they share any similar annotations.
+First we will look at all the references together and all possible cell types. 
+
+```{r, fig.width=8}
+# grab all the pruned.labels that are created with a label.main ref
+pruned_label_main_df <- all_results |>
+  dplyr::filter(label_type == "label.main") |>
+  dplyr::select(reference, pruned.labels) |>
+  # collapse similar cell types and some sub types 
+  dplyr::mutate(collapsed_labels = forcats::fct_collapse(pruned.labels,
+                                      "Monocyte" = c("Monocyte",
+                                                     "Monocytes"),
+                                      "B-cells" = c("B cells", 
+                                                    "Pre-B_cell_CD34-",
+                                                    "Pro-B_cell_CD34+"),
+                                      "T-cells" = c("T_cells",
+                                                    "CD8+ T-cells",
+                                                    "CD4+ T-cells",
+                                                    "CD8+ T cells",
+                                                    "CD4+ T cells",
+                                                    "T cells",
+                                                    "T cells, CD4+",
+                                                    "T cells, CD8+"),
+                                      "Endothelial cells" = c("Endothelial_cells",
+                                                              "Endothelial cells"),
+                                      "NK cells" = c("NK_cell",
+                                                     "NK cells"),
+                                      "HSC" = c("HSC",
+                                                "HSC_CD34+"),
+                                      "Epithelial cells" = c("Epithelial cells",
+                                                             "Epithelial_cells"),
+                                      "Myelocyte" = c("Myelocyte",
+                                                      "Pro-Myelocyte"),
+                                      "Smooth muscle" = c("Smooth muscle",
+                                                          "Smooth_muscle_cells")))
+
+# build a matrix with reference as the rows and the celltype as the columns
+label_mtx <- table(pruned_label_main_df$reference,
+                   pruned_label_main_df$collapsed_labels,
+                   useNA = "ifany") |> 
+  log1p() # log transform for visual help
+
+pheatmap::pheatmap(label_mtx,
+                   cluster_rows = FALSE, 
+                   width = 10,
+                   fontsize_col = 8)
+```
+Now we will explicitly compare our two references that we have been looking at to see how they annotated each of the cells.
+
+```{r}
+# table of blueprint labels vs. hpca labels
+blueprint_hpca_comparision <- table(annotated_sce$label.main_BlueprintEncodeData,
+                                   annotated_sce$label.main_HumanPrimaryCellAtlasData,
+                                   useNA = "ifany") |>
+  log1p()
+
+pheatmap::pheatmap(blueprint_hpca_comparision)
+```
+
+```{r}
+# do the same thing but looking at blueprint vs. blueprint without immune cells
+no_immune_comparision <- table(annotated_sce$label.main_BlueprintEncodeData,
+                               annotated_sce$label.main_no_immune.BlueprintEncodeData,
+                               useNA = "ifany") |>
+  log1p()
+
+pheatmap::pheatmap(no_immune_comparision)
+```
+
+
+```{r}
+sessionInfo()
+```
+
+
