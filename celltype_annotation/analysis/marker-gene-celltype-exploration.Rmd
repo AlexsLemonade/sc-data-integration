@@ -147,8 +147,7 @@ run_sctype <- function(annotated_sce,
     dplyr::left_join(cluster_celltypes) |>
     # get the score associated with the label assigned to that cell
     dplyr::left_join(score_mtx) |>
-    # assign NAs for scores in the bottom 25% of all scores
-    dplyr::mutate(celltype = ifelse(score < max(score)/n, 'NA', celltype))
+dplyr::mutate(celltype = ifelse(score < n/4, 'NA', celltype))
   
   return(celltype_assignments)
   
@@ -212,7 +211,7 @@ fl_ref <- fl_ref |>
   dplyr::rename("gene_symbol" = "Gene") |>
   dplyr::left_join(rowdata_df) |>
   dplyr::select(-gene_symbol) |>
-  dplyr::relocate(ensembl_id, .before = 1)
+  dplyr::relocate(ensembl_id)
 
 # create a no b cells ref 
 fl_nobcells_ref <- fl_ref |>
