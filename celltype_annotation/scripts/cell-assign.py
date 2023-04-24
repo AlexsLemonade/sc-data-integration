@@ -14,6 +14,9 @@ from scvi.external import CellAssign
 import pandas as pd
 import numpy as np
 
+# set seed
+scvi.settings.seed = 2023
+
 # read in public references as marker gene tables
 fl_file = os.path.join("..", "references", "FL_celltype_ensembl.csv")
 fl_mtx = pd.read_csv(fl_file, index_col=0)
@@ -40,6 +43,7 @@ def get_predictions(anndata_object, marker_genes_mtx):
     model = CellAssign(anndata_object, marker_genes_mtx)
     model.train()
     predictions = model.predict()
+    predictions['barcode'] = anndata_object.obs_names
     return(predictions)
 
 # model cell types with all cells
@@ -51,15 +55,6 @@ all_cells_predictions = get_predictions(anndata_object = subset_adata,
 no_bcells_predictions = get_predictions(anndata_object = subset_adata,
                                         marker_genes_mtx = fl_noBcells_mtx)
 
-# add predictions to annotated adata
-annotated_adata.obs["fl_all_prediction"] = all_cells_predictions.idxmax(axis=1).values
-annotated_adata.obs["fl_noBcells_prediction"] = no_bcells_predictions.idxmax(axis=1).values
-
-# write out modified adata
-output_anndata = os.path.join(anndata_dir, "SCPCL000295_cellassign.hdf5")
-annotated_adata.write(filename = output_anndata)
-
 # write out predictions as tsv
 all_cells_predictions.to_csv(os.path.join(anndata_dir, "all_cells_predictions.tsv"), sep = "\t", index = False)
 no_bcells_predictions.to_csv(os.path.join(anndata_dir, "no_bcells_predictions.tsv"), sep = "\t", index = False)
-
