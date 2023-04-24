@@ -279,16 +279,11 @@ readr::write_csv(fl_nobcells_ref, file.path("..", "references", "FL_celltype_ens
 conda activate scvi
 
 # create cell type assignments
-python ../scripts/cell_assign.py
+python ../scripts/cell-assign.py
 ```
 
 After running `cell_assign.py` in the `scvi` conda environment, load in the outputs here.
 
-
-```{r}
-# read in new annotated sce file 
-cellassign_annotated_sce <- zellkonverter::readH5AD(file.path(anndata_dir, "SCPCL000295_cellassign.hdf5"))
-```
 
 ```{r}
 # read in prediction scores 
@@ -328,15 +323,19 @@ We can also look at the actual predictions, similar to how we look at the scores
 
 ```{r}
 # all cells
-pheatmap::pheatmap(all_cells_preds,
-                   show_rownames = FALSE)
+all_cells_preds |>
+  dplyr::select(-barcode) |> 
+  as.matrix() |> 
+  pheatmap::pheatmap(show_rownames = FALSE)
 ```
 
 
 ```{r}
 # no B cells
-pheatmap::pheatmap(no_bcells_preds,
-                   show_rownames = FALSE)
+no_bcells_preds |> 
+  dplyr::select(-barcode) |> 
+  as.matrix() |> 
+  pheatmap::pheatmap(show_rownames = FALSE)
 ```
 
 ```{r}

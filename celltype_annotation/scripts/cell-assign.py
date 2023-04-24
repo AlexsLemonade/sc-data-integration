@@ -14,9 +14,6 @@ from scvi.external import CellAssign
 import pandas as pd
 import numpy as np
 
-# set seed
-scvi.settings.seed = 2023
-
 # read in public references as marker gene tables
 fl_file = os.path.join("..", "references", "FL_celltype_ensembl.csv")
 fl_mtx = pd.read_csv(fl_file, index_col=0)
