@@ -84,8 +84,8 @@ I followed the guidelines in the [README of the Github page](https://github.com/
 
 ```{r}
 # function for running sctype and creating a results table
-run_sctype <- function(annotated_sce,
-                       model){
+sctype_scores <- function(annotated_sce,
+                          model){
   
   # grab the unique celltypes
   celltypes <- model$labels$unique
@@ -104,9 +104,35 @@ run_sctype <- function(annotated_sce,
   celltype_mtx <- sctype_score(scRNAseqData = as.matrix(logcounts(annotated_sce)),
                                scaled = TRUE,
                                gs = all_markers,
-                               gs2 = NULL
-                               
-  )
+                               gs2 = NULL)
+  
+  return(celltype_mtx)
+}
+```
+
+
+```{r}
+sctype_per_cell <- function(celltype_mtx){
+  
+  per_cell_assignment <- celltype_mtx |>
+    t() |>
+    as.data.frame() |>
+    tibble::rownames_to_column("barcode") |>
+    tidyr::pivot_longer(cols = !"barcode",
+                        names_to = "celltype",
+                        values_to = "score") |>
+    dplyr::group_by(barcode) |>
+    dplyr::top_n(n = 1, wt = score) |>
+    dplyr::mutate(celltype = ifelse(score < 0.25, 'NA', celltype))
+  
+  return(per_cell_assignment)
+}
+```
+
+
+```{r}
+sctype_per_cluster <- function(annotated_sce,
+                               celltype_mtx){
   
   # assign clusters for the sce object 
   pcs <- reducedDim(annotated_sce, "PCA")
@@ -141,40 +167,65 @@ run_sctype <- function(annotated_sce,
     dplyr::group_by(clusters) |>
     dplyr::add_count() |>
     dplyr::top_n(n = 1, wt = sum_score)
-
+  
   # map everything back to each cell so that each cell receives a label
-  celltype_assignments <- coldata_df |>
+  per_cluster_assignments <- coldata_df |>
     dplyr::left_join(cluster_celltypes) |>
     # get the score associated with the label assigned to that cell
     dplyr::left_join(score_mtx) |>
-dplyr::mutate(celltype = ifelse(score < n/4, 'NA', celltype))
+    dplyr::mutate(celltype = ifelse(score < n/4, 'NA', celltype))
   
-  return(celltype_assignments)
+  return(per_cluster_assignments)
   
 }
 ```
 
-
 ```{r}
 # run sctype for both references 
 sctype_results <- purrr::map(model_list, 
-                             \(model) run_sctype(model = model$label.main, annotated_sce = annotated_sce))
-```
+                             \(model) sctype_scores(model = model$label.main, 
+                                                    annotated_sce = annotated_sce))
 
+# label based on per cell max score
+per_cell_results <- purrr::map(sctype_results, sctype_per_cell)
+
+# label based on max cluster score
+per_cluster_results <- purrr::map(sctype_results, 
+                                  \(result) sctype_per_cluster(annotated_sce = annotated_sce, 
+                                                               celltype_mtx = result))
+```
 
 ```{r}
-# print out the table of celltype results for blueprint with all cells
-table(sctype_results[[1]]$celltype,
-      useNA = "ifany")
+sctype_results |>
+  purrr::iwalk(\(scores, title){
+    pheatmap::pheatmap(scores, 
+                       show_colnames = FALSE, 
+                       main = title)
+  })
 ```
 
 ```{r}
-# blueprint with no immune cells
-table(sctype_results[[2]]$celltype,
-      useNA = "ifany")
+# print out the table of celltype results on a per cell level
+per_cell_results |>
+  purrr::map(\(result){
+    table(result$celltype,
+          useNA = "ifany")
+  })
 ```
 
-Both tables total up to 5452 and none of them return `NA` assignments. 
+```{r}
+# print out the table of celltype results on a per cluster level
+per_cluster_results |>
+  purrr::map(\(result){
+    table(result$celltype,
+          useNA = "ifany")
+  })
+```
+
+Looks like we do actually see some more `NA` when we assign by cluster over assigning on a per cell level? 
+However, it still doesn't completely fail... 
+Looking at the heatmap we also see closer scores between the Adipocytes and Fibroblasts in the no immune reference vs. the HSC scores for all cells. 
+I would think if we applied a similar delta metric looking at the scores between the highest score and the median we might see a difference between these two references along with the higher percentage of `NA` assignments.
 
 ## Cell assign 
 
@@ -222,7 +273,17 @@ readr::write_csv(fl_ref, file.path("..", "references", "FL_celltype_ensembl.csv"
 readr::write_csv(fl_nobcells_ref, file.path("..", "references", "FL_celltype_ensembl-noBcells.csv"))
 ```
 
+
+```sh
+# activate scvi environment
+conda activate scvi
+
+# create cell type assignments
+python ../scripts/cell_assign.py
+```
+
 After running `cell_assign.py` in the `scvi` conda environment, load in the outputs here.
+
 
 ```{r}
 # read in new annotated sce file 
@@ -234,15 +295,32 @@ cellassign_annotated_sce <- zellkonverter::readH5AD(file.path(anndata_dir, "SCPC
 all_cells_preds <- readr::read_tsv(file.path(anndata_dir, "all_cells_predictions.tsv"))
 no_bcells_preds <- readr::read_tsv(file.path(anndata_dir, "no_bcells_predictions.tsv"))
 ```
+
+```{r}
+print_celltype_table <- function(celltype_predictions){
+  
+ celltype_predictions |>
+  tidyr::pivot_longer(!barcode,
+                      names_to = "celltype",
+                      values_to = "prediction") |>
+  dplyr::group_by(barcode) |>
+  dplyr::top_n(n = 1, wt = prediction) |>
+  dplyr::ungroup() |>
+  dplyr::count(celltype)
+  
+}
+```
+
+
 ```{r}
 # summary of assignment with B cells
-table(cellassign_annotated_sce$fl_all_prediction)
+print_celltype_table(all_cells_preds)
 ```
 
 
 ```{r}
 # summary of assignment with no B cells 
-table(cellassign_annotated_sce$fl_noBcells_prediction)
+print_celltype_table(no_bcells_preds)
 ```
 
 `cellassign` actually will assign cells to `other` which is a column in the marker gene matrix representing cells that contain none of the marker genes. 
