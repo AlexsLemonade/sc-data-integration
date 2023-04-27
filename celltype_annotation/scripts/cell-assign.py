@@ -30,7 +30,7 @@ annotated_adata = adata.read_h5ad(annotated_adata_file)
 subset_adata = annotated_adata[:, fl_mtx.index].copy()
 subset_adata.X = subset_adata.X.tocsr()
 
-# renormalize/ calcualate size factor on subset adata
+# add size factor to subset adata (calculated from full data)
 lib_size = annotated_adata.X.sum(1)
 subset_adata.obs["size_factor"] = lib_size / np.mean(lib_size)
 
