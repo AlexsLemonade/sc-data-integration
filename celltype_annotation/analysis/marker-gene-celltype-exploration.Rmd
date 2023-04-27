@@ -1,0 +1,344 @@
+---
+title: "Marker gene based cell type assignment: scType"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+---
+
+## Set Up
+
+```{r}
+suppressPackageStartupMessages({
+  library(SingleCellExperiment)
+  library(ggplot2)
+})
+theme_set(theme_bw())
+```
+
+Here load in the libraries and source in the functions that we need to run `scType`.
+
+```{r}
+# scType dependencies:
+# need to have openxlsx and HGNChelper installed
+# also need HGNChelper loaded
+library(HGNChelper)
+
+# load gene set preparation function
+source("https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/R/gene_sets_prepare.R")
+# load cell type annotation function
+source("https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/R/sctype_score_.R")
+# database 
+database_file <- "https://raw.githubusercontent.com/IanevskiAleksandr/sc-type/master/ScTypeDB_full.xlsx"
+```
+
+```{r}
+# build path to annotated sce file 
+annotated_sce_file <- glue::glue("SCPCL000295_annotated.rds")
+local_annotated_sce_path <- file.path("..", "data", "SCPCS000221", annotated_sce_file) 
+
+# read in all annotated sce 
+annotated_sce <- readr::read_rds(local_annotated_sce_path)
+```
+
+`scType` requires a list of marker genes for each cell type in the reference. 
+We can use their database that they have available, but it's an excel file that only contains gene symbols. 
+They have a function that opens that excel file and grabs the gene sets of interest and then returns a list of a list of marker genes. 
+I think if we want to explore `scType` further we could think about using their reference and converting to ensembl IDs and doing some more data wrangling to get it to work with our SCE objects. 
+But for the sake of not spending too much time on this right now, I decided to read in our references that we trained with `SingleR` and grab the lists of marker genes from those references. 
+
+```{r}
+# grab models from S3 and read in
+# we need the models to get a list of marker genes for each of the cell types
+s3_model_dir <- "s3://scpca-references/celltype/singler_models"
+local_model_dir <- file.path("..", "singler_models")
+
+model_filenames <- c(
+  "BlueprintEncodeData_model.rds",
+  "no_immune-BlueprintEncodeData_model.rds"
+)
+
+local_model_files <- file.path(local_model_dir, model_filenames)
+
+# if missing any of the model files, grab them from S3
+if(!(all(file.exists(local_model_files)))){
+  # sync models 
+  aws_includes <- glue::glue('--include "{model_filenames}"')
+  
+  sync_call <- glue::glue('aws s3 sync {s3_model_dir} {local_model_dir}  --exclude "*" {aws_includes}')
+  purrr::walk(sync_call, \(call) system(call, ignore.stdout = TRUE))
+}
+
+# read in all refs 
+model_list <- purrr::map(local_model_files, readr::read_rds) |>
+  purrr::set_names(model_filenames)
+```
+
+## ScType
+
+`scType` will assign a score for each barcode for each type present in the provided celltypes. 
+Then to assign cell type labels, the scores for all cells in a cluster are summed together and the label with the top score is chosen. 
+This means that one label is assigned to all scores in a cluster. 
+To assign `NA` cells, it appears that they take any cells with a score that's in the lower 25% of the scores, but that part is more unclear. 
+I followed the guidelines in the [README of the Github page](https://github.com/IanevskiAleksandr/sc-type) and created the function below to annotate celltypes provided a reference model.
+
+```{r}
+# function for running sctype and creating a results table
+sctype_scores <- function(annotated_sce,
+                          model){
+  
+  # grab the unique celltypes
+  celltypes <- model$labels$unique
+  
+  # get a list of all markers for each celltype
+  all_markers <- purrr::map(celltypes, 
+                            \(label){
+                              
+                              # grab the markers for each celltype
+                              markers <- unique(unlist(model$markers$full[[label]]))
+                              
+                            }) |>
+    purrr::set_names(celltypes)
+  
+  # get the assigned score for each cell for each celltype
+  celltype_mtx <- sctype_score(scRNAseqData = as.matrix(logcounts(annotated_sce)),
+                               scaled = TRUE,
+                               gs = all_markers,
+                               gs2 = NULL)
+  
+  return(celltype_mtx)
+}
+```
+
+
+```{r}
+sctype_per_cell <- function(celltype_mtx){
+  
+  per_cell_assignment <- celltype_mtx |>
+    t() |>
+    as.data.frame() |>
+    tibble::rownames_to_column("barcode") |>
+    tidyr::pivot_longer(cols = !"barcode",
+                        names_to = "celltype",
+                        values_to = "score") |>
+    dplyr::group_by(barcode) |>
+    dplyr::top_n(n = 1, wt = score) |>
+    dplyr::mutate(celltype = ifelse(score < 0.25, 'NA', celltype))
+  
+  return(per_cell_assignment)
+}
+```
+
+
+```{r}
+sctype_per_cluster <- function(annotated_sce,
+                               celltype_mtx){
+  
+  # assign clusters for the sce object 
+  pcs <- reducedDim(annotated_sce, "PCA")
+  annotated_sce$clusters <- bluster::clusterRows(pcs,
+                                                 bluster::NNGraphParam(cluster.fun = "louvain",
+                                                                      type = "jaccard"))
+  
+  # extract the barcode and clusters information from coldata 
+  coldata_df <- as.data.frame(colData(annotated_sce)) |>
+    tibble::rownames_to_column("barcode") |>
+    dplyr::select(barcode, clusters)
+  
+  # make a matrix of all the scores for all barcodes, clusters, and label combinations
+  score_mtx <- celltype_mtx |>
+    t() |>
+    as.data.frame() |>
+    tibble::rownames_to_column("barcode") |>
+    dplyr::left_join(coldata_df) |>
+    tidyr::pivot_longer(cols = !c("barcode", "clusters"),
+                        names_to = "celltype",
+                        values_to = "score")
+  
+  # summarize the scores by clusters and celltype so that all scores are summed across all barcodes
+  # for each label in a cluster
+  summarized_scores_mtx <- score_mtx |>
+    dplyr::group_by(clusters, celltype) |>
+    dplyr::summarise(sum_score = sum(score))
+  
+  # assign labels for each cluster, final number of rows should be equal to the number of clusters
+  # obtain one celltype label per cluster
+  cluster_celltypes <- summarized_scores_mtx |>
+    dplyr::group_by(clusters) |>
+    dplyr::add_count() |>
+    dplyr::top_n(n = 1, wt = sum_score)
+  
+  # map everything back to each cell so that each cell receives a label
+  per_cluster_assignments <- coldata_df |>
+    dplyr::left_join(cluster_celltypes) |>
+    # get the score associated with the label assigned to that cell
+    dplyr::left_join(score_mtx) |>
+    dplyr::mutate(celltype = ifelse(score < n/4, 'NA', celltype))
+  
+  return(per_cluster_assignments)
+  
+}
+```
+
+```{r}
+# run sctype for both references 
+sctype_results <- purrr::map(model_list, 
+                             \(model) sctype_scores(model = model$label.main, 
+                                                    annotated_sce = annotated_sce))
+
+# label based on per cell max score
+per_cell_results <- purrr::map(sctype_results, sctype_per_cell)
+
+# label based on max cluster score
+per_cluster_results <- purrr::map(sctype_results, 
+                                  \(result) sctype_per_cluster(annotated_sce = annotated_sce, 
+                                                               celltype_mtx = result))
+```
+
+```{r}
+sctype_results |>
+  purrr::iwalk(\(scores, title){
+    pheatmap::pheatmap(scores, 
+                       show_colnames = FALSE, 
+                       main = title)
+  })
+```
+
+```{r}
+# print out the table of celltype results on a per cell level
+per_cell_results |>
+  purrr::map(\(result){
+    table(result$celltype,
+          useNA = "ifany")
+  })
+```
+
+```{r}
+# print out the table of celltype results on a per cluster level
+per_cluster_results |>
+  purrr::map(\(result){
+    table(result$celltype,
+          useNA = "ifany")
+  })
+```
+
+Looks like we do actually see some more `NA` when we assign by cluster over assigning on a per cell level? 
+However, it still doesn't completely fail... 
+Looking at the heatmap we also see closer scores between the Adipocytes and Fibroblasts in the no immune reference vs. the HSC scores for all cells. 
+I would think if we applied a similar delta metric looking at the scores between the highest score and the median we might see a difference between these two references along with the higher percentage of `NA` assignments.
+
+## Cell assign 
+
+`cellassign` for R requires tensor flow which has had multiple issues with installation. 
+Rather than use that, let's convert to an anndata object and then use the cellassign from scvi-tools.
+Followed the tutorial available for [`cellassign`](https://docs.scvi-tools.org/en/stable/tutorials/notebooks/cellassign_tutorial.html).
+
+```{r}
+# write out anndata 
+anndata_dir <- file.path("..", "data", "anndata")
+fs::dir_create(anndata_dir)
+
+anndata_file <- file.path(anndata_dir, "SCPCL000295_anndata.hdf5")
+scpcaTools::sce_to_anndata(annotated_sce, anndata_file = anndata_file)
+```
+
+For `cellassign` we need a matrix with marker genes as rows and cell types as columns.
+For now, I'm using the follicular lymphoma reference dataset they used in the tutorial to show how well the method works. 
+The marker gene matrix has gene symbols rather than Ensembl id's so I'm going to convert them to Ensembl Id's before reading them into the python script. 
+
+```{r}
+# read in reference marker gene tables to use with cellassign 
+fl_ref_file <- file.path("..", "references", "FL_celltype.csv")
+fl_ref <- readr::read_csv(fl_ref_file)
+
+# convert rownames to ensembl ids
+rowdata_df <- rowData(annotated_sce) |>
+  as.data.frame() |>
+  tibble::rownames_to_column("ensembl_id") |>
+  dplyr::select(ensembl_id, gene_symbol)
+
+# merge reference with rowdata and replace gene symbols with ensembl
+fl_ref <- fl_ref |>
+  dplyr::rename("gene_symbol" = "Gene") |>
+  dplyr::left_join(rowdata_df) |>
+  dplyr::select(-gene_symbol) |>
+  dplyr::relocate(ensembl_id)
+
+# create a no b cells ref 
+fl_nobcells_ref <- fl_ref |>
+  dplyr::select(-c("B cells"))
+
+# write out updated ref
+readr::write_csv(fl_ref, file.path("..", "references", "FL_celltype_ensembl.csv"))
+readr::write_csv(fl_nobcells_ref, file.path("..", "references", "FL_celltype_ensembl-noBcells.csv"))
+```
+
+
+```sh
+# activate scvi environment
+conda activate scvi
+
+# create cell type assignments
+python ../scripts/cell-assign.py
+```
+
+After running `cell_assign.py` in the `scvi` conda environment, load in the outputs here.
+
+
+```{r}
+# read in prediction scores 
+all_cells_preds <- readr::read_tsv(file.path(anndata_dir, "all_cells_predictions.tsv"))
+no_bcells_preds <- readr::read_tsv(file.path(anndata_dir, "no_bcells_predictions.tsv"))
+```
+
+```{r}
+print_celltype_table <- function(celltype_predictions){
+  
+ celltype_predictions |>
+  tidyr::pivot_longer(!barcode,
+                      names_to = "celltype",
+                      values_to = "prediction") |>
+  dplyr::group_by(barcode) |>
+  dplyr::top_n(n = 1, wt = prediction) |>
+  dplyr::ungroup() |>
+  dplyr::count(celltype)
+  
+}
+```
+
+
+```{r}
+# summary of assignment with B cells
+print_celltype_table(all_cells_preds)
+```
+
+
+```{r}
+# summary of assignment with no B cells 
+print_celltype_table(no_bcells_preds)
+```
+
+`cellassign` actually will assign cells to `other` which is a column in the marker gene matrix representing cells that contain none of the marker genes. 
+We can also look at the actual predictions, similar to how we look at the scores in `SingleR`. 
+
+```{r}
+# all cells
+all_cells_preds |>
+  dplyr::select(-barcode) |> 
+  as.matrix() |> 
+  pheatmap::pheatmap(show_rownames = FALSE)
+```
+
+
+```{r}
+# no B cells
+no_bcells_preds |> 
+  dplyr::select(-barcode) |> 
+  as.matrix() |> 
+  pheatmap::pheatmap(show_rownames = FALSE)
+```
+
+```{r}
+sessionInfo()
+```
+
