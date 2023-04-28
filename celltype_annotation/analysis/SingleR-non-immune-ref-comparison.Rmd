@@ -11,6 +11,8 @@ params:
   library_id: "SCPCL000296"
 ---
 
+Results for `r params$library_id`.
+
 ## Set Up
 
 ```{r}
@@ -55,31 +57,42 @@ This can show us if there are any common assignments across references.
 Here we are showing the **pruned labels**.
 Any cells that do not have labels or have been labeled with `NA` have been removed from the plot.
 
-```{r fig.height=8, fig.width=8}
-label_counts_df <- colData(annotated_sce) |>
-  as.data.frame() |>
-  tidyr::pivot_longer(cols = starts_with("label.main"),
-                      names_to = "reference",
-                      values_to = "celltype") |>
-  # do some string replacements to deal with a few similar assignments across references
-  dplyr::mutate(reference = stringr::str_replace(reference, "label.main_", ""),
-                celltype = stringr::str_replace(celltype, "Monocytes", "Monocyte"),
-                celltype = stringr::str_replace(celltype, "Endothelial_cells", "Endothelial cells"),
-                celltype_top = forcats::fct_lump_n(celltype, 10)) |>
-  dplyr::count(reference, celltype_top) |>
-  tidyr::drop_na()
+```{r}
+plot_annotations <- function(label_type,
+                             annotated_sce = annotated_sce){
+  label_counts_df <- colData(annotated_sce) |>
+    as.data.frame() |>
+    tidyr::pivot_longer(cols = starts_with(label_type),
+                        names_to = "reference",
+                        values_to = "celltype") |>
+    # do some string replacements to deal with a few similar assignments across references
+    dplyr::mutate(reference = stringr::str_replace(reference, paste0(label_type, "_"), ""),
+                  celltype = stringr::str_replace(celltype, "Monocytes", "Monocyte"),
+                  celltype = stringr::str_replace(celltype, "Endothelial_cells", "Endothelial cells"),
+                  celltype_top = forcats::fct_lump_n(celltype, 10)) |>
+    dplyr::count(reference, celltype_top) |>
+    tidyr::drop_na()
 
 ggplot(label_counts_df, aes(x = reference, fill = celltype_top, y = n, label = n)) + 
   geom_bar(position = "stack", stat = "identity") +
   labs(
     x = "Reference dataset",
     y = "Number of cells", 
-    fill = "Cell type"
+    fill = "Cell type",
+    title = label_type
   ) +
   geom_text(size = 3, position = position_stack(vjust = 0.5)) +
    guides(x = guide_axis(angle = 90))
-
+}
 ```
+
+```{r fig.height=8, fig.width=8}
+labels <- c("label.main", "label.fine", "label.ont")
+purrr::map(labels, 
+           \(label_type) plot_annotations(label_type,
+                                          annotated_sce))
+```
+
 
 One thing to consider when evaluating the cell type assignments is what options are available for annotations in the reference: 
 
