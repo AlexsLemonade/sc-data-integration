@@ -91,7 +91,7 @@ if(!(opt$scpca_project_id %in% library_metadata$project_name)){
 
 # Render reports ---------------------------------------------------------------
 
-# filter to provided project ID and make sure column names match 
+# filter to provided project ID and make sure column names match function arguments
 library_metadata |>
   dplyr::filter(project_name == opt$scpca_project_id) |>
   dplyr::select("project_id" = project_name, 
