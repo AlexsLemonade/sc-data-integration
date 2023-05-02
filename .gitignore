@@ -32,6 +32,7 @@ analysis_templates/*.html.zip
 celltype_annotation/references
 celltype_annotation/data
 celltype_annotation/singler_models
+celltype_annotation/analysis/reports
 
 
 
