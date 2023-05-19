@@ -1,0 +1,218 @@
+---
+title: "SingleR cell type exploration - Combining references"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+params:
+  s3_data_dir: "s3://nextflow-ccdl-results/scpca/processed/results/SCPCP000007" 
+  local_data_dir: "../data"
+  sample_id: "SCPCS000222"
+  library_id: "SCPCL000296"
+  s3_ref_dir: "s3://scpca-references/celltype/references"
+  local_ref_dir: "../references"
+---
+
+Results for `r params$library_id`.
+
+This notebook is focused on a preliminary analysis of using SingleR with combining references.
+I mostly followed the setup outlined in the [SingleR book section on combining multiple references with harmonizing labels](http://bioconductor.org/books/release/SingleRBook/using-multiple-references.html#using-harmonized-labels).
+To do this, I created a list of all references and then grabbed the `label.ont` from all references and provided both of those as input to `SingleR::SingleR()` to annotate a single library.
+
+## Set Up
+
+```{r}
+suppressPackageStartupMessages({
+  library(SingleCellExperiment)
+  library(ggplot2)
+})
+theme_set(theme_bw())
+```
+
+```{r}
+# make local data directory if it doesn't exist
+fs::dir_create(params$local_data_dir)
+fs::dir_create(params$local_ref_dir)
+```
+
+```{r}
+# Define list of reference files that we will use for combined analysis
+refs <- c("BlueprintEncodeData", 
+          "HumanPrimaryCellAtlasData",
+          "DatabaseImmuneCellExpressionData",
+          "MonacoImmuneData")
+ref_files <- glue::glue("celldex-{refs}.rds")
+local_ref_paths <- file.path(params$local_ref_dir, ref_files) |>
+  purrr::set_names(refs)
+
+# if missing the reference files, grab them from S3
+if(!all(file.exists(local_ref_paths))){
+  # sync reference files 
+  aws_includes <- paste("--include '", ref_files, "'", sep = '', collapse = ' ')
+  sync_call <- paste('aws s3 cp', params$s3_ref_dir, params$local_ref_dir,
+                     '--exclude "*"', aws_includes,'--recursive', sep = " ")
+  system(sync_call, ignore.stdout = TRUE) 
+}
+
+# read all ref files in as a single list
+celldex_refs <- purrr::map(local_ref_paths, readr::read_rds)
+```
+
+
+```{r}
+# build path to annotated sce file 
+annotated_sce_file <- glue::glue("{params$library_id}_annotated.rds")
+local_annotated_sce_path <- file.path(params$local_data_dir, 
+                                      params$sample_id, 
+                                      annotated_sce_file)
+
+# if missing the annotated sce files, grab them from S3
+if(!all(file.exists(local_annotated_sce_path))){
+  # sync annotated SCE files 
+  aws_includes <- glue::glue('--include "*/{annotated_sce_file}"')
+  
+  sync_call <- glue::glue('aws s3 sync {params$s3_data_dir} {params$local_data_dir} --exclude "*" {aws_includes}')
+  system(sync_call, ignore.stdout = TRUE) 
+}
+
+# read in all annotated sce 
+annotated_sce <- readr::read_rds(local_annotated_sce_path)
+```
+
+## SingleR with combined reference
+
+Before providing the list of references and labels, first subset them so that they contain the same set of genes.
+
+```{r}
+# identify shared genes among all references
+shared_ref_genes <- celldex_refs |>
+    purrr::map(rownames) |>
+    purrr::reduce(intersect)
+
+# create list of refs with shared genes only 
+celldex_refs_shared <- celldex_refs |>
+  purrr::map(\(ref)
+             ref <- ref[shared_ref_genes ,])
+```
+
+
+```{r}
+# create list of labels 
+ont_labels <- celldex_refs_shared |> 
+  purrr::map(\(ref) ref$label.ont)
+```
+
+
+```{r}
+# perform SingleR using combined refs and labels
+combined_result <- SingleR::SingleR(test = annotated_sce, 
+                                    ref = celldex_refs_shared,
+                                    labels = ont_labels)
+```
+
+## Evaluate combined reference annotations
+
+Before evaluating some of the output, I wanted to be able to interpret the ontology ID's so the first thing I did was map the `label.ont` back to the main labels from each reference then combine that with the SingleR results.
+
+```{r}
+# for each reference, provide a map between ont labels and other labels in the dataset
+ref_labels <- celldex_refs_shared |>
+  purrr::map(\(ref) data.frame(label_ont = ref$label.ont,
+                               label_main = ref$label.main,
+                               label_fine = ref$label.fine)) |>
+  dplyr::bind_rows(.id = "label_reference")
+
+# add main and fine labels to combined results 
+result_df <- combined_result |>
+  as.data.frame() |>
+  # first recode the reference assigned 
+  dplyr::mutate(reference = dplyr::case_when(reference == 1 ~ "BlueprintEncodeData", 
+                                             reference == 2 ~ "HumanPrimaryCellAtlasData",
+                                             reference == 3 ~ "DatabaseImmuneCellExpressionData",
+                                             reference == 4 ~ "MonacoImmuneData")) |>
+  # then combine with labels to get main and fine labels associated with ont labels for each reference
+  dplyr::left_join(ref_labels, by = c("pruned.labels" = "label_ont", "reference" = "label_reference")) 
+```
+
+The first thing I looked at was the labels that end up getting assigned and which reference was used to assign those labels. 
+
+```{r fig.height = 5}
+# get a tally of the assigned labels and the associated reference
+label_counts_df <- result_df |>
+  dplyr::count(label_main, reference)
+
+# barchart of labels that are assigned and reference they came from
+ggplot(label_counts_df, aes(x = reference, fill = label_main, y = n)) +
+  geom_bar(position = "stack", stat = "identity") +
+  labs(x = "",
+       y = "Number of cells",
+       label = "Cell type") +
+  guides(x = guide_axis(angle = 90))
+```
+
+```{r, fig.height = 5}
+# only pull out the top 10 labels 
+top_label_counts_df <- result_df |>
+  dplyr::mutate(top_labels = forcats::fct_lump_n(label_main, 10)) |>
+  dplyr::count(top_labels, reference)
+
+# same barchart but with just the top 10 labels
+ggplot(top_label_counts_df, aes(x = reference, fill = top_labels, y = n)) +
+  geom_bar(position = "stack", stat = "identity") +
+  labs(x = "",
+       y = "Number of cells",
+       label = "Cell type") +
+  guides(x = guide_axis(angle = 90))
+```
+
+It looks like most of the labels are coming from the HSC's in BlueprintEncodeData reference with a few cells being assigned to other labels present in the other datasets.
+
+Below, I looked at how the labels looked when using all references vs. single references. 
+When running SingleR with multiple references, first DE genes are identified within each reference and labels assigned within each reference and then statistics are merged across references (I'm still slightly unclear on exactly what that means).
+
+```{r, fig.height=5}
+# get all the labels from combined and each individual reference
+all_results <- result_df |> 
+  dplyr::select(ends_with("pruned.labels")) |>
+  tidyr::pivot_longer(cols = everything(), 
+                      values_to = "label.ont",
+                      names_to = "reference") |> 
+  # rename final assigned labels as combined and remove some extra strings
+  dplyr::mutate(reference = ifelse(reference == "pruned.labels", "combined", reference),
+                reference = stringr::str_remove_all(reference, "orig.results.|.pruned.labels")) |>
+  # grab top 10 and relevel for ordering
+  dplyr::mutate(top_labels = forcats::fct_lump_n(label.ont, 10), 
+                reference = factor(reference, 
+                                   levels = c("combined", 
+                                              "BlueprintEncodeData", 
+                                              "HumanPrimaryCellAtlasData",
+                                              "DatabaseImmuneCellExpressionData",
+                                              "MonacoImmuneData"))) |>
+  dplyr::count(top_labels, reference)
+
+# create a barchart to look at assignments between combined vs. single refs 
+ggplot(all_results, aes(x = reference, fill = top_labels, y = n)) +
+  geom_bar(position = "stack", stat = "identity")  +
+  labs(x = "",
+       y = "Number of cells",
+       label = "Cell type") +
+  guides(x = guide_axis(angle = 90))
+  
+  
+```
+
+It looks like the combined references look the most similar to the BlueprintEncodeData as with most cells being labeled as HSCs(CL:0000557) as noted earlier. 
+However, if we used individual references we see that the other references that don't have HSC's assign cells as CD34+ progenitors (CL:0002043) or monocytes (CL:0002057). 
+In the combined reference we also see a small portion of the cells are annotated as CD34+ HSCs, which would not have been the case if we only used BlueprintEncodeData.
+
+```{r fig.height=15, fig.width=15}
+# make some heatmaps because why not
+SingleR::plotScoreHeatmap(combined_result)
+```
+
+## Session Info
+
+```{r}
+sessionInfo()
+```
+
