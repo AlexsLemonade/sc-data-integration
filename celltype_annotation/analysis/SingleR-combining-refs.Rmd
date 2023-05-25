@@ -117,19 +117,25 @@ Before evaluating some of the output, I wanted to be able to interpret the ontol
 ```{r}
 # for each reference, provide a map between ont labels and other labels in the dataset
 ref_labels <- celldex_refs_shared |>
-  purrr::map(\(ref) data.frame(label_ont = ref$label.ont,
-                               label_main = ref$label.main,
-                               label_fine = ref$label.fine)) |>
-  dplyr::bind_rows(.id = "label_reference")
+  purrr::imap_df(\(ref, id){ 
+    data.frame(
+      label_reference = id,
+      label_ont = ref$label.ont,
+      label_main = ref$label.main,
+      label_fine = ref$label.fine))
+     )
+   })
 
 # add main and fine labels to combined results 
 result_df <- combined_result |>
   as.data.frame() |>
   # first recode the reference assigned 
-  dplyr::mutate(reference = dplyr::case_when(reference == 1 ~ "BlueprintEncodeData", 
-                                             reference == 2 ~ "HumanPrimaryCellAtlasData",
-                                             reference == 3 ~ "DatabaseImmuneCellExpressionData",
-                                             reference == 4 ~ "MonacoImmuneData")) |>
+  dplyr::mutate(reference = forcats::recode(
+    "BlueprintEncodeData" = 1, 
+    "HumanPrimaryCellAtlasData" = 2,
+    "DatabaseImmuneCellExpressionData" = 3,
+    "MonacoImmuneData" = 4
+   )) |>
   # then combine with labels to get main and fine labels associated with ont labels for each reference
   dplyr::left_join(ref_labels, by = c("pruned.labels" = "label_ont", "reference" = "label_reference")) 
 ```
