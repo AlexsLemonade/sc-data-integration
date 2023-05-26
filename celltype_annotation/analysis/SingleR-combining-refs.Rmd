@@ -89,17 +89,24 @@ shared_ref_genes <- celldex_refs |>
     purrr::map(rownames) |>
     purrr::reduce(intersect)
 
-# create list of refs with shared genes only 
+# grab cell label names corresponding to cell ontology ids
+cl_ont <- ontoProc::getCellOnto()
+
+# create list of refs with shared genes only and replace ont labels with cell type names
 celldex_refs_shared <- celldex_refs |>
-  purrr::map(\(ref)
-             ref <- ref[shared_ref_genes ,])
+  purrr::map(\(ref){
+             ref <- ref[shared_ref_genes ,]
+             ref$cell_label_ont <- cl_ont$name[ref$label.ont]
+             return(ref)
+             })
 ```
 
 
 ```{r}
 # create list of labels 
-ont_labels <- celldex_refs_shared |> 
-  purrr::map(\(ref) ref$label.ont)
+cl_ont_labels <- celldex_refs_shared |> 
+  purrr::map(\(ref) ref$cell_label_ont)
+
 ```
 
 
@@ -107,59 +114,30 @@ ont_labels <- celldex_refs_shared |>
 # perform SingleR using combined refs and labels
 combined_result <- SingleR::SingleR(test = annotated_sce, 
                                     ref = celldex_refs_shared,
-                                    labels = ont_labels)
+                                    labels = cl_ont_labels)
 ```
 
 ## Evaluate combined reference annotations
 
-Before evaluating some of the output, I wanted to be able to interpret the ontology ID's so the first thing I did was map the `label.ont` back to the main labels from each reference then combine that with the SingleR results.
 
 ```{r}
-# for each reference, provide a map between ont labels and other labels in the dataset
-ref_labels <- celldex_refs_shared |>
-  purrr::imap_df(\(ref, id){ 
-    data.frame(
-      label_reference = id,
-      label_ont = ref$label.ont,
-      label_main = ref$label.main,
-      label_fine = ref$label.fine))
-     )
-   })
-
-# add main and fine labels to combined results 
 result_df <- combined_result |>
   as.data.frame() |>
-  # first recode the reference assigned 
-  dplyr::mutate(reference = forcats::recode(
-    "BlueprintEncodeData" = 1, 
-    "HumanPrimaryCellAtlasData" = 2,
-    "DatabaseImmuneCellExpressionData" = 3,
-    "MonacoImmuneData" = 4
-   )) |>
-  # then combine with labels to get main and fine labels associated with ont labels for each reference
-  dplyr::left_join(ref_labels, by = c("pruned.labels" = "label_ont", "reference" = "label_reference")) 
+  # recode the reference assigned 
+  dplyr::mutate(reference = forcats::fct_recode(as.factor(reference),
+    "BlueprintEncodeData" = "1", 
+    "HumanPrimaryCellAtlasData" = "2",
+    "DatabaseImmuneCellExpressionData" = "3",
+    "MonacoImmuneData" = "4"
+   ))
 ```
 
 The first thing I looked at was the labels that end up getting assigned and which reference was used to assign those labels. 
 
-```{r fig.height = 5}
-# get a tally of the assigned labels and the associated reference
-label_counts_df <- result_df |>
-  dplyr::count(label_main, reference)
-
-# barchart of labels that are assigned and reference they came from
-ggplot(label_counts_df, aes(x = reference, fill = label_main, y = n)) +
-  geom_bar(position = "stack", stat = "identity") +
-  labs(x = "",
-       y = "Number of cells",
-       label = "Cell type") +
-  guides(x = guide_axis(angle = 90))
-```
-
 ```{r, fig.height = 5}
 # only pull out the top 10 labels 
 top_label_counts_df <- result_df |>
-  dplyr::mutate(top_labels = forcats::fct_lump_n(label_main, 10)) |>
+  dplyr::mutate(top_labels = forcats::fct_lump_n(pruned.labels, 10)) |>
   dplyr::count(top_labels, reference)
 
 # same barchart but with just the top 10 labels
@@ -171,7 +149,7 @@ ggplot(top_label_counts_df, aes(x = reference, fill = top_labels, y = n)) +
   guides(x = guide_axis(angle = 90))
 ```
 
-It looks like most of the labels are coming from the HSC's in BlueprintEncodeData reference with a few cells being assigned to other labels present in the other datasets.
+It looks like most of the labels are coming from monocyte progenitors in BlueprintEncodeData reference with a few cells being assigned to other labels present in the other datasets.
 
 Below, I looked at how the labels looked when using all references vs. single references. 
 When running SingleR with multiple references, first DE genes are identified within each reference and labels assigned within each reference and then statistics are merged across references (I'm still slightly unclear on exactly what that means).
@@ -186,7 +164,7 @@ all_results <- result_df |>
   # rename final assigned labels as combined and remove some extra strings
   dplyr::mutate(reference = ifelse(reference == "pruned.labels", "combined", reference),
                 reference = stringr::str_remove_all(reference, "orig.results.|.pruned.labels")) |>
-  # grab top 10 and relevel for ordering
+  # grab top 10 and relevel for ordering |>
   dplyr::mutate(top_labels = forcats::fct_lump_n(label.ont, 10), 
                 reference = factor(reference, 
                                    levels = c("combined", 
@@ -207,13 +185,14 @@ ggplot(all_results, aes(x = reference, fill = top_labels, y = n)) +
   
 ```
 
-It looks like the combined references look the most similar to the BlueprintEncodeData as with most cells being labeled as HSCs(CL:0000557) as noted earlier. 
-However, if we used individual references we see that the other references that don't have HSC's assign cells as CD34+ progenitors (CL:0002043) or monocytes (CL:0002057). 
-In the combined reference we also see a small portion of the cells are annotated as CD34+ HSCs, which would not have been the case if we only used BlueprintEncodeData.
+It looks like the combined references look the most similar to the BlueprintEncodeData. 
+However, if we used individual references we see that the other references assign cells as CD34+ progenitors or monocytes. 
+In the combined reference we also see a small portion of the cells are annotated as CD34+ progenitors, which would not have been the case if we only used BlueprintEncodeData.
 
-```{r fig.height=15, fig.width=15}
+```{r fig.height=20, fig.width=15}
 # make some heatmaps because why not
-SingleR::plotScoreHeatmap(combined_result)
+SingleR::plotScoreHeatmap(combined_result,
+                          grid.vars = list(ncol = 1))
 ```
 
 ## Session Info
