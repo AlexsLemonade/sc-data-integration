@@ -192,7 +192,9 @@ In the combined reference we also see a small portion of the cells are annotated
 ```{r fig.height=20, fig.width=15}
 # make some heatmaps because why not
 SingleR::plotScoreHeatmap(combined_result,
-                          grid.vars = list(ncol = 1))
+                          grid.vars = list(ncol = 1),
+                          annotation_legend = FALSE,
+                          treeheight_row = 0)
 ```
 
 ## Session Info
