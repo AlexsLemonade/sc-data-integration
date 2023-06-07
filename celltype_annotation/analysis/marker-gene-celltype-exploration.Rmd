@@ -279,7 +279,15 @@ readr::write_csv(fl_nobcells_ref, file.path("..", "references", "FL_celltype_ens
 conda activate scvi
 
 # create cell type assignments
-python ../scripts/cell-assign.py
+python ../scripts/cell-assign.py \
+  --input_anndata "../data/anndata/SCPCL000295_anndata.h5" \
+  --output_predictions "../data/anndata/no_bcells_predictions.tsv" \
+  --reference "../references/FL_celltype_ensembl.csv" 
+  
+python ../scripts/cell-assign.py \
+  --input_anndata "../data/anndata/SCPCL000295_anndata.h5" \
+  --output_predictions "../data/anndata/all_cells_predictions.tsv" \
+  --reference "../references/FL_celltype_ensembl-noBcells.csv" 
 ```
 
 After running `cell_assign.py` in the `scvi` conda environment, load in the outputs here.
