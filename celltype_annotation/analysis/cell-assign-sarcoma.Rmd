@@ -1,5 +1,5 @@
 ---
-title: "CellAssign:Brain Tissue"
+title: "CellAssign: Rhabdomyosarcoma"
 output: 
   html_notebook:
     toc: true
@@ -153,10 +153,10 @@ readr::write_csv(cellmarker_mtx, file.path("..", "references", "cell_marker_musc
 
 ```sh
 # run cell assign with muscle ref
-python ../scripts/cell-assign.py \
-  --input_anndata "../data/anndata/SCPCL000488_anndata.hdf5" \
-  --output_predictions "../data/anndata/SCPCL000488_muscle.tsv" \
-  --reference "../references/cell_marker_muscle_mtx.csv"
+#python ../scripts/cell-assign.py \
+#  --input_anndata "../data/anndata/SCPCL000488_anndata.hdf5" \
+#  --output_predictions "../data/anndata/SCPCL000488_muscle.tsv" \
+#  --reference "../references/cell_marker_muscle_mtx.csv"
 ```
 
 
@@ -267,10 +267,10 @@ readr::write_csv(panglao_binary_mtx, file.path("..", "references", "panglao_conn
 
 ```sh
 # cell assign with panglao db
-python ../scripts/cell-assign.py \
-  --input_anndata "../data/anndata/SCPCL000488_anndata.hdf5" \
-  --output_predictions "../data/anndata/SCPCL000488_panglao_connective_tissue.tsv" \
-  --reference "../references/panglao_connective_tissue_mtx.csv"
+#python ../scripts/cell-assign.py \
+#  --input_anndata "../data/anndata/SCPCL000488_anndata.hdf5" \
+#  --output_predictions "../data/anndata/SCPCL000488_panglao_connective_tissue.tsv" \
+#  --reference "../references/panglao_connective_tissue_mtx.csv"
 ```
 
 ```{r}
@@ -396,10 +396,10 @@ readr::write_csv(markers_binary_mtx, file.path("..", "references", "rms_broad_ma
 
 ```sh
 # run cell assign with muscle ref 
-python ../scripts/cell-assign.py \
-  --input_anndata "../data/anndata/SCPCL000488_anndata.hdf5" \
-  --output_predictions "../data/anndata/SCPCL000488_rms_broad_markers.tsv" \
-  --reference "../references/rms_broad_markers_mtx.csv" 
+#python ../scripts/cell-assign.py \
+#  --input_anndata "../data/anndata/SCPCL000488_anndata.hdf5" \
+#  --output_predictions "../data/anndata/SCPCL000488_rms_broad_markers.tsv" \
+#  --reference "../references/rms_broad_markers_mtx.csv" 
 ```
 
 ```{r}
