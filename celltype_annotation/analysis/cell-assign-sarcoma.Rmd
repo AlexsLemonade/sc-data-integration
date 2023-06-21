@@ -151,12 +151,18 @@ cellmarker_mtx <- cellmarker_mtx |>
 readr::write_csv(cellmarker_mtx, file.path("..", "references", "cell_marker_muscle_mtx.csv"))
 ```
 
-```sh
+```{r run cellassign,  eval = FALSE}
+prediction_file <- "../data/anndata/SCPCL000488_muscle.tsv"
+
 # run cell assign with muscle ref
-#python ../scripts/cell-assign.py \
-#  --input_anndata "../data/anndata/SCPCL000488_anndata.hdf5" \
-#  --output_predictions "../data/anndata/SCPCL000488_muscle.tsv" \
-#  --reference "../references/cell_marker_muscle_mtx.csv"
+cellassign_call <- glue::glue("
+python ../scripts/cell-assign.py \
+  --input_anndata '{anndata_file}' \
+  --output_predictions '{prediction_file}' \
+  --reference '{reference_file}'
+")
+
+system(cellassign_call)
 ```
 
 
@@ -240,8 +246,8 @@ panglao_binary_mtx <- panglao_connective_tissue |>
   tidyr::pivot_wider('official gene symbol',
                      names_from = 'cell type',
                      values_from = 'cell type',
-                     values_fn = list('cell type' = length),
-                     values_fill = list('cell type' = 0)) |> 
+                     values_fn = length,
+                     values_fill = 0) |> 
   tibble::column_to_rownames("official gene symbol") |>
   dplyr::mutate(other = 0)
 
@@ -293,7 +299,7 @@ panglao_predictions |>
   as.matrix() |> 
   pheatmap::pheatmap(show_rownames = FALSE)
 ```
-Here the majority of cells are getting classified as other with a small group of fibroblasts and myocytes. 
+Here the majority of cells are getting classified as `other` with a small group of fibroblasts and myocytes. 
 
 ## Reference comparison 
 
@@ -362,11 +368,13 @@ processed_sce_markers <- scran::findMarkers(processed_sce,
 ```{r}
 # get top 10 markers for each cell type 
 top_markers_df <- as.list(processed_sce_markers) |>
-  purrr::map(\(markers) head(rownames(markers), n = 10)) |>
-  dplyr::bind_rows() |>
-  tidyr::pivot_longer(everything(),
-                      names_to = "celltype",
-                      values_to = "ensembl_id")
+  purrr::imap(
+    \(markers, id) data.frame(
+      celltype = id, 
+      ensembl_id = head(rownames(markers), n = 10)
+    )
+  ) |>
+  dplyr::list_cbind()
 
 # create a binary matrix of genes by cell type markers 
 markers_binary_mtx <- top_markers_df |>

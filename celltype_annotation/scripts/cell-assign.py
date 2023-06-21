@@ -56,7 +56,7 @@ predictions_dir = os.path.dirname(args.output_predictions)
 os.makedirs(predictions_dir, exist_ok = True)
 
 # read in references as marker gene tables
-ref_matrix = pd.read_csv(args.reference, index_col=0)
+ref_matrix = pd.read_csv(args.reference, index_col='ensembl_id')
 
 # file path to annotated sce
 annotated_adata = adata.read_h5ad(args.input_anndata)
