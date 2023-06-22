@@ -1,9 +1,13 @@
 ---
-title: "CellAssign: Rhabdomyosarcoma"
+title: "CellAssign: Rhabdomyosarcoma using public references"
 output: 
   html_notebook:
     toc: true
     toc_float: true
+params:
+  library_id: "SCPCL000488"
+  sample_id: "SCPCS000262"
+    
 ---
 
 This notebook evaluates using `CellAssign` for cell type assignment. 
@@ -27,67 +31,60 @@ library(ggplot2)
 ```
 
 ```{r}
-# build path to annotated sce file 
-processed_sce_file <- glue::glue("SCPCL000488_processed_celltype.rds")
-local_processed_sce_path <- file.path("..", "data", "SCPCS000262", processed_sce_file) 
+# Set up paths 
 
+# build path to annotated sce file 
+processed_data_dir <-file.path("..", "data") 
+processed_sce_file <- glue::glue("{params$library_id}_processed_celltype.rds")
+local_processed_sce_path <- file.path(processed_data_dir, params$sample_id, processed_sce_file)
+
+# anndata output
+anndata_dir <- file.path("..", "data", "anndata")
+anndata_file <- glue::glue("{params$library_id}_anndata.hdf5")
+anndata_file <- file.path(anndata_dir, anndata_file)
+fs::dir_create(anndata_dir)
+
+# reference files for cell marker
+ref_dir <- file.path("..", "references")
+excel_celltype_file <- file.path(ref_dir, "Cell_marker_Human.xlsx")
+panglao_file <- file.path(ref_dir, "PanglaoDB_markers_27_Mar_2020.tsv")
+
+# output matrix files 
+cell_marker_mtx_file <- file.path(ref_dir, "cell_marker_muscle_mtx.csv")
+panglao_matrix_file <- file.path(ref_dir, "panglao_connective_tissue_mtx.csv")
+
+# cellassign predictions
+cellmarker_prediction_file <- file.path(
+  anndata_dir, 
+  glue::glue("{params$library_id}_muscle.tsv")
+)
+panglao_prediction_file <- file.path(
+  anndata_dir, 
+  glue::glue("{params$library_id}_panglao_connective_tissue.tsv")
+)
+
+```
+
+
+```{r}
 # read in all annotated sce 
 processed_sce <- readr::read_rds(local_processed_sce_path)
 ```
 
 ```{r}
 # write out anndata 
-anndata_dir <- file.path("..", "data", "anndata")
-fs::dir_create(anndata_dir)
-
-anndata_file <- file.path(anndata_dir, "SCPCL000488_anndata.hdf5")
 scpcaTools::sce_to_anndata(processed_sce, anndata_file = anndata_file)
 ```
 
-## Functions
-
 ```{r}
-# define a function for obtaining cell type assignments from cell assign predictions
-get_celltype_assignments <- function(predictions){
-  
-  # get a dataframe of assignment for each barcode and prediction score
-  celltype_assignments <- predictions |>
-    tidyr::pivot_longer(!barcode,
-                        names_to = "celltype",
-                        values_to = "prediction") |>
-    dplyr::group_by(barcode) |>
-    dplyr::top_n(n = 1, wt = prediction) |>
-    dplyr::ungroup() 
-  
-  return(celltype_assignments)
-}
+# source helper functions
+function_file <- file.path("..", "utils", "cellassign-helper-functions.R")
+source(function_file)
 ```
-
-```{r}
-# function for creating comparison heatmaps between two different annotations
-compare_refs_heatmap <- function(original_assignment,
-                                 cell_assign){
-  # build a matrix with reference as the rows and the celltype as the columns
-  label_mtx <- table(original_assignment,
-                     cell_assign,
-                     useNA = "ifany") |> 
-    log1p() # log transform for visual help
-  
-  pheatmap::pheatmap(label_mtx,
-                     cluster_rows = TRUE, 
-                     width = 10,
-                     fontsize_col = 8)
-  
-}
-```
-
 
 ## CellMarker2.0
 
 ```{r}
-# reference file for cell marker
-excel_celltype_file <- file.path("..", "references", "Cell_marker_Human.xlsx")
-
 # read in excel file
 celltype_markers_df <- openxlsx::read.xlsx(excel_celltype_file)
 ```
@@ -95,7 +92,15 @@ celltype_markers_df <- openxlsx::read.xlsx(excel_celltype_file)
 
 ```{r}
 # look at different tissue types available 
-unique(celltype_markers_df$tissue_class)
+celltype_markers_df |>
+  dplyr::count(tissue_class)
+```
+
+```{r}
+celltype_markers_df |> 
+  dplyr::count(cancer_type, cellontology_id, cell_name) |>
+  dplyr::mutate(sarcoma_filter = stringr::str_detect(cancer_type, "sarcoma")) |>
+  dplyr::filter(sarcoma_filter)
 ```
 
 
@@ -105,9 +110,9 @@ muscle_markers_df <- celltype_markers_df |>
   dplyr::filter(tissue_class == "Muscle") |>
   tidyr::drop_na(cellontology_id, Symbol)
 
-# what types of cells are represented here? 
-unique(muscle_markers_df$cancer_type)
-unique(muscle_markers_df$cell_name)
+# print total number of marker genes for each cellontology id
+muscle_markers_df |>
+  dplyr::count(cell_name, cancer_type, cellontology_id)
 ```
 
 
@@ -118,8 +123,8 @@ cellmarker_mtx <- muscle_markers_df |>
   tidyr::pivot_wider(Symbol,
                      names_from = cellontology_id,
                      values_from = cellontology_id,
-                     values_fn = list(cellontology_id = length),
-                     values_fill = list(cellontology_id = 0)) |> 
+                     values_fn = length,
+                     values_fill = 0) |> 
   tibble::column_to_rownames("Symbol") |>
   dplyr::mutate(other = 0)
 
@@ -148,18 +153,16 @@ cellmarker_mtx <- cellmarker_mtx |>
 
 ```{r}
 # export mtx 
-readr::write_csv(cellmarker_mtx, file.path("..", "references", "cell_marker_muscle_mtx.csv"))
+readr::write_csv(cellmarker_mtx, cell_marker_mtx_file)
 ```
 
-```{r run cellassign,  eval = FALSE}
-prediction_file <- "../data/anndata/SCPCL000488_muscle.tsv"
-
+```{r,  eval = FALSE}
 # run cell assign with muscle ref
 cellassign_call <- glue::glue("
 python ../scripts/cell-assign.py \
   --input_anndata '{anndata_file}' \
-  --output_predictions '{prediction_file}' \
-  --reference '{reference_file}'
+  --output_predictions '{cellmarker_prediction_file}' \
+  --reference '{cell_marker_mtx_file}'
 ")
 
 system(cellassign_call)
@@ -168,7 +171,7 @@ system(cellassign_call)
 
 ```{r}
 # read in prediction scores 
-cellmarker_predictions <- readr::read_tsv(file.path(anndata_dir, "SCPCL000488_muscle.tsv"))
+cellmarker_predictions <- readr::read_tsv(cellmarker_prediction_file)
 ```
 
 ```{r}
@@ -176,9 +179,12 @@ cellmarker_predictions <- readr::read_tsv(file.path(anndata_dir, "SCPCL000488_mu
 cl_ont <- ontoProc::getCellOnto()
 
 # replace column names(ontology ids) with cell label
-colnames(cellmarker_predictions) <- stringr::str_replace(colnames(cellmarker_predictions), "_", ":")
-cl_ids <- colnames(cellmarker_predictions)[-grep("other|barcode", colnames(cellmarker_predictions))]
-colnames(cellmarker_predictions)[-grep("other|barcode", colnames(cellmarker_predictions))] <- cl_ont$name[cl_ids]
+cellmarker_predictions <- cellmarker_predictions |>
+  dplyr::rename_with(
+    \(cl_id) 
+    cl_ont$name[stringr::str_replace(cl_id, "_", ":")],
+    !any_of(c("barcode", "other"))
+)
 ```
 
 
@@ -214,32 +220,88 @@ muscle_markers_df |>
 What's strange is that CD163 and CD68 aren't present in our SCE object, only PTPRC and it is not highly expressed.
 
 ```{r}
+processed_sce$cellmarker_assignments <- cellmarker_assignments$celltype
+
 # PTPRC is the only gene that's found in our dataset and the other two are not? 
 scater::plotReducedDim(processed_sce,
                        dimred = "UMAP",
-                       colour_by = "ENSG00000081237")
+                       colour_by = "ENSG00000081237",
+                       other_fields = "cellmarker_assignments",
+                       point_size = 0.5,
+                       point_alpha = 0.5) +
+  facet_wrap(~ cellmarker_assignments)
 ```
+Let's also look at the marker genes for the myoblast population that was used in our reference file. 
+Looking at the original annotations for this sample, most of the cells should be myoblasts. 
 
+```{r}
+# print out markers that were associated with myoblast during assignment
+# cancer myoblasts
+muscle_markers_df |>
+  dplyr::filter(cancer_type == "Rhabdomyosarcoma", 
+                cell_name == "Myoblast")
+
+# normal myoblast markers
+muscle_markers_df |>
+  dplyr::filter(cancer_type == "Normal", 
+                cell_name == "Myoblast") |>
+  dplyr::select(cancer_type, cell_name, cellontology_id, Symbol, Genename) |> 
+  unique()
+```
+How do some of these marker genes look when looking at our data? 
+Are they expressed in what we would expect to be the myoblasts? 
+Looking back on the original paper, `MYF5`, `MSC`, and `PAX7` are pulled out as markers for the myoblast population. 
+`MSC` is not in this list and not expressed in our dataset. 
+The other two are both in the marker gene list and in our dataset, but how highly are they expressed in the population that gets labeled as `Tumor_myoblast`? 
+
+```{r}
+# marker genes for myoblasts from paper
+# MYF5 ENSG00000111049
+# MSC ENSG00000178860 (not in marker genes listed from cellmarker or our dataset)
+# PAX7 ENSG00000009709
+
+scater::plotReducedDim(processed_sce,
+                       dimred = "UMAP",
+                       colour_by = "ENSG00000111049", #MYF5
+                       other_fields = "celltype",
+                       point_size = 0.5,
+                       point_alpha = 0.5) +
+  facet_wrap(~ celltype)
+
+scater::plotReducedDim(processed_sce,
+                       dimred = "UMAP",
+                       colour_by = "ENSG00000009709", #PAX7
+                       other_fields = "celltype",
+                       point_size = 0.5,
+                       point_alpha = 0.5) +
+  facet_wrap(~ celltype)
+```
 
 ## PanglaoDB
 
 ```{r}
 # read in panglao db 
-panglao_file <- file.path("..", "references", "PanglaoDB_markers_27_Mar_2020.tsv")
 panglao_df <- readr::read_tsv(panglao_file)
 ```
 
 
 ```{r}
 # overview of available organs to choose from 
-unique(panglao_df$organ)
+panglao_df |>
+  dplyr::count(organ)
 ```
 
 ```{r}
 # grab all muscle related organs
 panglao_connective_tissue <- panglao_df |> 
   dplyr::filter(organ %in% c("Connective tissue", "Smooth muscle", "Skeletal muscle"))
-                
+
+panglao_connective_tissue |>
+  dplyr::count(`cell type`, `organ`)
+```
+
+
+```{r}
 # create a binary matrix of genes by cell type markers 
 panglao_binary_mtx <- panglao_connective_tissue |>
   dplyr::select('cell type', 'official gene symbol') |> 
@@ -268,21 +330,27 @@ panglao_binary_mtx <- panglao_binary_mtx |>
 
 ```{r}
 # export mtx 
-readr::write_csv(panglao_binary_mtx, file.path("..", "references", "panglao_connective_tissue_mtx.csv"))
+readr::write_csv(panglao_binary_mtx, panglao_matrix_file)
 ```
 
-```sh
-# cell assign with panglao db
-#python ../scripts/cell-assign.py \
-#  --input_anndata "../data/anndata/SCPCL000488_anndata.hdf5" \
-#  --output_predictions "../data/anndata/SCPCL000488_panglao_connective_tissue.tsv" \
-#  --reference "../references/panglao_connective_tissue_mtx.csv"
+```{r,  eval = FALSE}
+# run cell assign with muscle ref
+cellassign_call <- glue::glue("
+python ../scripts/cell-assign.py \
+  --input_anndata '{anndata_file}' \
+  --output_predictions '{panglao_prediction_file}' \
+  --reference '{panglao_matrix_file}'
+")
+
+system(cellassign_call)
 ```
+
 
 ```{r}
 # read in prediction scores 
-panglao_predictions <- readr::read_tsv(file.path(anndata_dir, "SCPCL000488_panglao_connective_tissue.tsv"))
+panglao_predictions <- readr::read_tsv(panglao_prediction_file)
 ```
+
 ```{r}
 panglao_assignments <- get_celltype_assignments(panglao_predictions)
 
@@ -301,15 +369,38 @@ panglao_predictions |>
 ```
 Here the majority of cells are getting classified as `other` with a small group of fibroblasts and myocytes. 
 
-## Reference comparison 
+Look at the marker genes that were used for the Myoblast celltype. 
 
-To understand how CellAssign is assigning each of the cell types vs. the original assignments, let's directly compare references below.
+```{r}
+panglao_connective_tissue |>
+  dplyr::filter(`cell type` == "Myoblasts")
+```
 
 ```{r}
 # add celltypes to processed sce 
-processed_sce$cellmarker_assignments <- cellmarker_assignments$celltype
 processed_sce$panglao_assignments <- panglao_assignments$celltype
+
+scater::plotReducedDim(processed_sce,
+                       dimred = "UMAP",
+                       colour_by = "ENSG00000111049", #MYF5
+                       other_fields = "panglao_assignments",
+                       point_size = 0.5,
+                       point_alpha = 0.5) +
+  facet_wrap(~ panglao_assignments)
+
+scater::plotReducedDim(processed_sce,
+                       dimred = "UMAP",
+                       colour_by = "ENSG00000009709", #PAX7
+                       other_fields = "panglao_assignments",
+                       point_size = 0.5,
+                       point_alpha = 0.5) +
+  facet_wrap(~ panglao_assignments)
 ```
+
+
+## Reference comparison 
+
+To understand how CellAssign is assigning each of the cell types vs. the original assignments, let's directly compare references below.
 
 
 ```{r}
@@ -351,89 +442,6 @@ compare_refs_heatmap(original_assignment = coldata_df$broad_celltype,
 
 As expected, `CellAssign` seems to be struggling with the tumor cells and depending on the reference has been assigning them to `other` or `macrophage`. 
 There are a few places where the normal cells match up in their assignment, but they are also not perfectly in agreement. 
-
-## Compare to RMS marker genes 
-
-Since it's fairly obvious that `CellAssign`, although better at assigning `NA` than `SingleR`, is still going to be highly dependent on the marker genes that are in the reference, I wanted to see if we gave it marker genes that we know are associated with the cell types found in the dataset, how well does it perform. 
-Here I use `scran::FindMarkers()` to get the top 10 markers for each of the celltypes (using the `broad_celltype` column) and then use that as the reference gene by cell matrix for `CellAssign`.
-This is definitely a bit circular, but I would expect that the output of `CellAssign` should be fairly consistent with the annotations we have. 
-
-```{r}
-# find markers for all cell types 
-processed_sce_markers <- scran::findMarkers(processed_sce,
-                                            groups = coldata_df$broad_celltype,
-                                            pval.type = "all")
-```
-
-```{r}
-# get top 10 markers for each cell type 
-top_markers_df <- as.list(processed_sce_markers) |>
-  purrr::imap(
-    \(markers, id) data.frame(
-      celltype = id, 
-      ensembl_id = head(rownames(markers), n = 10)
-    )
-  ) |>
-  dplyr::list_cbind()
-
-# create a binary matrix of genes by cell type markers 
-markers_binary_mtx <- top_markers_df |>
-  dplyr::select(celltype, ensembl_id) |> 
-  tidyr::pivot_wider(ensembl_id,
-                     names_from = celltype,
-                     values_from = celltype,
-                     values_fn = list(celltype = length),
-                     values_fill = list(celltype = 0)) |> 
-  tibble::column_to_rownames("ensembl_id") |>
-  dplyr::mutate(other = 0)
-
-# replace length with 1
-markers_binary_mtx[markers_binary_mtx > 1] <- 1
-
-# add ensembl id as first column
-markers_binary_mtx <- markers_binary_mtx |>
-  tibble::rownames_to_column("ensembl_id") |>
-  dplyr::relocate(ensembl_id)
-```
-
-
-```{r}
-# export mtx 
-readr::write_csv(markers_binary_mtx, file.path("..", "references", "rms_broad_markers_mtx.csv"))
-```
-
-```sh
-# run cell assign with muscle ref 
-#python ../scripts/cell-assign.py \
-#  --input_anndata "../data/anndata/SCPCL000488_anndata.hdf5" \
-#  --output_predictions "../data/anndata/SCPCL000488_rms_broad_markers.tsv" \
-#  --reference "../references/rms_broad_markers_mtx.csv" 
-```
-
-```{r}
-# read in prediction scores 
-rms_predictions <- readr::read_tsv(file.path(anndata_dir, "SCPCL000488_rms_broad_markers.tsv"))
-```
-```{r}
-# heatmap of prediction scores 
-rms_predictions |>
-  dplyr::select(-barcode) |> 
-  as.matrix() |> 
-  pheatmap::pheatmap(show_rownames = FALSE)
-```
-Interestingly we still see quite a bit of cells that are classified as `other`. 
-And we also don't really see any `Tumor_myoblast` which should be the largest population.
-
-```{r}
-rms_assignments <- get_celltype_assignments(rms_predictions)
-coldata_df$rms_assignments <- rms_assignments$celltype
-```
-
-```{r}
-compare_refs_heatmap(original_assignment = coldata_df$broad_celltype,
-                     cell_assign = coldata_df$rms_assignments)
-```
-This heatmap does look better though where we see that for the non-cancer cell types there is agreement in the assignment between the `CellAssign` and the original assignment. 
 
 ## Session Info
 
