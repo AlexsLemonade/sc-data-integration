@@ -120,7 +120,7 @@ muscle_markers_df |>
 # create a binary matrix of genes by cell type markers 
 cellmarker_mtx <- muscle_markers_df |>
   dplyr::select(cellontology_id, Symbol) |> 
-  tidyr::pivot_wider(Symbol,
+  tidyr::pivot_wider(id_cols = Symbol,
                      names_from = cellontology_id,
                      values_from = cellontology_id,
                      values_fn = length,
@@ -305,7 +305,7 @@ panglao_connective_tissue |>
 # create a binary matrix of genes by cell type markers 
 panglao_binary_mtx <- panglao_connective_tissue |>
   dplyr::select('cell type', 'official gene symbol') |> 
-  tidyr::pivot_wider('official gene symbol',
+  tidyr::pivot_wider(id_cols = 'official gene symbol',
                      names_from = 'cell type',
                      values_from = 'cell type',
                      values_fn = length,
