@@ -84,6 +84,25 @@ source(function_file)
 
 ## CellMarker2.0
 
+Below I am using the marker gene set defined in the `Human cell markers` file on [CellMarker2.0](http://117.50.127.228/CellMarker/CellMarker_download.html).
+This file contains marker genes that have been curated from published literature. 
+More information on how marker gene sets are curated can be found in the [`Data Collection` section of the original CellMarker paper](https://doi.org/10.1093/nar/gky900) and in the [`Data expansion and pre-processing` section of the CellMarker2.0 paper](https://doi.org/10.1093/nar/gkac947).
+
+Based on the table of marker genes, it looks like the main organization is by the `tissue_type` column. 
+Within each `tissue_type`, cells are separated as either from a normal or cancer sample.
+Then all cell types within each normal or cancer sample are included along with all marker genes.
+
+This means that there are duplicates of the same cell type that are found in different tissue types.
+There also will be duplicates within a tissue type if a cell type is found in both a normal and cancer sample.
+
+For example, macrophages are found in multiple tissue types so the marker gene list for macrophages may change based on the tissue type you look at.
+Additionally, macrophages are in both normal and cancer cells so a different marker gene list for macrophages in normal muscle will vary from macrophages in cancer tissue from muscle.
+All cell types that are in normal tissue are not always listed in cancer tissue and vice versa.
+
+Because we are creating a gene by cell type matrix using the ontology ID and Ensembl ID, all marker genes for a given ontology ID will be combined into a single list of marker genes for that cell type.
+However, if we filter on tissue type first and then create this matrix, then we may miss marker genes used for a given cell type that is also found in another tissue type.
+
+
 ```{r}
 # read in excel file
 celltype_markers_df <- openxlsx::read.xlsx(excel_celltype_file)
@@ -223,13 +242,13 @@ What's strange is that CD163 and CD68 aren't present in our SCE object, only PTP
 processed_sce$cellmarker_assignments <- cellmarker_assignments$celltype
 
 # PTPRC is the only gene that's found in our dataset and the other two are not? 
-scater::plotReducedDim(processed_sce,
-                       dimred = "UMAP",
-                       colour_by = "ENSG00000081237",
-                       other_fields = "cellmarker_assignments",
+scater::plotExpression(processed_sce,
+                       features = "ENSG00000081237",
+                       x = "cellmarker_assignments",
                        point_size = 0.5,
                        point_alpha = 0.5) +
-  facet_wrap(~ cellmarker_assignments)
+  guides(x = guide_axis(angle = 90)) + 
+  ggtitle("PTPRC")
 ```
 Let's also look at the marker genes for the myoblast population that was used in our reference file. 
 Looking at the original annotations for this sample, most of the cells should be myoblasts. 
@@ -260,24 +279,28 @@ The other two are both in the marker gene list and in our dataset, but how highl
 # MSC ENSG00000178860 (not in marker genes listed from cellmarker or our dataset)
 # PAX7 ENSG00000009709
 
-scater::plotReducedDim(processed_sce,
-                       dimred = "UMAP",
-                       colour_by = "ENSG00000111049", #MYF5
-                       other_fields = "celltype",
-                       point_size = 0.5,
-                       point_alpha = 0.5) +
-  facet_wrap(~ celltype)
+myoblast_features <- c("ENSG00000111049", #MYF5
+                       "ENSG00000009709") #PAX7
 
-scater::plotReducedDim(processed_sce,
-                       dimred = "UMAP",
-                       colour_by = "ENSG00000009709", #PAX7
-                       other_fields = "celltype",
+scater::plotExpression(processed_sce,
+                       features = myoblast_features,
+                       x = "celltype",
                        point_size = 0.5,
                        point_alpha = 0.5) +
-  facet_wrap(~ celltype)
+  facet_grid(row = vars(Feature)) + 
+  guides(x = guide_axis(angle = 90))
 ```
 
 ## PanglaoDB
+
+In `PanglaoDB` each cell type only contains a single set of marker genes and is associated with a single `organ`.
+If we filter the `organ` column to a specific tissue, like `Connective tissue`, then we will only be able to annotate cell types found in that organ. 
+
+From the [`PanglaoDB` paper](https://doi.org/10.1093/database/baz046): 
+
+
+> The database of cell type markers was compiled by manual curation of thousands of published articles and abstracts, and by querying internet search engines with strings such as ‘GENE1 is expressed in * cells’. We did not require that gene markers had to be specific for a cell type, since our approach borrows information from multiple markers rather than relying on a single marker. For some cell types, when canonical markers were unambigious, we extended the list of putative cell-type markers by examining expressed genes in the particular single-cell cluster. Hence, our marker compendium is a mix of canonical and novel markers.
+
 
 ```{r}
 # read in panglao db 
@@ -380,21 +403,13 @@ panglao_connective_tissue |>
 # add celltypes to processed sce 
 processed_sce$panglao_assignments <- panglao_assignments$celltype
 
-scater::plotReducedDim(processed_sce,
-                       dimred = "UMAP",
-                       colour_by = "ENSG00000111049", #MYF5
-                       other_fields = "panglao_assignments",
+scater::plotExpression(processed_sce,
+                       features = myoblast_features,
+                       x = "panglao_assignments",
                        point_size = 0.5,
                        point_alpha = 0.5) +
-  facet_wrap(~ panglao_assignments)
-
-scater::plotReducedDim(processed_sce,
-                       dimred = "UMAP",
-                       colour_by = "ENSG00000009709", #PAX7
-                       other_fields = "panglao_assignments",
-                       point_size = 0.5,
-                       point_alpha = 0.5) +
-  facet_wrap(~ panglao_assignments)
+  facet_grid(row = vars(Feature)) + 
+  guides(x = guide_axis(angle = 90))
 ```
 
 
@@ -442,6 +457,21 @@ compare_refs_heatmap(original_assignment = coldata_df$broad_celltype,
 
 As expected, `CellAssign` seems to be struggling with the tumor cells and depending on the reference has been assigning them to `other` or `macrophage`. 
 There are a few places where the normal cells match up in their assignment, but they are also not perfectly in agreement. 
+
+## Conclusions
+
+- Looking at the two marker gene lists, PanglaoDb appears to have a larger number of marker gene lists for each cell type than CellMarker2.0.
+This is probably due to the way the marker gene list is organized.
+PanglaoDb only provides one list of potential marker genes for each cell type, regardless of tissue type. 
+- CellMarker2.0 has a larger list of tissue types and cell types and even includes some cancer tissue, while PanglaoDb does not. 
+Additionally, it provides the added advantage of grouping marker genes by ontology ID. 
+I think CellMarker2.0 has the potential to be more useful if we were to consider all marker genes for a cell type regardless of tissue type. 
+- Regardless of how comprehensive the list of marker genes is, it is concerning to me that `CellAssign` is labeling cells as macrophages.
+This is especially concerning because only a single gene from the list of macrophage marker genes is expressed in the dataset, and that marker gene is not expressed in the cells that get labeled as macrophages. 
+- The assignment of tumor cells to the `other` type when using PanglaoDb is more inline with what I would expect.
+That being said, is classifying all cells as `other` really informative to a user?
+- Overall, `CellAssign` performance is dependent on the reference, so ultimately we are going to need to identify the most appropriate reference for each project.
+This should involve some level of understanding of the cell type expectations in a given sample.
 
 ## Session Info
 
