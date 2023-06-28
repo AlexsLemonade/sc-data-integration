@@ -8,7 +8,7 @@ get_celltype_assignments <- function(predictions){
                         names_to = "celltype",
                         values_to = "prediction") |>
     dplyr::group_by(barcode) |>
-    dplyr::top_n(n = 1, wt = prediction) |>
+    dplyr::slice_max(prediction, n = 1) |>
     dplyr::ungroup() 
   
   return(celltype_assignments)

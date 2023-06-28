@@ -239,6 +239,9 @@ muscle_markers_df |>
 What's strange is that CD163 and CD68 aren't present in our SCE object, only PTPRC and it is not highly expressed.
 
 ```{r}
+cellmarker_assignments <- data.frame(barcode = processed_sce$barcode) |>
+  dplyr::left_join(cellmarker_assignments, by = barcode)
+  
 processed_sce$cellmarker_assignments <- cellmarker_assignments$celltype
 
 # PTPRC is the only gene that's found in our dataset and the other two are not? 
