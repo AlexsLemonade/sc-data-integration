@@ -240,7 +240,7 @@ What's strange is that CD163 and CD68 aren't present in our SCE object, only PTP
 
 ```{r}
 cellmarker_assignments <- data.frame(barcode = processed_sce$barcode) |>
-  dplyr::left_join(cellmarker_assignments, by = barcode)
+  dplyr::left_join(cellmarker_assignments, by = "barcode")
   
 processed_sce$cellmarker_assignments <- cellmarker_assignments$celltype
 
@@ -404,6 +404,8 @@ panglao_connective_tissue |>
 
 ```{r}
 # add celltypes to processed sce 
+panglao_assignments <- data.frame(barcode = processed_sce$barcode) |>
+  dplyr::left_join(panglao_assignments, by = "barcode")
 processed_sce$panglao_assignments <- panglao_assignments$celltype
 
 scater::plotExpression(processed_sce,
