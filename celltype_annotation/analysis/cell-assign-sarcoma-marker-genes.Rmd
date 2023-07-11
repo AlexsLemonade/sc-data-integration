@@ -130,7 +130,7 @@ myoblast_markers <- AnnotationDbi::mapIds(
     column = "SYMBOL"
   ) |>
     tibble::enframe(name = 'ensembl_id',
-                    value = tolower("SYMBOL")) |> 
+                    value = 'symbol') |> 
     dplyr::left_join(myoblast_markers, by = "ensembl_id")
 
 myoblast_markers
@@ -170,7 +170,7 @@ rms_predictions |>
   pheatmap::pheatmap(show_rownames = FALSE)
 ```
 
-This actuallylooks pretty good! 
+This actually looks pretty good! 
 We see most of the cells are assigned to `Tumor_Myoblast` which is what is expected.
 
 ```{r}
