@@ -47,7 +47,7 @@ rms_prediction_file <- file.path(
 
 ```{r}
 # read in all annotated sce 
-processed_sce <- readr::read_rds(local_processed_sce_path)
+processed_sce <- readr::read_rds(processed_sce_path)
 ```
 
 ```{r}
@@ -57,6 +57,15 @@ source(function_file)
 ```
 
 ## Get marker genes
+
+Below we will find the upregulated marker genes when comparing each cell type to all other cell types. 
+The cell types here were obtained from the submitter.
+The original submitter cell types contained sub groups of tumor cells, e.g., `Tumor_myoblast-A` and `Tumor_myoblast-B`. 
+Before finding markers, the subgroups are combined into a single cell type, e.g., `Tumor_myoblast`.
+These cell types are then used to group cells when applying `scran::FindMarkers()`.
+Then the markers are sorted by logFC and the top 10 are selected.
+This ensures that we only get marker genes that are upregulated in a specified cell type compared to all other cells in the dataset.
+Because of this, we are only identifying marker genes that are unique to each cell type and are not considering marker genes that may be expressed in a subset of cell types.
 
 ```{r}
 # extract coldata for easy plotting
@@ -77,9 +86,10 @@ processed_sce_markers <- scran::findMarkers(processed_sce,
                                             pval.type = "all")
 ```
 
+Below the top 10 upregulated markers for each cell type are converted into a binary gene by cell matrix to use as input for `CellAssign`.
 
 ```{r}
-# get top 20 markers for each cell type 
+# get top 10 markers for each cell type 
 top_markers_df <- as.list(processed_sce_markers) |>
   purrr::imap(
     \(markers, id) 
@@ -135,7 +145,12 @@ myoblast_markers <- AnnotationDbi::mapIds(
 
 myoblast_markers
 ```
+
 I kind of would expect some of the myoblast markers to be included here like `MYOG`, `MYF5`, `MYOD1`, etc. 
+Perhaps these genes are expressed in other cell types, such as normal myoblast cells that may be present. 
+If they are expressed at a high enough level in other cell types then this strategy of "all" used here for `FindMarkers` would not identify those genes. 
+Running the same test using "any" however, did not reveal these genes either, or at least they were not in the top 10 (data not shown). 
+Another approach could be to filter by a logFC cutoff rather than just taking the top 10.
 
 ## Run CellAssign
 ```{r}
