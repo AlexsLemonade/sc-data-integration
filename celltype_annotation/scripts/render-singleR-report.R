@@ -64,7 +64,7 @@ render_template <- function(project_id,
     output_file = file.path(results_dir, output_filename),
     output_dir = results_dir,
     params = list(
-      s3_data_dir = file.path(s3_prefix, project_id),
+      s3_data_dir = glue::glue("{s3_prefix}/{project_id}"),
       local_data_dir = local_dir,
       sample_id = sample_id,
       library_id = library_id
