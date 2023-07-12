@@ -39,7 +39,7 @@ option_list <- list(
   make_option(
     opt_str = c("--s3_prefix"),
     type = "character",
-    default = "s3://nextflow-ccdl-results/scpca/processed/results/",
+    default = "s3://nextflow-ccdl-results/scpca/processed/results",
     help = "S3 URI prefix where SCE objects containing cell type annotations are stored"
   )
 )
@@ -64,7 +64,7 @@ render_template <- function(project_id,
     output_file = file.path(results_dir, output_filename),
     output_dir = results_dir,
     params = list(
-      s3_data_dir = file.path(s3_prefix, project_id),
+      s3_data_dir = glue::glue("{s3_prefix}/{project_id}"),
       local_data_dir = local_dir,
       sample_id = sample_id,
       library_id = library_id
@@ -81,7 +81,8 @@ if(!file.exists(opt$library_metadata)){
   stop("Provided library_metadata file does not exist.")
 }
 
-fs::dir_create(opt$results_dir)
+results_dir <- file.path(opt$results_dir, opt$scpca_project_id)
+fs::dir_create(results_dir)
 
 library_metadata <- readr::read_tsv(opt$library_metadata)
 
@@ -99,7 +100,7 @@ library_metadata |>
                 "library_id" = library_biomaterial_id) |>
   # render templates for each library 
   purrr::pwalk(render_template,
-               results_dir = opt$results_dir,
+               results_dir = results_dir,
                template_rmd = opt$template_rmd,
                local_dir = opt$local_dir,
                s3_prefix = opt$s3_prefix)
