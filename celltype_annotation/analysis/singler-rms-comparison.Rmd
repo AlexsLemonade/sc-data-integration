@@ -101,7 +101,8 @@ rm(submitter_annotated_sce)
 # we also identify the top 10 represented cell types 
 
 celltype_assignments_table <- function(coldata_df,
-                                       label_type){
+                                       label_type,
+                                       num_celltypes = 10){
   celltype_assignments <- coldata_df |>
     tidyr::pivot_longer(cols = c(broad_celltype, starts_with(label_type)),
                         names_to = "reference",
@@ -110,12 +111,12 @@ celltype_assignments_table <- function(coldata_df,
     dplyr::mutate(reference = stringr::str_replace(reference, paste0(label_type, "_"), ""),
                   celltype = stringr::str_replace(celltype, "Monocytes", "Monocyte"),
                   celltype = stringr::str_replace(celltype, "Endothelial_cells", "Endothelial cells"),
-                  celltype_top = forcats::fct_lump_n(celltype, 10))
+                  celltype_top = forcats::fct_lump_n(celltype, num_celltypes))
   
   # level for plotting later 
   references <- unique(celltype_assignments$reference)
 celltype_assignments <- celltype_assignments |> 
-    dplyr::mutate(reference_factor = forcats::fct_relevel(reference, broad_celltype))
+    dplyr::mutate(reference_factor = forcats::fct_relevel(reference, "broad_celltype"))
   
   return(celltype_assignments)
 }
@@ -124,7 +125,7 @@ celltype_assignments <- celltype_assignments |>
 ## Overall celltype assignments 
 
 This section examines the overall distribution of cell type assignments across all references with `SingleR` and manual annotations.
-We look at this using a stacked bar chart and by printing out a table of cell type annotations.
+We look at this using a stacked bar chart. 
 
 The original submitter cell types contained sub groups of tumor cells, e.g., `Tumor_myoblast-A` and `Tumor_myoblast-B`. 
 Before comparing annotations, the subgroups are combined into a single cell type, e.g., `Tumor_myoblast`.
@@ -175,34 +176,33 @@ purrr::imap(celltype_assignment_list,
                                                                  label_type))
 ```
 
-```{r}
-# print out tables 
-purrr::map(celltype_assignment_list, 
-            \(celltype_assignments) 
-            celltype_table(celltype_assignments))
-```
 
 ## Comparison of SingleR annotations to submitter annotations
 
 This section will directly compare cell type annotations using `HumanPrimaryCellAtlasData` or `BlueprintEncodeData` with `SingleR` vs. manual annotations. 
 Each chunk displays a heatmap directly comparing a `SingleR` reference (columns) to manual annotations (rows).
 
-```{r}
+```{r, fig.height=5}
 compare_refs_heatmap(original_assignment = coldata_df$broad_celltype,
-                     cell_assign = coldata_df$label.ont_BlueprintEncodeData)
+                     cell_assign = coldata_df$label.ont_BlueprintEncodeData,
+                     title = "BlueprintEncodeData - label.ont")
 ```
+
 ```{r}
 compare_refs_heatmap(original_assignment = coldata_df$broad_celltype,
-                     cell_assign = coldata_df$label.main_BlueprintEncodeData)
+                     cell_assign = coldata_df$label.main_BlueprintEncodeData,
+                     title = "BlueprintEncodeData - label.main")
 ```
 ```{r, fig.height=7, fig.width=7}
 compare_refs_heatmap(original_assignment = coldata_df$broad_celltype,
-                     cell_assign = coldata_df$label.ont_HumanPrimaryCellAtlasData)
+                     cell_assign = coldata_df$label.ont_HumanPrimaryCellAtlasData,
+                     title = "HumanPrimaryCellAtlasData - label.ont")
 ```
 
 ```{r, fig.height=5, fig.width=7}
 compare_refs_heatmap(original_assignment = coldata_df$broad_celltype,
-                     cell_assign = coldata_df$label.main_HumanPrimaryCellAtlasData)
+                     cell_assign = coldata_df$label.main_HumanPrimaryCellAtlasData,
+                     "HumanPrimaryCellAtlasData - label.ont")
 ```
 
 ## Median delta score 
@@ -212,7 +212,7 @@ We can grab the complete `SingleR` results from the `metadata` of the annotated 
 These results contain a matrix of all the scores for each cell and for each label. 
 We expect that a reference that is more appropriate will have higher delta medians. 
 
-```{r warning=FALSE, message=FALSE}
+```{r warning=FALSE, message=FALSE, fig.height=7}
 # first just grab the singleR objects so we can directly use those as input to the plotScoreHeatmap function
 singler_results <- metadata(singler_annotated_sce)$singler_results
 
