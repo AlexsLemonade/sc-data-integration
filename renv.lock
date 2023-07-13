@@ -442,6 +442,14 @@
         "rhdf5filters"
       ]
     },
+    "HGNChelper": {
+      "Package": "HGNChelper",
+      "Version": "0.8.1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "d756e596f0f9ddd90b82921f5964b71b",
+      "Requirements": []
+    },
     "IRanges": {
       "Package": "IRanges",
       "Version": "2.30.0",
@@ -746,6 +754,19 @@
         "DelayedArray",
         "Matrix",
         "S4Vectors"
+      ]
+    },
+    "Rgraphviz": {
+      "Package": "Rgraphviz",
+      "Version": "2.40.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/Rgraphviz",
+      "git_branch": "RELEASE_3_15",
+      "git_last_commit": "d864c97",
+      "git_last_commit_date": "2022-04-26",
+      "Hash": "86c68a02b741b58960dae7c328d55fbb",
+      "Requirements": [
+        "graph"
       ]
     },
     "Rhdf5lib": {
@@ -1932,6 +1953,19 @@
         "gtools"
       ]
     },
+    "graph": {
+      "Package": "graph",
+      "Version": "1.74.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/graph",
+      "git_branch": "RELEASE_3_15",
+      "git_last_commit": "4af608a",
+      "git_last_commit_date": "2022-04-26",
+      "Hash": "08e64017b9fc86340df1a13eb89573cc",
+      "Requirements": [
+        "BiocGenerics"
+      ]
+    },
     "gridExtra": {
       "Package": "gridExtra",
       "Version": "2.3",
@@ -2556,6 +2590,52 @@
       "Hash": "df58958f293b166e4ab885ebcad90e02",
       "Requirements": []
     },
+    "ontoProc": {
+      "Package": "ontoProc",
+      "Version": "1.18.0",
+      "Source": "Bioconductor",
+      "git_url": "https://git.bioconductor.org/packages/ontoProc",
+      "git_branch": "RELEASE_3_15",
+      "git_last_commit": "6a28f6f",
+      "git_last_commit_date": "2022-04-26",
+      "Hash": "d3d7de793a03e58b7bf787f2630c388b",
+      "Requirements": [
+        "AnnotationDbi",
+        "AnnotationHub",
+        "Biobase",
+        "BiocFileCache",
+        "DT",
+        "Rgraphviz",
+        "S4Vectors",
+        "dplyr",
+        "graph",
+        "igraph",
+        "magrittr",
+        "ontologyIndex",
+        "ontologyPlot",
+        "shiny"
+      ]
+    },
+    "ontologyIndex": {
+      "Package": "ontologyIndex",
+      "Version": "2.11",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "d78d554536e3bc46741a6492e6a434cb",
+      "Requirements": []
+    },
+    "ontologyPlot": {
+      "Package": "ontologyPlot",
+      "Version": "1.6",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "013a457338fccdc34994fea51340342f",
+      "Requirements": [
+        "Rgraphviz",
+        "ontologyIndex",
+        "paintmap"
+      ]
+    },
     "openssl": {
       "Package": "openssl",
       "Version": "2.0.2",
@@ -2564,6 +2644,18 @@
       "Hash": "6d3bef2e305f55c705c674653c7d7d3d",
       "Requirements": [
         "askpass"
+      ]
+    },
+    "openxlsx": {
+      "Package": "openxlsx",
+      "Version": "4.2.5.2",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "c03b4c18d42da881fb8e15a085c2b9d6",
+      "Requirements": [
+        "Rcpp",
+        "stringi",
+        "zip"
       ]
     },
     "optparse": {
@@ -2575,6 +2667,23 @@
       "Requirements": [
         "getopt"
       ]
+    },
+    "org.Hs.eg.db": {
+      "Package": "org.Hs.eg.db",
+      "Version": "3.15.0",
+      "Source": "Bioconductor",
+      "Hash": "ea73036cd4946b4577e0aa9e51d0a61b",
+      "Requirements": [
+        "AnnotationDbi"
+      ]
+    },
+    "paintmap": {
+      "Package": "paintmap",
+      "Version": "1.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "864410e690c3e4d660c025037638058d",
+      "Requirements": []
     },
     "parallelly": {
       "Package": "parallelly",
@@ -2628,6 +2737,18 @@
       "Hash": "cc4b077b3626f117564c0e90ec4c7f9a",
       "Requirements": [
         "geometry"
+      ]
+    },
+    "pheatmap": {
+      "Package": "pheatmap",
+      "Version": "1.0.12",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "db1fb0021811b6693741325bbe916e58",
+      "Requirements": [
+        "RColorBrewer",
+        "gtable",
+        "scales"
       ]
     },
     "pillar": {
@@ -3827,6 +3948,14 @@
         "cli",
         "reticulate"
       ]
+    },
+    "zip": {
+      "Package": "zip",
+      "Version": "2.3.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "d98c94dacb7e0efcf83b0a133a705504",
+      "Requirements": []
     },
     "zlibbioc": {
       "Package": "zlibbioc",
