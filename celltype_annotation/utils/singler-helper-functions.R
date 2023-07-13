@@ -21,19 +21,6 @@ celltype_barchart <- function(celltype_assignments,
   
 }
 
-# create a table of the celltype assignments for each reference (e.g. HumanPrimaryCellAtlasData)
-celltype_table <- function(celltype_assignments){
-  
-  all_celltypes <- celltype_assignments |> 
-    dplyr::count(reference, celltype) |> 
-    dplyr::ungroup() |>
-    tidyr::spread(reference, n)
-
-  return(all_celltypes)
-
-}
-
-
 # creates a plot showing the distribution of the desired metric with reference on the x-axis
 # color by whether or not labels are pruned or not
 # facet by label type (main, fine, or ont)
@@ -41,7 +28,7 @@ celltype_table <- function(celltype_assignments){
 plot_metric_distribution <- function(all_results,
                                      metric_type){
   
-  metric_plot <- ggplot(all_results, aes_string(x = reference, y = metric_type, group = reference, color = pruned)) +
+  metric_plot <- ggplot(all_results, aes_string(x = "reference", y = metric_type, group = "reference", color = "pruned")) +
     ggforce::geom_sina(size = 0.1, alpha = 0.2) +
     stat_summary(
       aes(group = reference),
