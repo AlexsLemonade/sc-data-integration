@@ -61,15 +61,15 @@ local_submitter_sce_path <- file.path(params$local_data_dir,
 # if missing any of the annotated sce files, grab them from S3
 if(!(file.exists(local_singler_sce_path))){
   
-  aws_includes <- glue::glue('--include "*/{singler_annotated_sce_file}"')
-  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_singler_data_dir}/{params$sample_id} {singler_annotated_sce_file} --exclude "*" {aws_includes}')
+  aws_includes <- glue::glue('--include "{singler_annotated_sce_file}"')
+  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_singler_data_dir}/{params$sample_id} {params$local_data_dir}/{params$sample_id} --exclude "*" {aws_includes}')
   system(sync_call, ignore.stdout = TRUE) 
   
 }
 
 if(!(file.exists(local_submitter_sce_path))){
   
-  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_submitter_data_dir} {params$local_data_dir}/{params$sample_id} --exclude "*" --include {submitter_annotated_sce_file}')
+  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_submitter_data_dir} {params$local_data_dir}/{params$sample_id} --exclude "*" --include "{submitter_annotated_sce_file}"')
   system(sync_call, ignore.stdout = TRUE) 
   
 }
