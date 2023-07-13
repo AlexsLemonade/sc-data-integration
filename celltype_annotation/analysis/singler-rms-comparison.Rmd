@@ -5,8 +5,8 @@ output:
     toc: true
     toc_float: true
 params:
-  s3_singler_data_dir: "s3://nextflow-ccdl-results/scpca/processed/results/SCPCP000007" 
-  s3_submitter_data_dir: "s3://sc-data-integration/scpca"
+  s3_singler_data_dir: "s3://nextflow-ccdl-results/scpca/processed/results/SCPCP000005" 
+  s3_submitter_data_dir: "s3://sc-data-integration/scpca/celltype_sce"
   local_data_dir: "../data"
   library_id: "SCPCL000488"
   sample_id: "SCPCS000262"
@@ -51,22 +51,27 @@ singler_annotated_sce_file <- glue::glue("{params$library_id}_annotated.rds")
 submitter_annotated_sce_file <- glue::glue("{params$library_id}_processed_celltype.rds")
 
 local_singler_sce_path <- file.path(params$local_data_dir, 
-                                      params$sample_id, 
-                                      singler_annotated_sce_file)
+                                    params$sample_id, 
+                                    singler_annotated_sce_file)
 
 local_submitter_sce_path <- file.path(params$local_data_dir,
                                       params$sample_id,
                                       submitter_annotated_sce_file)
 
-all_paths <- c(local_singler_sce_path, local_submitter_sce_path)
-
 # if missing any of the annotated sce files, grab them from S3
-if(any(!(file.exists(all_paths)))){
-  # sync annotated SCE files 
-  aws_includes <- paste("--include '", all_paths, "'", sep = '', collapse = ' ')
-  sync_call <- paste('aws s3 cp', params$s3_ref_dir, params$local_data_dir,
-                     '--exclude "*"', aws_includes,'--recursive', sep = " ")
+if(!(file.exists(local_singler_sce_path))){
+  
+  aws_includes <- glue::glue('--include "*/{singler_annotated_sce_file}"')
+  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_singler_data_dir}/{params$sample_id} {singler_annotated_sce_file} --exclude "*" {aws_includes}')
   system(sync_call, ignore.stdout = TRUE) 
+  
+}
+
+if(!(file.exists(local_submitter_sce_path))){
+  
+  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_submitter_data_dir} {params$local_data_dir}/{params$sample_id} --exclude "*" {submitter_annotated_sce_file}')
+  system(sync_call, ignore.stdout = TRUE) 
+  
 }
 
 # read in all annotated sce 
