@@ -69,7 +69,7 @@ if(!(file.exists(local_singler_sce_path))){
 
 if(!(file.exists(local_submitter_sce_path))){
   
-  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_submitter_data_dir} {params$local_data_dir}/{params$sample_id} --exclude "*" {submitter_annotated_sce_file}')
+  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_submitter_data_dir} {params$local_data_dir}/{params$sample_id} --exclude "*" --include {submitter_annotated_sce_file}')
   system(sync_call, ignore.stdout = TRUE) 
   
 }
