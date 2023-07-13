@@ -25,9 +25,8 @@ celltype_barchart <- function(celltype_assignments,
 celltype_table <- function(celltype_assignments){
   
   all_celltypes <- celltype_assignments |> 
-    dplyr::group_by(reference, celltype) |> 
-    dplyr::count() |> 
-    dplyr::ungroup() |> 
+    dplyr::count(reference, celltype) |> 
+    dplyr::ungroup() |>
     tidyr::spread(reference, n)
 
   return(all_celltypes)
@@ -42,7 +41,7 @@ celltype_table <- function(celltype_assignments){
 plot_metric_distribution <- function(all_results,
                                      metric_type){
   
-  metric_plot <- ggplot(all_results, aes_string(x = "reference", y = metric_type, group = "reference", color = "pruned")) +
+  metric_plot <- ggplot(all_results, aes_string(x = reference, y = metric_type, group = reference, color = pruned)) +
     ggforce::geom_sina(size = 0.1, alpha = 0.2) +
     stat_summary(
       aes(group = reference),

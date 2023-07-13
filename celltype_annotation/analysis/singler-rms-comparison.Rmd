@@ -114,10 +114,8 @@ celltype_assignments_table <- function(coldata_df,
   
   # level for plotting later 
   references <- unique(celltype_assignments$reference)
-  reference_order <- c("broad_celltype", references[!references == "broad_celltype"])
-  
-  celltype_assignments <- celltype_assignments |> 
-    dplyr::mutate(reference_factor = forcats::fct_relevel(reference, reference_order))
+celltype_assignments <- celltype_assignments |> 
+    dplyr::mutate(reference_factor = forcats::fct_relevel(reference, broad_celltype))
   
   return(celltype_assignments)
 }
@@ -139,10 +137,10 @@ coldata_df <- colData(singler_annotated_sce) |>
   # classify cells as tumor or normal
   dplyr::mutate(cell_category = dplyr::if_else(stringr::str_detect(submitter_annotations, "Tumor"), "Tumor", submitter_annotations),
                 # remove sub states of myoblast/mesoderm/myocyte
-                broad_celltype = stringr::str_remove(submitter_annotations, "-A|-B|-C|-D"))
+                broad_celltype = stringr::str_remove(submitter_annotations, "-\\w$"))
 ```
 
-For all the `label.ont` reference labels, we will grab the human readable cell ontology labels.
+For all the `label.ont` reference labels, we will grab the human-readable cell ontology labels.
 These labels will be used for plotting for the remainder of the notebook. 
 
 ```{r}
@@ -150,7 +148,7 @@ These labels will be used for plotting for the remainder of the notebook.
 cl_ont <- ontoProc::getCellOnto()
 
 # rename all label.ont columns with full cell ontology label
-ont_columns_idx <- startsWith(colnames(coldata_df), "label.ont")
+ont_columns_idx <- stringr::str_starts(colnames(coldata_df), "label.ont")
 cl_columns <- coldata_df[,ont_columns_idx] |>
   purrr::map(
     \(cl_id) 
@@ -170,7 +168,7 @@ celltype_assignment_list <- purrr::map(labels,
 ```
 
 
-```{r, fig.width=10, fig.height=5}
+```{r, fig.width=10, fig.height=7}
 # print out barcharts
 purrr::imap(celltype_assignment_list, 
            \(celltype_assignments, label_type) celltype_barchart(celltype_assignments,
@@ -226,7 +224,8 @@ median_delta_results <- singler_results |>
   dplyr::mutate(pruned = ifelse(is.na(pruned.labels), "Yes", "No"))
 
 # plot the distribution of median_delta for each reference, faceting by label type (main, fine, ont)
-plot_metric_distribution(median_delta_results, "median_delta")
+plot_metric_distribution(median_delta_results, "median_delta") + 
+  theme(legend.position = "bottom")
 ```
 
 ## Conclusions 
