@@ -1,0 +1,183 @@
+---
+title: "CellAssign: Rhabdomyosarcoma using public references"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+params:
+  library_id: "SCPCL000488"
+  sample_id: "SCPCS000262"
+---
+
+## Set Up
+
+```{r}
+library(SingleCellExperiment)
+library(ggplot2)
+
+# source helper functions
+function_file <- file.path("..", "utils", "cellassign-helper-functions.R")
+source(function_file)
+```
+
+```{r}
+# Set up paths 
+
+# build path to annotated sce file 
+processed_data_dir <-file.path("..", "data") 
+processed_sce_file <- glue::glue("{params$library_id}_processed_celltype.rds")
+local_processed_sce_path <- file.path(processed_data_dir, params$sample_id, processed_sce_file)
+
+# anndata output
+anndata_dir <- file.path("..", "data", "anndata")
+anndata_file <- glue::glue("{params$library_id}_anndata.hdf5")
+anndata_file <- file.path(anndata_dir, anndata_file)
+
+# reference files for cell marker
+ref_dir <- file.path("..", "references")
+panglao_file <- file.path(ref_dir, "PanglaoDB_markers_27_Mar_2020.tsv")
+
+# matrix files 
+panglao_comb_mtx_file <- file.path(ref_dir, "panglao_combined_mtx.csv")
+panglao_muscle_only_mtx_file <- file.path(ref_dir, "panglao_connective_tissue_mtx.csv")
+
+# cellassign predictions
+combined_prediction_file <- file.path(
+  anndata_dir, 
+  glue::glue("{params$library_id}_panglao_combined.tsv")
+)
+muscle_only_prediction_file <- file.path(
+  anndata_dir, 
+  glue::glue("{params$library_id}_panglao_connective_tissue.tsv")
+)
+
+```
+
+
+```{r}
+# read in all annotated sce 
+processed_sce <- readr::read_rds(local_processed_sce_path)
+```
+
+## CellAssign with combined organs 
+
+```{r}
+# read in panglao db 
+panglao_df <- readr::read_tsv(panglao_file)
+```
+
+```{r}
+# grab all muscle related organs
+panglao_tissue_immune_combined <- panglao_df |> 
+  dplyr::filter(organ %in% c("Connective tissue", "Smooth muscle", "Skeletal muscle", "Blood", "Immune system"))
+
+panglao_tissue_immune_combined |>
+  dplyr::count(`cell type`, `organ`)
+```
+```{r}
+# create rowdata df
+rowdata_df <- rowData(processed_sce) |>
+  as.data.frame() |>
+  tibble::rownames_to_column("ensembl_id") |>
+  dplyr::select(ensembl_id, gene_symbol)
+
+# get binary mtx for combined tissues 
+combined_binary_mtx <- build_binary_mtx(marker_genes_df = panglao_tissue_immune_combined,
+                                        celltype_column = 'cell type',
+                                        gene_id_column = 'official gene symbol',
+                                        rowdata_df = rowdata_df)
+
+# export mtx 
+readr::write_csv(combined_binary_mtx, panglao_comb_mtx_file)
+```
+
+```{r,  eval = FALSE}
+# run cell assign with muscle ref
+cellassign_call <- glue::glue("
+python ../scripts/cell-assign.py \
+  --input_anndata '{anndata_file}' \
+  --output_predictions '{combined_prediction_file}' \
+  --reference '{panglao_comb_mtx_file}'
+")
+
+system(cellassign_call)
+```
+## PanglaoDb Results
+
+```{r}
+# read in prediction scores 
+combined_predictions <- readr::read_tsv(combined_prediction_file)
+muscle_only_predictions <- readr::read_tsv(muscle_only_prediction_file)
+
+all_predictions <- list(combined_predictions,
+                        muscle_only_predictions)
+names(all_predictions) <- c("combined", "muscle_only")
+```
+
+```{r}
+all_assignments <- purrr::map(all_predictions,
+                              get_celltype_assignments)
+```
+
+
+```{r}
+# print table of assignments
+all_assignments |>
+  purrr::map(\(celltype_assignments){
+    
+    # print out table of assignments
+    celltype_assignments |> 
+      dplyr::count(celltype) |>
+      dplyr::arrange(desc(n))
+    
+  })
+```
+
+```{r}
+# heatmap of prediction scores 
+all_predictions |>
+  purrr::imap(\(prediction_mtx, organ_type){
+    
+    prediction_mtx |>
+      dplyr::select(-barcode) |> 
+      as.matrix() |> 
+      pheatmap::pheatmap(show_rownames = FALSE,
+                         main = organ_type)
+    
+  })
+```
+
+
+## Comparison between marker gene sets
+
+```{r}
+# add celltypes to processed sce 
+processed_sce$combined_assignments <- all_assignments$combined$celltype
+processed_sce$muscle_only_assignments <- all_assignments$muscle_only$celltype
+```
+
+
+```{r}
+# extract coldata for easy plotting
+coldata_df <- colData(processed_sce) |>
+  as.data.frame() |> 
+  dplyr::select(barcode, celltype, combined_assignments, muscle_only_assignments) |>
+  # classify cells as tumor or normal
+  dplyr::mutate(cell_category = dplyr::if_else(stringr::str_detect(celltype, "Tumor"), "Tumor", celltype),
+                # remove sub states of myoblast/mesoderm/myocyte
+                broad_celltype = stringr::str_remove(celltype, "-\\w$"))
+```
+
+```{r}
+compare_refs_heatmap(original_assignment = coldata_df$combined_assignments,
+                     cell_assign = coldata_df$muscle_only_assignments,
+                     title = "Combined vs. Muscle only")
+```
+
+```{r}
+compare_refs_heatmap(original_assignment = coldata_df$combined_assignments,
+                     cell_assign = coldata_df$broad_celltype,
+                     title = "Combined vs. Submitter annotations")
+```
+
+
