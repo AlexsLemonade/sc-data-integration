@@ -1,3 +1,35 @@
+# create binary gene by cell matrix given a set of marker genes 
+
+build_binary_mtx <- function(marker_genes_df, 
+                             celltype_column,
+                             gene_id_column,
+                             rowdata_df){
+ 
+  # create a binary matrix of genes by cell type markers 
+  binary_mtx <- marker_genes_df |>
+    dplyr::select(celltype_column, gene_id_column) |> 
+    tidyr::pivot_wider(id_cols = gene_id_column,
+                       names_from = celltype_column,
+                       values_from = celltype_column,
+                       values_fn = length,
+                       values_fill = 0) |> 
+    tibble::column_to_rownames(gene_id_column) |>
+    dplyr::mutate(other = 0)
+  
+  # replace length with 1
+  binary_mtx[binary_mtx > 1] <- 1
+  
+  # merge reference with rowdata and replace gene symbols with ensembl
+  binary_mtx <- binary_mtx |>
+    tibble::rownames_to_column("gene_symbol") |>
+    dplyr::left_join(rowdata_df) |>
+    # drop any rows where there is no ensembl id
+    tidyr::drop_na(ensembl_id) |>
+    dplyr::select(-gene_symbol) |>
+    dplyr::relocate(ensembl_id)
+  
+  return(binary_mtx)
+}
 
 # define a function for obtaining cell type assignments from cell assign predictions
 get_celltype_assignments <- function(predictions){
