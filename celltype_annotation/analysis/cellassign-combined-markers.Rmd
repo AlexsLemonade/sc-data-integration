@@ -57,17 +57,20 @@ panglao_comb_mtx_file <- file.path(ref_dir, "panglao_combined_mtx.csv")
 panglao_custom_mtx_file <- file.path(ref_dir, "panglao_custom_mtx.csv")
 panglao_muscle_only_mtx_file <- file.path(ref_dir, "panglao_connective_tissue_mtx.csv")
 
+# predictions output
+cellassign_outs_dir <- "cellassign_results"
+
 # cellassign predictions
 combined_prediction_file <- file.path(
-  anndata_dir, 
+  cellassign_outs_dir, 
   glue::glue("{params$library_id}_panglao_combined.tsv")
 )
 muscle_only_prediction_file <- file.path(
-  anndata_dir, 
+  cellassign_outs_dir, 
   glue::glue("{params$library_id}_panglao_connective_tissue.tsv")
 )
 custom_prediction_file <- file.path(
-  anndata_dir, 
+  cellassign_outs_dir, 
   glue::glue("{params$library_id}_panglao_custom.tsv")
 )
 
