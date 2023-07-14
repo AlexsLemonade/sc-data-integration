@@ -29,7 +29,6 @@ analysis_templates/*.html
 analysis_templates/*.html.zip
 
 # celltype references and data
-celltype_annotation/references
 celltype_annotation/data
 celltype_annotation/singler_models
 celltype_annotation/analysis/reports
