@@ -23,6 +23,9 @@ However instead of using public references for marker gene sets, we use `scran::
 
 6. `singler-rms-comparison.Rmd`: This notebook compares annotations from `SingleR` to manual annotations in Rhabdomyosarcoma samples from `SCPCP000005`.
 
+7. `cellassign-combined-markers.Rmd`: This notebook is follow-up to the exploration in `cell-assign-sarcoma.Rmd`.
+In the notebook, cell type annotations using different sets of marker genes from `PanglaoDB` are compared to submitter annotations.
+
 ## Scripts
 
 This folder contains any scripts used for cell type annotation.
