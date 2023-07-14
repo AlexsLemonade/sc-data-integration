@@ -17,7 +17,12 @@ get_celltype_assignments <- function(predictions){
 
 # function for creating comparison heatmaps between two different annotations
 compare_refs_heatmap <- function(original_assignment,
-                                 cell_assign){
+                                 cell_assign,
+                                 title = NULL){
+  if(is.null(title)){
+    title <- ""
+  }
+  
   # build a matrix with reference as the rows and the celltype as the columns
   label_mtx <- table(original_assignment,
                      cell_assign,
@@ -27,6 +32,7 @@ compare_refs_heatmap <- function(original_assignment,
   pheatmap::pheatmap(label_mtx,
                      cluster_rows = TRUE, 
                      width = 10,
-                     fontsize_col = 8)
+                     fontsize_col = 8,
+                     main = title)
   
 }

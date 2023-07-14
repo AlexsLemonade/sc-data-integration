@@ -1,0 +1,244 @@
+---
+title: "SingleR: Rhabdomyosarcoma cell type comparison for `r {params$library_id}`"
+output: 
+  html_notebook:
+    toc: true
+    toc_float: true
+params:
+  s3_singler_data_dir: "s3://nextflow-ccdl-results/scpca/processed/results/SCPCP000005" 
+  s3_submitter_data_dir: "s3://sc-data-integration/scpca/celltype_sce"
+  local_data_dir: "../data"
+  library_id: "SCPCL000488"
+  sample_id: "SCPCS000262"
+---
+
+The goal of this notebook is to compare using `SingleR` for cell type annotation to manual annotations in Rhabdomyosarcoma samples.
+For each SCE object, we annotated cell types using the `SingleR` workflow in `scpca-nf v0.5.2`. 
+This adds a cell type annotation for all available `celldex` references (`BlueprintEncodeData`, `ImmuneCellExpressionData`, `HumanPrimaryCellAtlasData`, and `MonacoImmuneData`).
+Additionally, we created references from `BlueprintEncodeData` and `HumanPrimaryCellAtlasData` that do not contain immune cells.
+For each reference, cell types were obtained using all available reference labels, `label.main`, `label.fine`, and `label.ont`. 
+
+We are mostly concerned with looking at the results from using `BlueprintEncodeData` and `HumanPrimaryCellAtlasData` as those references contain more than just immune cells and will be more relevant for the RMS samples. 
+
+In this notebook we do the following: 
+
+- Look at the distribution of cell type annotations with `SingleR` vs. manual
+- Directly compare how each cell is annotated between `SingleR` and manual
+- Calculate the median delta score across all `SingleR` annotations
+
+## Set Up
+
+```{r}
+suppressPackageStartupMessages({
+  library(SingleCellExperiment)
+  library(ggplot2)
+})
+theme_set(theme_bw())
+
+# source in helper functions for plotting 
+source(file.path("..", "utils", "cellassign-helper-functions.R"))
+source(file.path("..", "utils", "singler-helper-functions.R"))
+```
+
+```{r}
+# make local data directory if it doesn't exist
+if(!dir.exists(params$local_data_dir)){
+  dir.create(params$local_data_dir, recursive = TRUE)
+}
+
+# build path to singler and submitter annotated sce file 
+singler_annotated_sce_file <- glue::glue("{params$library_id}_annotated.rds")
+submitter_annotated_sce_file <- glue::glue("{params$library_id}_processed_celltype.rds")
+
+local_singler_sce_path <- file.path(params$local_data_dir, 
+                                    params$sample_id, 
+                                    singler_annotated_sce_file)
+
+local_submitter_sce_path <- file.path(params$local_data_dir,
+                                      params$sample_id,
+                                      submitter_annotated_sce_file)
+
+# if missing any of the annotated sce files, grab them from S3
+if(!(file.exists(local_singler_sce_path))){
+  
+  aws_includes <- glue::glue('--include "{singler_annotated_sce_file}"')
+  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_singler_data_dir}/{params$sample_id} {params$local_data_dir}/{params$sample_id} --exclude "*" {aws_includes}')
+  system(sync_call, ignore.stdout = TRUE) 
+  
+}
+
+if(!(file.exists(local_submitter_sce_path))){
+  
+  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_submitter_data_dir} {params$local_data_dir}/{params$sample_id} --exclude "*" --include "{submitter_annotated_sce_file}"')
+  system(sync_call, ignore.stdout = TRUE) 
+  
+}
+
+# read in all annotated sce 
+singler_annotated_sce <- readr::read_rds(local_singler_sce_path)
+submitter_annotated_sce <- readr::read_rds(local_submitter_sce_path)
+```
+
+
+```{r}
+# add submitter annotations to singler annotated object 
+singler_annotated_sce$submitter_annotations <- submitter_annotated_sce$celltype
+
+# remove extra objects
+rm(submitter_annotated_sce)
+```
+
+## Define Functions
+
+```{r}
+# This function is used to create a table with cell type assignments for SingleR
+# This also assumes there is a `broad_celltype` column that comes from a submitter
+# Input is a dataframe from the column data containing all the cell type annotations
+# and the label type to grab (e.g., label.main, label.fine, or label.ont)
+
+# output is a dataframe of just the label types indicated across all references used
+# annotations in the broad_celltype column are also included in the final output
+# we also identify the top 10 represented cell types 
+
+celltype_assignments_table <- function(coldata_df,
+                                       label_type,
+                                       num_celltypes = 10){
+  celltype_assignments <- coldata_df |>
+    tidyr::pivot_longer(cols = c(broad_celltype, starts_with(label_type)),
+                        names_to = "reference",
+                        values_to = "celltype") |>
+    # do some string replacements to deal with a few similar assignments across references
+    dplyr::mutate(reference = stringr::str_replace(reference, paste0(label_type, "_"), ""),
+                  celltype = stringr::str_replace(celltype, "Monocytes", "Monocyte"),
+                  celltype = stringr::str_replace(celltype, "Endothelial_cells", "Endothelial cells"),
+                  celltype_top = forcats::fct_lump_n(celltype, num_celltypes))
+  
+  # level for plotting later 
+  references <- unique(celltype_assignments$reference)
+celltype_assignments <- celltype_assignments |> 
+    dplyr::mutate(reference_factor = forcats::fct_relevel(reference, "broad_celltype"))
+  
+  return(celltype_assignments)
+}
+```
+
+## Overall celltype assignments 
+
+This section examines the overall distribution of cell type assignments across all references with `SingleR` and manual annotations.
+We look at this using a stacked bar chart. 
+
+The original submitter cell types contained sub groups of tumor cells, e.g., `Tumor_myoblast-A` and `Tumor_myoblast-B`. 
+Before comparing annotations, the subgroups are combined into a single cell type, e.g., `Tumor_myoblast`.
+These will be stored in the `broad_celltype` column and used throughout the remainder of the notebook. 
+
+```{r}
+# extract coldata for easy plotting
+coldata_df <- colData(singler_annotated_sce) |>
+  as.data.frame() |> 
+  # classify cells as tumor or normal
+  dplyr::mutate(cell_category = dplyr::if_else(stringr::str_detect(submitter_annotations, "Tumor"), "Tumor", submitter_annotations),
+                # remove sub states of myoblast/mesoderm/myocyte
+                broad_celltype = stringr::str_remove(submitter_annotations, "-\\w$"))
+```
+
+For all the `label.ont` reference labels, we will grab the human-readable cell ontology labels.
+These labels will be used for plotting for the remainder of the notebook. 
+
+```{r}
+# grab cell label names corresponding to cell ontology ids
+cl_ont <- ontoProc::getCellOnto()
+
+# rename all label.ont columns with full cell ontology label
+ont_columns_idx <- stringr::str_starts(colnames(coldata_df), "label.ont")
+cl_columns <- coldata_df[,ont_columns_idx] |>
+  purrr::map(
+    \(cl_id) 
+    cl_ont$name[cl_id]
+  ) |> 
+  dplyr::bind_cols()
+coldata_df[,ont_columns_idx] <- cl_columns
+```
+
+```{r}
+# create a table of cell type assignments for each label type
+labels <- c("label.main", "label.fine", "label.ont")
+celltype_assignment_list <- purrr::map(labels,
+                                       \(label_type) celltype_assignments_table(coldata_df,
+                                                                                label_type)) |>
+  purrr::set_names(labels)
+```
+
+
+```{r, fig.width=10, fig.height=7}
+# print out barcharts
+purrr::imap(celltype_assignment_list, 
+           \(celltype_assignments, label_type) celltype_barchart(celltype_assignments,
+                                                                 label_type))
+```
+
+
+## Comparison of SingleR annotations to submitter annotations
+
+This section will directly compare cell type annotations using `HumanPrimaryCellAtlasData` or `BlueprintEncodeData` with `SingleR` vs. manual annotations. 
+Each chunk displays a heatmap directly comparing a `SingleR` reference (columns) to manual annotations (rows).
+
+```{r, fig.height=5}
+compare_refs_heatmap(original_assignment = coldata_df$broad_celltype,
+                     cell_assign = coldata_df$label.ont_BlueprintEncodeData,
+                     title = "BlueprintEncodeData - label.ont")
+```
+
+```{r}
+compare_refs_heatmap(original_assignment = coldata_df$broad_celltype,
+                     cell_assign = coldata_df$label.main_BlueprintEncodeData,
+                     title = "BlueprintEncodeData - label.main")
+```
+```{r, fig.height=7, fig.width=7}
+compare_refs_heatmap(original_assignment = coldata_df$broad_celltype,
+                     cell_assign = coldata_df$label.ont_HumanPrimaryCellAtlasData,
+                     title = "HumanPrimaryCellAtlasData - label.ont")
+```
+
+```{r, fig.height=5, fig.width=7}
+compare_refs_heatmap(original_assignment = coldata_df$broad_celltype,
+                     cell_assign = coldata_df$label.main_HumanPrimaryCellAtlasData,
+                     "HumanPrimaryCellAtlasData - label.ont")
+```
+
+## Median delta score 
+
+The last thing we will look at is the distribution of the delta between the top and median scores (referred to as the delta median here).
+We can grab the complete `SingleR` results from the `metadata` of the annotated SCE object.
+These results contain a matrix of all the scores for each cell and for each label. 
+We expect that a reference that is more appropriate will have higher delta medians. 
+
+```{r warning=FALSE, message=FALSE, fig.height=7}
+# first just grab the singleR objects so we can directly use those as input to the plotScoreHeatmap function
+singler_results <- metadata(singler_annotated_sce)$singler_results
+
+median_delta_results <- singler_results |> 
+  purrr::map(get_median_delta) |>
+  dplyr::bind_rows(.id = "reference") |>
+  tidyr::separate(reference, into = c("label_type", "reference"), sep = "_", extra = "merge") |>
+  # classify each label as pruned or not
+  dplyr::mutate(pruned = ifelse(is.na(pruned.labels), "Yes", "No"))
+
+# plot the distribution of median_delta for each reference, faceting by label type (main, fine, ont)
+plot_metric_distribution(median_delta_results, "median_delta") + 
+  theme(legend.position = "bottom")
+```
+
+## Conclusions 
+
+- `BlueprintEncodeData` seems like the most appropriate reference when looking at the direct comparison of cell type labels with `SingleR` to manual. 
+This is mostly based on the presence of skeletal muscle cells obtained from `SingleR` annotations, whereas muscle cells don't appear to be present in `HumanPrimaryCellAtlasData`. 
+- There appears to be a higher proportion of `NA` cells that correspond to tumor cells than we saw with the AML samples. 
+- Generally I think we could use `SingleR` with solid tumors, but I think we will still want to be careful about which reference we use for each disease type. 
+I don't think we are going to find a single reference that works across all of our samples, although `BlueprintEncodeData` does seem to generally be doing a decent job here. 
+Although I'm making that conclusion mostly based on _vibes_...
+
+## Session Info
+
+```{r}
+sessionInfo()
+```
