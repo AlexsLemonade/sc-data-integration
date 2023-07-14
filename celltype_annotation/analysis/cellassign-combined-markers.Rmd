@@ -1,5 +1,5 @@
 ---
-title: "CellAssign: Rhabdomyosarcoma using public references"
+title: "CellAssign: Annotating Rhabdomyosarcoma with combined marker gene sets"
 output: 
   html_notebook:
     toc: true
@@ -8,6 +8,21 @@ params:
   library_id: "SCPCL000488"
   sample_id: "SCPCS000262"
 ---
+
+This notebook dives deeper into using `CellAssign` with marker gene sets derived from the [`PanglaoDB` database](https://panglaodb.se/index.html). 
+Previously we had compared using marker gene sets from a single organ or tissue type using two different databases, `PanglaoDB` or `CellMarker2.0`. 
+We liked the organization of `PanglaoDB`, other than the missing cell ontology IDs, so want to see how `CellAssign` performs when using marker gene sets obtained by combining cell types across organs. 
+
+Here we run `CellAssign` using two different gene sets and compare the results to the previous `CellAssign` results using only cell types found in the muscle/connective tissue and to the submitter annotations. 
+
+- `combined` refers to a reference gene set that contains all cell types found in muscle, connective tissue, and the immune system. 
+- `custom` refers to a reference gene set that contains all cell types found in muscle and connective tissue and only Monocytes from the immune system.
+This is because the only overlap between the submitter annotations and the cells in the immune system found in `PanglaoDB` are Monocytes. 
+- `muscle_only` refers to a reference gene set that contains only cell types found in muscle and connective tissue. 
+The predictions from using this reference gene set were obtained by running `CellAssign` in the `cell-assign-sarcoma.Rmd` notebook. 
+
+**Note:** Running this notebook requires you to download the `<library_id>_processed_celltype.rds` file for the library that you would like to process from `s3://sc-data-integration/scpca/celltype_sce`.
+This file should be saved in `data/<sample_id>`. 
 
 ## Set Up
 
@@ -39,6 +54,7 @@ panglao_file <- file.path(ref_dir, "PanglaoDB_markers_27_Mar_2020.tsv")
 
 # matrix files 
 panglao_comb_mtx_file <- file.path(ref_dir, "panglao_combined_mtx.csv")
+panglao_custom_mtx_file <- file.path(ref_dir, "panglao_custom_mtx.csv")
 panglao_muscle_only_mtx_file <- file.path(ref_dir, "panglao_connective_tissue_mtx.csv")
 
 # cellassign predictions
@@ -50,16 +66,25 @@ muscle_only_prediction_file <- file.path(
   anndata_dir, 
   glue::glue("{params$library_id}_panglao_connective_tissue.tsv")
 )
+custom_prediction_file <- file.path(
+  anndata_dir, 
+  glue::glue("{params$library_id}_panglao_custom.tsv")
+)
 
 ```
 
 
 ```{r}
-# read in all annotated sce 
+# read in annotated sce 
 processed_sce <- readr::read_rds(local_processed_sce_path)
 ```
 
-## CellAssign with combined organs 
+```{r}
+# write out anndata 
+scpcaTools::sce_to_anndata(processed_sce, anndata_file = anndata_file)
+```
+
+## Prep marker gene sets for CellAssign
 
 ```{r}
 # read in panglao db 
@@ -67,13 +92,24 @@ panglao_df <- readr::read_tsv(panglao_file)
 ```
 
 ```{r}
-# grab all muscle related organs
+# grab all muscle related organs + all immune
 panglao_tissue_immune_combined <- panglao_df |> 
-  dplyr::filter(organ %in% c("Connective tissue", "Smooth muscle", "Skeletal muscle", "Blood", "Immune system"))
+  dplyr::filter(organ %in% c("Connective tissue", "Smooth muscle", "Skeletal muscle", "Immune system"))
 
 panglao_tissue_immune_combined |>
   dplyr::count(`cell type`, `organ`)
 ```
+
+```{r}
+# grab all muscle related organs + monocytes only
+custom_marker_genes <- panglao_df |> 
+  dplyr::filter(organ %in% c("Connective tissue", "Smooth muscle", "Skeletal muscle") |
+                `cell type` == "Monocytes")
+
+custom_marker_genes |>
+  dplyr::count(`cell type`, `organ`)
+```
+
 ```{r}
 # create rowdata df
 rowdata_df <- rowData(processed_sce) |>
@@ -81,40 +117,58 @@ rowdata_df <- rowData(processed_sce) |>
   tibble::rownames_to_column("ensembl_id") |>
   dplyr::select(ensembl_id, gene_symbol)
 
+# create list of marker gene sets
+all_marker_genes <- list(panglao_tissue_immune_combined,
+                         custom_marker_genes)
+names(all_marker_genes) <- c("combined", "custom")
+
 # get binary mtx for combined tissues 
-combined_binary_mtx <- build_binary_mtx(marker_genes_df = panglao_tissue_immune_combined,
-                                        celltype_column = 'cell type',
-                                        gene_id_column = 'official gene symbol',
-                                        rowdata_df = rowdata_df)
+binary_matrix_list <- all_marker_genes |> 
+  purrr::map(\(gene_list) build_binary_mtx(marker_genes_df = gene_list,
+                                            celltype_column = 'cell type',
+                                            gene_id_column = 'official gene symbol',
+                                            rowdata_df = rowdata_df))
 
 # export mtx 
-readr::write_csv(combined_binary_mtx, panglao_comb_mtx_file)
+mtx_files <- c(panglao_comb_mtx_file,
+               panglao_custom_mtx_file)
+purrr::walk2(binary_matrix_list, mtx_files,
+             \(binary_mtx, file)
+             readr::write_csv(binary_mtx, file))
+
+# list of prediction files 
+prediction_files <- c(combined_prediction_file,
+                      custom_prediction_file)
 ```
+
 
 ```{r,  eval = FALSE}
 # run cell assign with muscle ref
-cellassign_call <- glue::glue("
-python ../scripts/cell-assign.py \
-  --input_anndata '{anndata_file}' \
-  --output_predictions '{combined_prediction_file}' \
-  --reference '{panglao_comb_mtx_file}'
-")
+cellassign_calls <- purrr::map2(prediction_files, mtx_files,
+                                \(predictions, marker_genes) {
+                                  glue::glue("python ../scripts/cell-assign.py \
+                                              --input_anndata '{anndata_file}' \
+                                              --output_predictions '{predictions}' \
+                                              --reference '{marker_genes}'")
+                                })
 
 system(cellassign_call)
 ```
-## PanglaoDb Results
+
+## CellAssign Results
 
 ```{r}
-# read in prediction scores 
-combined_predictions <- readr::read_tsv(combined_prediction_file)
-muscle_only_predictions <- readr::read_tsv(muscle_only_prediction_file)
+# add muscle only to prediction file list 
+prediction_files <- c(prediction_files, muscle_only_prediction_file)
+names(prediction_files) <- c("combined", "custom", "muscle_only")
 
-all_predictions <- list(combined_predictions,
-                        muscle_only_predictions)
-names(all_predictions) <- c("combined", "muscle_only")
+# read in prediction scores 
+all_predictions <- prediction_files |>
+  purrr::map(readr::read_tsv)
 ```
 
 ```{r}
+# get final cell type assignments 
 all_assignments <- purrr::map(all_predictions,
                               get_celltype_assignments)
 ```
@@ -133,7 +187,7 @@ all_assignments |>
   })
 ```
 
-```{r}
+```{r, fig.height=5, fig.width=10}
 # heatmap of prediction scores 
 all_predictions |>
   purrr::imap(\(prediction_mtx, organ_type){
@@ -147,12 +201,16 @@ all_predictions |>
   })
 ```
 
+The main conclusion after looking at this is that regardless of the marker gene set, most cells get classified as "other"
 
 ## Comparison between marker gene sets
+
+Here we directly compare the annotations between different marker gene sets and the submitter annotations. 
 
 ```{r}
 # add celltypes to processed sce 
 processed_sce$combined_assignments <- all_assignments$combined$celltype
+processed_sce$custom_assignments <- all_assignments$custom$celltype
 processed_sce$muscle_only_assignments <- all_assignments$muscle_only$celltype
 ```
 
@@ -161,23 +219,59 @@ processed_sce$muscle_only_assignments <- all_assignments$muscle_only$celltype
 # extract coldata for easy plotting
 coldata_df <- colData(processed_sce) |>
   as.data.frame() |> 
-  dplyr::select(barcode, celltype, combined_assignments, muscle_only_assignments) |>
+  dplyr::select(barcode, celltype, combined_assignments, custom_assignments, muscle_only_assignments) |>
   # classify cells as tumor or normal
   dplyr::mutate(cell_category = dplyr::if_else(stringr::str_detect(celltype, "Tumor"), "Tumor", celltype),
                 # remove sub states of myoblast/mesoderm/myocyte
                 broad_celltype = stringr::str_remove(celltype, "-\\w$"))
 ```
 
-```{r}
+```{r, fig.width=7}
 compare_refs_heatmap(original_assignment = coldata_df$combined_assignments,
                      cell_assign = coldata_df$muscle_only_assignments,
                      title = "Combined vs. Muscle only")
 ```
 
-```{r}
+```{r, fig.width=7}
 compare_refs_heatmap(original_assignment = coldata_df$combined_assignments,
                      cell_assign = coldata_df$broad_celltype,
                      title = "Combined vs. Submitter annotations")
 ```
 
+```{r, fig.width=7}
+compare_refs_heatmap(original_assignment = coldata_df$custom_assignments,
+                     cell_assign = coldata_df$muscle_only_assignments,
+                     title = "Custom vs. Muscle only")
+```
+
+
+```{r, fig.width=7}
+compare_refs_heatmap(original_assignment = coldata_df$custom_assignments,
+                     cell_assign = coldata_df$broad_celltype,
+                     title = "Custom vs. Submitter annotations")
+```
+
+```{r, fig.width=7}
+compare_refs_heatmap(original_assignment = coldata_df$muscle_only_assignments,
+                     cell_assign = coldata_df$broad_celltype,
+                     title = "Muscle only vs. Submitter annotations")
+```
+## Conclusions
+
+- Regardless of which combination of cell types we choose from `PanglaoDB` most of the cells get categorized as "other" for this sample. 
+One thing to note is that when using `SingleR` we are able to assign cells to `muscle cells` and `skeletal muscle cells`. 
+Although the assignments from `SingleR` (see `singler-rms-comparison.Rmd`) don't completely line up with the submitter annotations, identifying cells as muscle cells rather than labeling most of them as "other" does seem more informative to me. 
+- The more marker genes you have the more time `CellAssign` takes. 
+We already knew this, but this was a new record. 
+It took ~ 2 hours to run the immune + connective tissue with 8 cpus. 
+- I don't think adding in the immune system really helped that much.
+It just made it take longer and then assigned cells to immune cells that were not previously identified in our dataset.
+Maybe we don't need to use multiple organs? 
+
+
+## Session Info
+
+```{r}
+sessionInfo()
+```
 
