@@ -11,6 +11,7 @@ import os
 import anndata as adata
 import scvi
 from scvi.external import CellAssign
+from scvi import settings
 import pandas as pd
 import numpy as np
 import argparse
@@ -69,6 +70,9 @@ subset_adata.X = subset_adata.X.tocsr()
 # add size factor to subset adata (calculated from full data)
 lib_size = annotated_adata.X.sum(1)
 subset_adata.obs["size_factor"] = lib_size / np.mean(lib_size)
+
+# define the number of threads to use
+settings.num_threads = 8
 
 # train and assign cell types
 scvi.external.CellAssign.setup_anndata(subset_adata, size_factor_key="size_factor")
