@@ -16,7 +16,7 @@ We liked the organization of `PanglaoDB`, other than the missing cell ontology I
 Here we run `CellAssign` using two different gene sets and compare the results to the previous `CellAssign` results using only cell types found in the muscle/connective tissue and to the submitter annotations. 
 
 - `combined` refers to a reference gene set that contains all cell types found in muscle, connective tissue, and the immune system. 
-- `custom` refers to a reference gene set that contains all cell types found in muscle and connective tissue and only Monocytes from the immune system.
+- `combined_custom` refers to a reference gene set that contains all cell types found in muscle and connective tissue and only Monocytes from the immune system.
 This is because the only overlap between the submitter annotations and the cells in the immune system found in `PanglaoDB` are Monocytes. 
 - `muscle_only` refers to a reference gene set that contains only cell types found in muscle and connective tissue. 
 The predictions from using this reference gene set were obtained by running `CellAssign` in the `cell-assign-sarcoma.Rmd` notebook. 
@@ -71,7 +71,7 @@ muscle_only_prediction_file <- file.path(
 )
 custom_prediction_file <- file.path(
   cellassign_outs_dir, 
-  glue::glue("{params$library_id}_panglao_custom.tsv")
+  glue::glue("{params$library_id}_panglao_combined-custom.tsv")
 )
 
 ```
@@ -93,11 +93,11 @@ scpcaTools::sce_to_anndata(processed_sce, anndata_file = anndata_file)
 # read in panglao db 
 panglao_df <- readr::read_tsv(panglao_file)
 ```
-
+muscle_cells <- c("Connective tissue", "Smooth muscle", "Skeletal muscle")
 ```{r}
 # grab all muscle related organs + all immune
 panglao_tissue_immune_combined <- panglao_df |> 
-  dplyr::filter(organ %in% c("Connective tissue", "Smooth muscle", "Skeletal muscle", "Immune system"))
+  dplyr::filter(organ %in% c(muscle_cells, "Immune system"))
 
 panglao_tissue_immune_combined |>
   dplyr::count(`cell type`, `organ`)
@@ -106,7 +106,7 @@ panglao_tissue_immune_combined |>
 ```{r}
 # grab all muscle related organs + monocytes only
 custom_marker_genes <- panglao_df |> 
-  dplyr::filter(organ %in% c("Connective tissue", "Smooth muscle", "Skeletal muscle") |
+  dplyr::filter(organ %in% muscle_cells |
                 `cell type` == "Monocytes")
 
 custom_marker_genes |>
@@ -123,7 +123,7 @@ rowdata_df <- rowData(processed_sce) |>
 # create list of marker gene sets
 all_marker_genes <- list(panglao_tissue_immune_combined,
                          custom_marker_genes)
-names(all_marker_genes) <- c("combined", "custom")
+names(all_marker_genes) <- c("combined", "combined_custom")
 
 # get binary mtx for combined tissues 
 binary_matrix_list <- all_marker_genes |> 
@@ -163,7 +163,7 @@ system(cellassign_call)
 ```{r}
 # add muscle only to prediction file list 
 prediction_files <- c(prediction_files, muscle_only_prediction_file)
-names(prediction_files) <- c("combined", "custom", "muscle_only")
+names(prediction_files) <- c("combined", "combined_custom", "muscle_only")
 
 # read in prediction scores 
 all_predictions <- prediction_files |>
@@ -213,7 +213,7 @@ Here we directly compare the annotations between different marker gene sets and 
 ```{r}
 # add celltypes to processed sce 
 processed_sce$combined_assignments <- all_assignments$combined$celltype
-processed_sce$custom_assignments <- all_assignments$custom$celltype
+processed_sce$custom_assignments <- all_assignments$combined_custom$celltype
 processed_sce$muscle_only_assignments <- all_assignments$muscle_only$celltype
 ```
 
@@ -222,7 +222,7 @@ processed_sce$muscle_only_assignments <- all_assignments$muscle_only$celltype
 # extract coldata for easy plotting
 coldata_df <- colData(processed_sce) |>
   as.data.frame() |> 
-  dplyr::select(barcode, celltype, combined_assignments, custom_assignments, muscle_only_assignments) |>
+  dplyr::select(barcode, celltype, combined_assignments, combined_custom_assignments, muscle_only_assignments) |>
   # classify cells as tumor or normal
   dplyr::mutate(cell_category = dplyr::if_else(stringr::str_detect(celltype, "Tumor"), "Tumor", celltype),
                 # remove sub states of myoblast/mesoderm/myocyte
@@ -242,16 +242,16 @@ compare_refs_heatmap(original_assignment = coldata_df$combined_assignments,
 ```
 
 ```{r, fig.width=7}
-compare_refs_heatmap(original_assignment = coldata_df$custom_assignments,
+compare_refs_heatmap(original_assignment = coldata_df$combined_custom_assignments,
                      cell_assign = coldata_df$muscle_only_assignments,
-                     title = "Custom vs. Muscle only")
+                     title = "Combined-custom vs. Muscle only")
 ```
 
 
 ```{r, fig.width=7}
-compare_refs_heatmap(original_assignment = coldata_df$custom_assignments,
+compare_refs_heatmap(original_assignment = coldata_df$combined_custom_assignments,
                      cell_assign = coldata_df$broad_celltype,
-                     title = "Custom vs. Submitter annotations")
+                     title = "Combined-custom vs. Submitter annotations")
 ```
 
 ```{r, fig.width=7}

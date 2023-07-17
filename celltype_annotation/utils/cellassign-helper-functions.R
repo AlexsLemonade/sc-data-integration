@@ -25,8 +25,7 @@ build_binary_mtx <- function(marker_genes_df,
     dplyr::left_join(rowdata_df) |>
     # drop any rows where there is no ensembl id
     tidyr::drop_na(ensembl_id) |>
-    dplyr::select(-gene_symbol) |>
-    dplyr::relocate(ensembl_id)
+    dplyr::select(ensembl_id, everything(), -gene_symbol)
   
   return(binary_mtx)
 }
