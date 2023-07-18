@@ -14,6 +14,8 @@ build_binary_mtx <- function(marker_genes_df,
                        values_fn = length,
                        values_fill = 0) |> 
     tibble::column_to_rownames(gene_id_column) |>
+    # add a column with no marker genes 
+    # cell assign will assign cells to "other" when no other cell types are appropriate 
     dplyr::mutate(other = 0)
   
   # replace length with 1
@@ -49,6 +51,8 @@ get_celltype_assignments <- function(predictions){
 # function for creating comparison heatmaps between two different annotations
 compare_refs_heatmap <- function(original_assignment,
                                  cell_assign,
+                                 cluster_rows = TRUE,
+                                 cluster_cols = TRUE,
                                  title = NULL){
   if(is.null(title)){
     title <- ""
@@ -60,10 +64,11 @@ compare_refs_heatmap <- function(original_assignment,
                      useNA = "ifany") |> 
     log1p() # log transform for visual help
   
-  pheatmap::pheatmap(label_mtx,
-                     cluster_rows = TRUE, 
-                     width = 10,
-                     fontsize_col = 8,
-                     main = title)
+  ComplexHeatmap::pheatmap(label_mtx,
+                           cluster_rows = cluster_rows, 
+                           cluster_cols = cluster_cols,
+                           fontsize_col = 8,
+                           heatmap_legend_param = list(title = "Log(Number of cells)"),
+                           main = title)
   
 }

@@ -4,6 +4,7 @@ output:
   html_notebook:
     toc: true
     toc_float: true
+    code_folding: "hide"
 params:
   library_id: "SCPCL000488"
   sample_id: "SCPCS000262"
@@ -20,9 +21,6 @@ Here we run `CellAssign` using two different gene sets and compare the results t
 This is because the only overlap between the submitter annotations and the cells in the immune system found in `PanglaoDB` are Monocytes. 
 - `muscle_only` refers to a reference gene set that contains only cell types found in muscle and connective tissue. 
 The predictions from using this reference gene set were obtained by running `CellAssign` in the `cell-assign-sarcoma.Rmd` notebook. 
-
-**Note:** Running this notebook requires you to download the `<library_id>_processed_celltype.rds` file for the library that you would like to process from `s3://sc-data-integration/scpca/celltype_sce`.
-This file should be saved in `data/<sample_id>`. 
 
 ## Set Up
 
@@ -54,8 +52,8 @@ panglao_file <- file.path(ref_dir, "PanglaoDB_markers_27_Mar_2020.tsv")
 
 # matrix files 
 panglao_comb_mtx_file <- file.path(ref_dir, "panglao_combined_mtx.csv")
-panglao_custom_mtx_file <- file.path(ref_dir, "panglao_custom_mtx.csv")
-panglao_muscle_only_mtx_file <- file.path(ref_dir, "panglao_connective_tissue_mtx.csv")
+panglao_custom_mtx_file <- file.path(ref_dir, "panglao_combined-custom_mtx.csv")
+panglao_muscle_only_mtx_file <- file.path(ref_dir, "panglao_muscle_mtx.csv")
 
 # predictions output
 cellassign_outs_dir <- "cellassign_results"
@@ -67,7 +65,7 @@ combined_prediction_file <- file.path(
 )
 muscle_only_prediction_file <- file.path(
   cellassign_outs_dir, 
-  glue::glue("{params$library_id}_panglao_connective_tissue.tsv")
+  glue::glue("{params$library_id}_panglao_muscle.tsv")
 )
 custom_prediction_file <- file.path(
   cellassign_outs_dir, 
@@ -78,13 +76,29 @@ custom_prediction_file <- file.path(
 
 
 ```{r}
+# if the file isn't present, grab it from aws
+if(!file.exists(local_processed_sce_path)){
+  
+  filename <- basename(local_processed_sce_path)
+  local_data_dir <- file.path("..", "data", params$sample_id)
+  s3_dir <- "s3://sc-data-integration/scpca/celltype_sce"
+  fs::dir_create(local_data_dir)
+  
+  sync_call <- glue::glue('op run -- aws s3 sync {s3_dir} {local_data_dir} --exclude "*" --include "{filename}"')
+  system(sync_call, ignore.stdout = TRUE) 
+  
+}
+
+
 # read in annotated sce 
 processed_sce <- readr::read_rds(local_processed_sce_path)
 ```
 
 ```{r}
-# write out anndata 
-scpcaTools::sce_to_anndata(processed_sce, anndata_file = anndata_file)
+if(!file.exists(anndata_file)){
+ # write out anndata 
+  scpcaTools::sce_to_anndata(processed_sce, anndata_file = anndata_file) 
+}
 ```
 
 ## Prep marker gene sets for CellAssign
@@ -93,8 +107,9 @@ scpcaTools::sce_to_anndata(processed_sce, anndata_file = anndata_file)
 # read in panglao db 
 panglao_df <- readr::read_tsv(panglao_file)
 ```
-muscle_cells <- c("Connective tissue", "Smooth muscle", "Skeletal muscle")
 ```{r}
+muscle_cells <- c("Connective tissue", "Smooth muscle", "Skeletal muscle")
+
 # grab all muscle related organs + all immune
 panglao_tissue_immune_combined <- panglao_df |> 
   dplyr::filter(organ %in% c(muscle_cells, "Immune system"))
@@ -114,34 +129,43 @@ custom_marker_genes |>
 ```
 
 ```{r}
-# create rowdata df
-rowdata_df <- rowData(processed_sce) |>
-  as.data.frame() |>
-  tibble::rownames_to_column("ensembl_id") |>
-  dplyr::select(ensembl_id, gene_symbol)
-
-# create list of marker gene sets
-all_marker_genes <- list(panglao_tissue_immune_combined,
-                         custom_marker_genes)
-names(all_marker_genes) <- c("combined", "combined_custom")
-
-# get binary mtx for combined tissues 
-binary_matrix_list <- all_marker_genes |> 
-  purrr::map(\(gene_list) build_binary_mtx(marker_genes_df = gene_list,
-                                            celltype_column = 'cell type',
-                                            gene_id_column = 'official gene symbol',
-                                            rowdata_df = rowdata_df))
-
-# export mtx 
+# list of matrix files to create
 mtx_files <- c(panglao_comb_mtx_file,
                panglao_custom_mtx_file)
-purrr::walk2(binary_matrix_list, mtx_files,
-             \(binary_mtx, file)
-             readr::write_csv(binary_mtx, file))
 
-# list of prediction files 
+# if any of them don't exist, make them 
+if(!any(file.exists(mtx_files))){
+ 
+  # create rowdata df
+  rowdata_df <- rowData(processed_sce) |>
+    as.data.frame() |>
+    tibble::rownames_to_column("ensembl_id") |>
+    dplyr::select(ensembl_id, gene_symbol)
+  
+  # create list of marker gene sets
+  all_marker_genes <- list(panglao_tissue_immune_combined,
+                           custom_marker_genes)
+  names(all_marker_genes) <- c("combined", "combined_custom")
+  
+  # get binary mtx for combined tissues 
+  binary_matrix_list <- all_marker_genes |> 
+    purrr::map(\(gene_list) build_binary_mtx(marker_genes_df = gene_list,
+                                             celltype_column = 'cell type',
+                                             gene_id_column = 'official gene symbol',
+                                             rowdata_df = rowdata_df))
+  
+  # export mtx 
+  purrr::walk2(binary_matrix_list, mtx_files,
+               \(binary_mtx, file)
+               readr::write_csv(binary_mtx, file))
+  
+}
+```
+
+```{r}
+# list of output prediction files 
 prediction_files <- c(combined_prediction_file,
-                      custom_prediction_file)
+                      custom_prediction_file) 
 ```
 
 
@@ -213,7 +237,7 @@ Here we directly compare the annotations between different marker gene sets and 
 ```{r}
 # add celltypes to processed sce 
 processed_sce$combined_assignments <- all_assignments$combined$celltype
-processed_sce$custom_assignments <- all_assignments$combined_custom$celltype
+processed_sce$combined_custom_assignments <- all_assignments$combined_custom$celltype
 processed_sce$muscle_only_assignments <- all_assignments$muscle_only$celltype
 ```
 
@@ -259,6 +283,94 @@ compare_refs_heatmap(original_assignment = coldata_df$muscle_only_assignments,
                      cell_assign = coldata_df$broad_celltype,
                      title = "Muscle only vs. Submitter annotations")
 ```
+
+## Compare to clustering 
+
+This section will compare the various cell type annotations to the cluster assignments. 
+For simplicity, we will use louvain-jaccard graph-based clustering with the default nearest neighbors parameter of 10. 
+We will look at UMAPs and heatmaps of the cluster assignments and cell type assignments.
+We expect that any assigned cell types should be somewhat correlated to the clusters, in particular for cell types that are less frequent.
+This means that a single cell type is probably less likely to be spread across multiple clusters.
+
+```{r}
+# cluster sce object
+pcs <- reducedDim(processed_sce, "PCA")
+clusters <- bluster::clusterRows(pcs,
+                                 bluster::NNGraphParam(
+                                   cluster.fun = "louvain", 
+                                   type = "jaccard"
+                                 ))
+```
+
+```{r}
+# pull out the cell type columns that we want to plot
+umap_labels <- c("cluster_assignment", 
+                 "broad_celltype",
+                 "combined_assignments",
+                 "combined_custom_assignments",
+                 "muscle_only_assignments")
+
+umap_df <- coldata_df |> 
+  # add clusters and UMAP embeddings to coldata
+  dplyr::mutate(
+    cluster_assignment = clusters,
+    UMAP_1 = reducedDim(processed_sce, "UMAP")[,1],
+    UMAP_2 = reducedDim(processed_sce, "UMAP")[,2]
+  ) |>
+  # combine all the cell type assignments into one column
+  tidyr::pivot_longer(cols = umap_labels,
+                      names_to = "label_type",
+                      values_to = "cell_label") |>
+  # relabel other to distinguish from "other" added by forcats
+  # Cells categorized by other in CellAssign become Not assigned 
+  dplyr::mutate(cell_label = dplyr::if_else(cell_label == "other",
+                                            "Not assigned",
+                                            cell_label)) |>
+  dplyr::group_split(label_type) |>
+  # only grab the top cell types for each cell type assignment method
+  # all other cell types will get grouped as "other" 
+  purrr::map(\(df) 
+             dplyr::mutate(df, 
+                           top_labels = forcats::fct_lump_n(
+                             df$cell_label, 
+                             n = 10
+                             ))) |>
+  dplyr::bind_rows()
+```
+
+
+```{r}
+# create a separate umap for each of the cluster/ cell type assignments 
+# only plot the top cell types otherwise it gets overwhelming with colors
+purrr::map(umap_labels,
+           \(label){
+             
+             plotting_df <- umap_df |>
+               dplyr::filter(label_type %in% label)
+
+             ggplot(plotting_df, aes(x = UMAP_1, y = UMAP_2, color = top_labels)) +
+               geom_point(size = 0.2, alpha = 0.5) +
+               guides(color = guide_legend(override.aes = list(size = 3))) +
+               labs(color = label) +
+               theme_bw()
+               
+           })
+```
+
+```{r}
+# heatmaps comparing clusters to cell type assignments
+heatmap_labels <- umap_labels[umap_labels != "cluster_assignment"]
+purrr::map(heatmap_labels,
+           \(label) compare_refs_heatmap(coldata_df[, label],
+                                         clusters,
+                                         cluster_cols = FALSE,
+                                         cluster_rows = TRUE,
+                                         title = label))
+```
+It looks like the smaller immune cell populations (e.g., the T memory cells and Dendritic Cells in the combined annotation) are spread throughout the same cluster that contains cells that are "Not assigned".
+These correlate with tumor cells in the submitter annotations.
+I would have maybe expected to see those cells in their own cluster or separate from the clusters containing tumor cells.
+
 ## Conclusions
 
 - Regardless of which combination of cell types we choose from `PanglaoDB` most of the cells get categorized as "other" for this sample. 
