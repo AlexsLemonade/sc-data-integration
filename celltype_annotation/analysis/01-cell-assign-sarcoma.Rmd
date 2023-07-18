@@ -51,7 +51,7 @@ panglao_file <- file.path(ref_dir, "PanglaoDB_markers_27_Mar_2020.tsv")
 
 # output matrix files 
 cell_marker_mtx_file <- file.path(ref_dir, "cell_marker_muscle_mtx.csv")
-panglao_matrix_file <- file.path(ref_dir, "panglao_connective_tissue_mtx.csv")
+panglao_matrix_file <- file.path(ref_dir, "panglao_muscle_mtx.csv")
 
 # cellassign predictions
 cellmarker_prediction_file <- file.path(
@@ -60,7 +60,7 @@ cellmarker_prediction_file <- file.path(
 )
 panglao_prediction_file <- file.path(
   anndata_dir, 
-  glue::glue("{params$library_id}_panglao_connective_tissue.tsv")
+  glue::glue("{params$library_id}_panglao_muscle.tsv")
 )
 
 ```

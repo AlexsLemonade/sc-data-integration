@@ -15,15 +15,15 @@ Again, this notebook specifically is for blood tumors.
 
 3. `marker-gene-celltype-exploration.Rmd`: This notebook looks at using other marker gene based methods, specifically `scType` and `CellAssign`.
 
-4. `cell-assign-sarcoma.Rmd`: Here we specifically look at using `CellAssign` with Rhabdomyosarcoma samples from `SCPCP000005`.
+4. `01-cell-assign-sarcoma.Rmd`: Here we specifically look at using `CellAssign` with Rhabdomyosarcoma samples from `SCPCP000005`.
 This analysis compares the assignments using `CellAssign` to the submitter annotations.
 
-5. `cell-assign-sarcoma-marker-genes.Rmd`: This notebook also compare annotations using `CellAssign` to manual annotations cell type annotations in Rhabdomyosarcoma samples from `SCPCP000005`.
+5. `02-cell-assign-sarcoma-marker-genes.Rmd`: This notebook also compare annotations using `CellAssign` to manual annotations cell type annotations in Rhabdomyosarcoma samples from `SCPCP000005`.
 However instead of using public references for marker gene sets, we use `scran::FindMarkers()` to build a custom marker gene table for the specified library.
 
 6. `singler-rms-comparison.Rmd`: This notebook compares annotations from `SingleR` to manual annotations in Rhabdomyosarcoma samples from `SCPCP000005`.
 
-7. `cellassign-combined-markers.Rmd`: This notebook is follow-up to the exploration in `cell-assign-sarcoma.Rmd`.
+7. `03-cellassign-combined-markers.Rmd`: This notebook is follow-up to the exploration in `01-cell-assign-sarcoma.Rmd`.
 In the notebook, cell type annotations using different sets of marker genes from `PanglaoDB` are compared to submitter annotations.
 
 ## Scripts
