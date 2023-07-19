@@ -217,7 +217,7 @@ all_assignments |>
 ```{r, fig.height=5, fig.width=10}
 # heatmap of prediction scores 
 all_predictions |>
-  purrr::imap(\(prediction_mtx, organ_type){
+  purrr::iwalk(\(prediction_mtx, organ_type){
     
     prediction_mtx |>
       dplyr::select(-barcode) |> 
@@ -303,6 +303,8 @@ clusters <- bluster::clusterRows(pcs,
 ```
 
 ```{r}
+top_n_labels <- 10
+
 # pull out the cell type columns that we want to plot
 umap_labels <- c("cluster_assignment", 
                  "broad_celltype",
@@ -318,7 +320,7 @@ umap_df <- coldata_df |>
     UMAP_2 = reducedDim(processed_sce, "UMAP")[,2]
   ) |>
   # combine all the cell type assignments into one column
-  tidyr::pivot_longer(cols = umap_labels,
+  tidyr::pivot_longer(cols = all_of(umap_labels),
                       names_to = "label_type",
                       values_to = "cell_label") |>
   # relabel other to distinguish from "other" added by forcats
@@ -333,7 +335,7 @@ umap_df <- coldata_df |>
              dplyr::mutate(df, 
                            top_labels = forcats::fct_lump_n(
                              df$cell_label, 
-                             n = 10
+                             n = top_n_labels
                              ))) |>
   dplyr::bind_rows()
 ```
@@ -351,7 +353,7 @@ purrr::map(umap_labels,
              ggplot(plotting_df, aes(x = UMAP_1, y = UMAP_2, color = top_labels)) +
                geom_point(size = 0.2, alpha = 0.5) +
                guides(color = guide_legend(override.aes = list(size = 3))) +
-               labs(color = label) +
+               labs(color = label, title = label) +
                theme_bw()
                
            })
@@ -365,7 +367,7 @@ purrr::map(heatmap_labels,
                                          clusters,
                                          cluster_cols = FALSE,
                                          cluster_rows = TRUE,
-                                         title = label))
+                                         title = glue::glue("{label} across clusters")))
 ```
 It looks like the smaller immune cell populations (e.g., the T memory cells and Dendritic Cells in the combined annotation) are spread throughout the same cluster that contains cells that are "Not assigned".
 These correlate with tumor cells in the submitter annotations.
@@ -380,7 +382,7 @@ Although the assignments from `SingleR` (see `singler-rms-comparison.Rmd`) don't
 We already knew this, but this was a new record. 
 It took ~ 2 hours to run the immune + connective tissue with 8 cpus. 
 - I don't think adding in the immune system really helped that much.
-It just made it take longer and then assigned cells to immune cells that were not previously identified in our dataset.
+It just made it take longer and then assigned cells to immune cells that were not previously identified by submitters in our dataset.
 Maybe we don't need to use multiple organs? 
 
 
