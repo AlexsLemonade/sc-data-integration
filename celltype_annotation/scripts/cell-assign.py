@@ -11,6 +11,7 @@ import os
 import anndata as adata
 import scvi
 from scvi.external import CellAssign
+from scvi import settings
 import pandas as pd
 import numpy as np
 import argparse
@@ -29,6 +30,11 @@ parser.add_argument('-r', '--reference',
                     dest = 'reference',
                     required = True,
                     help = 'Path to marker by cell type reference file')
+parser.add_argument('-t', '--num_threads',
+                    dest = 'num_threads',
+                    default = 1,
+                    type = int,
+                    help = 'Number of threads to use when training the CellAssign model')
 
 args = parser.parse_args()
 
@@ -69,6 +75,9 @@ subset_adata.X = subset_adata.X.tocsr()
 # add size factor to subset adata (calculated from full data)
 lib_size = annotated_adata.X.sum(1)
 subset_adata.obs["size_factor"] = lib_size / np.mean(lib_size)
+
+# define the number of threads to use
+settings.num_threads = args.num_threads
 
 # train and assign cell types
 scvi.external.CellAssign.setup_anndata(subset_adata, size_factor_key="size_factor")
