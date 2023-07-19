@@ -35,11 +35,14 @@ rms_matrix_file <- file.path("..", "references", "rms_broad_markers_mtx.csv")
 anndata_dir <- file.path("..", "data", "anndata")
 anndata_file <- glue::glue("{params$library_id}_anndata.hdf5")
 anndata_file <- file.path(anndata_dir, anndata_file)
-fs::dir_create(anndata_dir)
+
+# prediction output
+cellassign_outs_dir <- "cellassign_results"
+fs::dir_create(cellassign_outs_dir)
 
 # cellassign predictions
 rms_prediction_file <- file.path(
-  anndata_dir, 
+  cellassign_outs_dir, 
   glue::glue("{params$library_id}_rms_broad_markers.tsv")
 )
 

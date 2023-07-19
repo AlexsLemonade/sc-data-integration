@@ -53,13 +53,17 @@ panglao_file <- file.path(ref_dir, "PanglaoDB_markers_27_Mar_2020.tsv")
 cell_marker_mtx_file <- file.path(ref_dir, "cell_marker_muscle_mtx.csv")
 panglao_matrix_file <- file.path(ref_dir, "panglao_muscle_mtx.csv")
 
+# predictions output
+cellassign_outs_dir <- "cellassign_results"
+fs::dir_create(cellassign_outs_dir)
+
 # cellassign predictions
 cellmarker_prediction_file <- file.path(
-  anndata_dir, 
+  cellassign_outs_dir, 
   glue::glue("{params$library_id}_muscle.tsv")
 )
 panglao_prediction_file <- file.path(
-  anndata_dir, 
+  cellassign_outs_dir, 
   glue::glue("{params$library_id}_panglao_muscle.tsv")
 )
 
