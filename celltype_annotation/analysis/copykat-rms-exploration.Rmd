@@ -1,0 +1,79 @@
+---
+title: "CopyKAT: Rhabdomyosarcoma cell type tumor vs normal inference for `r {params$library_id}`"
+output: 
+  html_notebook:
+  toc: true
+toc_float: true
+params:
+  s3_singler_data_dir: "s3://nextflow-ccdl-results/scpca/processed/results/SCPCP000005" 
+  s3_submitter_data_dir: "s3://sc-data-integration/scpca/celltype_sce"
+  local_data_dir: "../data"
+  library_id: "SCPCL000488"
+  sample_id: "SCPCS000262"
+---
+  
+Placeholder for text about what this notebook does.
+
+## Set Up
+
+```{r}
+suppressPackageStartupMessages({
+  library(SingleCellExperiment)
+  library(ggplot2)
+  library(copykat) # https://github.com/navinlabcode/copykat
+})
+theme_set(theme_bw())
+```
+
+
+
+```{r}
+# make local data directory if it doesn't exist
+if (!dir.exists(params$local_data_dir)) {
+  dir.create(params$local_data_dir, recursive = TRUE)
+}
+
+# build path to submitter annotated sce file 
+submitter_annotated_sce_file <- glue::glue("{params$library_id}_processed_celltype.rds")
+
+
+local_submitter_sce_path <- file.path(params$local_data_dir,
+                                      params$sample_id,
+                                      submitter_annotated_sce_file)
+
+# get submitter sce from S3 if not already present locally
+if (!(file.exists(local_submitter_sce_path))) {
+  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_submitter_data_dir} {params$local_data_dir}/{params$sample_id} --exclude "*" --include "{submitter_annotated_sce_file}"')
+  system(sync_call, ignore.stdout = TRUE) 
+}
+
+# read in sce 
+sce <- readr::read_rds(local_submitter_sce_path)
+```
+
+
+## Run CopyKAT
+
+First, we'll run `CopyKAT` on the SCE file.
+
+
+To run `CopyKAT`, we'll need to pull out the _raw expression matrix_, as described: https://github.com/navinlabcode/copykat#step-2-prepare-the-readcount-input-file. 
+
+Some notes on the distance parameter:
+> One struggling observation is that none of one clustering method could fit all datasets. In this version, I add a distance parameters for clustering that include "euclidean" distance and correlational distance, ie. 1-"pearson" and "spearman" similarity. In general, corretional distances tend to favor noisy data, while euclidean distance tends to favor data with larger CN segments.
+
+This step below takes _quite a while_ to run, so we'll want to save it to a file probably.
+It took nearly an hour. Should probably be run on the server with as many cores as possible.
+```{r message=FALSE, warning=FALSE}
+rms_copykat_result <- copykat(
+  rawmat = as.matrix(counts(sce)), 
+  id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
+  sam.name = params$library_id, # sample name 
+  n.cores = 2
+)
+```
+## Session Info
+
+```{r}
+sessionInfo()
+```

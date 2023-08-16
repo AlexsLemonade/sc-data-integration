@@ -1,6 +1,6 @@
 {
   "R": {
-    "Version": "4.2.1",
+    "Version": "4.2.2",
     "Repositories": [
       {
         "Name": "CRAN",
@@ -562,12 +562,26 @@
       "Hash": "762e1804143a332333c054759f89a706",
       "Requirements": []
     },
-    "Matrix": {
-      "Package": "Matrix",
-      "Version": "1.4-1",
+    "MCMCpack": {
+      "Package": "MCMCpack",
+      "Version": "1.6-3",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "699c47c606293bdfbc9fd78a93c9c8fe",
+      "Hash": "520335edba1c95a90eec54d693727723",
+      "Requirements": [
+        "MASS",
+        "coda",
+        "lattice",
+        "mcmc",
+        "quantreg"
+      ]
+    },
+    "Matrix": {
+      "Package": "Matrix",
+      "Version": "1.6-1",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "cb6855ac711958ca734b75e631b2035d",
       "Requirements": [
         "lattice"
       ]
@@ -767,6 +781,14 @@
         "Rcpp",
         "RcppEigen"
       ]
+    },
+    "RcppParallel": {
+      "Package": "RcppParallel",
+      "Version": "5.1.7",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "a45594a00f5dbb073d5ec9f48592a08a",
+      "Requirements": []
     },
     "RcppProgress": {
       "Package": "RcppProgress",
@@ -1438,6 +1460,16 @@
       "Hash": "c5f8447373ec2a0f593c694024e5b7ee",
       "Requirements": []
     },
+    "coda": {
+      "Package": "coda",
+      "Version": "0.19-4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "24b6d006b8b2343876cf230687546932",
+      "Requirements": [
+        "lattice"
+      ]
+    },
     "codetools": {
       "Package": "codetools",
       "Version": "0.2-18",
@@ -1461,6 +1493,27 @@
       "Repository": "CRAN",
       "Hash": "2ba81b120c1655ab696c935ef33ea716",
       "Requirements": []
+    },
+    "copykat": {
+      "Package": "copykat",
+      "Version": "1.1.0",
+      "Source": "GitHub",
+      "RemoteType": "github",
+      "RemoteHost": "api.github.com",
+      "RemoteUsername": "navinlabcode",
+      "RemoteRepo": "copykat",
+      "RemoteRef": "master",
+      "RemoteSha": "b795ff793522499f814f6ae282aad1aab790902f",
+      "Hash": "ebed63e95490218187089667a7269b76",
+      "Requirements": [
+        "MCMCpack",
+        "RColorBrewer",
+        "cluster",
+        "dlm",
+        "gplots",
+        "mixtools",
+        "parallelDist"
+      ]
     },
     "corrplot": {
       "Package": "corrplot",
@@ -1603,6 +1656,14 @@
       "Requirements": [
         "filelock"
       ]
+    },
+    "dlm": {
+      "Package": "dlm",
+      "Version": "1.1-6",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "e0dff489d999029c03330f063668e590",
+      "Requirements": []
     },
     "doParallel": {
       "Package": "doParallel",
@@ -2342,6 +2403,14 @@
         "xml2"
       ]
     },
+    "kernlab": {
+      "Package": "kernlab",
+      "Version": "0.9-32",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "d7d6a7cb690ac73eeced99e1ed9d6cdb",
+      "Requirements": []
+    },
     "knitr": {
       "Package": "knitr",
       "Version": "1.39",
@@ -2554,6 +2623,14 @@
       "Hash": "36ad89a805c436c5316c22490079da67",
       "Requirements": []
     },
+    "mcmc": {
+      "Package": "mcmc",
+      "Version": "0.9-7",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "aab79cde1fef3861c9eed1cbc3f931fb",
+      "Requirements": []
+    },
     "memoise": {
       "Package": "memoise",
       "Version": "2.0.1",
@@ -2631,6 +2708,21 @@
       "Hash": "eaee7d2a6f3ed4491df868611cb064cc",
       "Requirements": [
         "Rcpp"
+      ]
+    },
+    "mixtools": {
+      "Package": "mixtools",
+      "Version": "2.0.0",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "2b9414057d7f3725130e2f743ea05a2f",
+      "Requirements": [
+        "MASS",
+        "kernlab",
+        "plotly",
+        "scales",
+        "segmented",
+        "survival"
       ]
     },
     "modeltools": {
@@ -2781,6 +2873,18 @@
       "Repository": "CRAN",
       "Hash": "864410e690c3e4d660c025037638058d",
       "Requirements": []
+    },
+    "parallelDist": {
+      "Package": "parallelDist",
+      "Version": "0.2.6",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "3141cdd4fa667a29965fc9b6d6dbba42",
+      "Requirements": [
+        "Rcpp",
+        "RcppArmadillo",
+        "RcppParallel"
+      ]
     },
     "parallelly": {
       "Package": "parallelly",
@@ -3500,6 +3604,17 @@
         "SingleCellExperiment",
         "SummarizedExperiment",
         "beachmat"
+      ]
+    },
+    "segmented": {
+      "Package": "segmented",
+      "Version": "1.6-4",
+      "Source": "Repository",
+      "Repository": "CRAN",
+      "Hash": "afd0d39d61c3e80ef254b7d3162fdfee",
+      "Requirements": [
+        "MASS",
+        "nlme"
       ]
     },
     "selectr": {
