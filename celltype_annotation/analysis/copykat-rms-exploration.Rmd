@@ -10,21 +10,34 @@ params:
   local_data_dir: "../data"
   library_id: "SCPCL000488"
   sample_id: "SCPCS000262"
+  threads: 16
 ---
   
-Placeholder for text about what this notebook does.
+This notebook explores performance of the [`copyKat`](https://github.com/navinlabcode/copykat) package for calling tumor vs. normal cells in pediatric cancer scRNA-seq data.
+Specifically, we look at a library from the `SCPCP000005` (RMS) project, where the submitter has annotated cell types which we can consider "ground truth" for the purposes of this exploration.
+We'll assess agreement between the submitter tumor/normal classification and what `copyKat` infers as tumor/normal.
+
 
 ## Set Up
 
 ```{r}
 suppressPackageStartupMessages({
   library(SingleCellExperiment)
-  library(ggplot2)
   library(copykat) # https://github.com/navinlabcode/copykat
 })
-theme_set(theme_bw())
+
+# define output path and SCE file
+output_dir <-  here::here("celltype_annotation", 
+                         "analysis", 
+                         "copykat-results")
+fs::dir_create(output_dir)
+
+copykat_sce <- file.path(output_dir,
+                         glue::glue("{params$library}_copykat_sce.rds"))
 ```
 
+In the next chunk, we obtain the _submitter-annotated_ SCE from S3, if it is not already locally present.
+We'll wait to read it in when actually running `copyKat`, mostly for memory reasons.
 
 
 ```{r}
@@ -46,32 +59,164 @@ if (!(file.exists(local_submitter_sce_path))) {
   sync_call <- glue::glue('op run -- aws s3 sync {params$s3_submitter_data_dir} {params$local_data_dir}/{params$sample_id} --exclude "*" --include "{submitter_annotated_sce_file}"')
   system(sync_call, ignore.stdout = TRUE) 
 }
-
-# read in sce 
-sce <- readr::read_rds(local_submitter_sce_path)
 ```
 
 
 ## Run CopyKAT
 
-First, we'll run `CopyKAT` on the SCE file.
+Now, we are ready to run `copyKat` on the SCE, using the _raw expression matrix_ as described in the [GitHub `README` file](https://github.com/navinlabcode/copykat/blob/master/README.md).
 
+Of note, the `README` includes this caveat about the `"distance"` parameter:
 
-To run `CopyKAT`, we'll need to pull out the _raw expression matrix_, as described: https://github.com/navinlabcode/copykat#step-2-prepare-the-readcount-input-file. 
-
-Some notes on the distance parameter:
 > One struggling observation is that none of one clustering method could fit all datasets. In this version, I add a distance parameters for clustering that include "euclidean" distance and correlational distance, ie. 1-"pearson" and "spearman" similarity. In general, corretional distances tend to favor noisy data, while euclidean distance tends to favor data with larger CN segments.
 
-This step below takes _quite a while_ to run, so we'll want to save it to a file probably.
-It took nearly an hour. Should probably be run on the server with as many cores as possible.
+Therefore we'll compare `"euclidian"`, `"spearman"`, and `"pearson"` values for [this parameter](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/R/copykat.R#L251-L255).
+
+
 ```{r message=FALSE, warning=FALSE}
-rms_copykat_result <- copykat(
-  rawmat = as.matrix(counts(sce)), 
-  id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
-  sam.name = params$library_id, # sample name 
-  n.cores = 2
-)
+# Only run copykat if the final SCE does not exist
+if (file.exists(copykat_sce)) {
+  
+  sce <- readr::read_rds(copykat_sce)
+  
+} else {
+  
+  # Otherwise, read in initial SCE and run copyKat
+  sce <- readr::read_rds(local_submitter_sce_path)
+    
+  purrr::walk(
+    c("spearman", "pearson", "euclidean"), 
+    \(x) {
+      
+      copykat_result <- copykat(
+        rawmat = as.matrix(counts(sce)), 
+        id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
+        sam.name = params$library_id, 
+        distance = x, 
+        plot.genes = FALSE,
+        n.cores = params$threads
+      )
+      
+      # save prediction to sce
+      colname <- glue::glue("copykat_{x}")
+      colData(sce)[[colname]] <- copykat_result$prediction$copykat.pred
+      
+      # export full result
+      output_file <- file.path(output_dir,
+                              glue::glue("{params$library}_copykat_{x}.rds"))
+      readr::write_rds(copykat_result, output_file)
+    }
+  )
+  
+  # finally, export SCE with all copykat predictions
+  readr::write_rds(sce, copykat_sce)
+} 
 ```
+
+## copyKat results
+
+First, we'll look at quick tables for correspondance between submitter cell type annotations and `copyKat` inferences.
+For `copyKat`, "diploid" is normal and "aneuploid" is tumor.
+
+```{r}
+table(sce$celltype, sce$copykat_spearman)
+```
+
+```{r}
+table(sce$celltype, sce$copykat_pearson)
+```
+
+```{r}
+table(sce$celltype, sce$copykat_euclidian)
+```
+
+
+Next, we'll look at some classification metrics overall, using a custom function to calculate a confusion matrix.
+For this, we will _only consider_ cells which i) the submitter was able to classify, and ii) `copyKat` was able to classify.
+In other words, all `NA` values are removed from the data before calculations.
+
+
+
+```{r}
+# Custom function to calculate some confusion matrix quantities, including
+# accuracy, TPR, and FPR
+calculate_confusion <- function(df, test_column) {
+  # assumes the true column is `celltype_class`
+  df |>
+    # remove NA values all around
+    tidyr::drop_na(celltype_class) |>
+    dplyr::filter({{test_column}} != "not.defined") |>
+    # confusion matrix
+    dplyr::mutate(confusion = dplyr::case_when(
+      celltype_class == "Tumor" & {{test_column}} == "aneuploid"  ~ "TP",
+      celltype_class == "Tumor" & {{test_column}} == "diploid"    ~ "FN",
+      celltype_class == "Normal" & {{test_column}} == "aneuploid" ~ "FP",
+      celltype_class == "Normal" & {{test_column}} == "diploid"   ~ "TN",
+      TRUE ~ NA_character_,
+    )) |>
+    # just in case..
+    tidyr::drop_na(confusion) |>
+    dplyr::count(confusion) |>
+    tidyr::pivot_wider(
+      names_from = "confusion", 
+      values_from = "n"
+    ) |>
+    # calculate some metrics
+    dplyr::summarize(accuracy = (TP+TN)/(TP+TN+FP+FN), 
+                     tpr      = (TP)/(TP+FN),
+                     fpr      = (FP)/(FP+TN)) 
+}
+```
+
+
+```{r}
+# Create a data frame for performing calculations on
+copykat_df <- colData(sce) |>
+  as.data.frame() |>
+  dplyr::select(celltype, contains("copykat")) |>
+  dplyr::mutate(celltype_class = ifelse(
+    stringr::str_starts(celltype, "Tumor"), 
+    "Tumor", 
+    "Normal"
+  )) 
+
+# run confusion matrix function
+cat("============== SPEARMAN distance =====================")
+calculate_confusion(copykat_df, copykat_spearman)
+
+cat("============== PEARSON distance =====================")
+calculate_confusion(copykat_df, copykat_pearson)
+
+cat("============== EUCLIDIAN distance =====================")
+calculate_confusion(copykat_df, copykat_euclidian)
+```
+
+## Conclusions
+
+`copyKat` does not seem to agree with the submitter annotations, but possibly has the best chance of success with one of the correlational distances (spearman or pearson).
+
+It is also worth noting some drawbacks of the `copyKat` package:
+
+* It emits _a lot of output_, and we don't have much control over it! 
+  * This includes both `print()` statements and output files, some of which are optional but not all. 
+  * The _lots and lots of output_ is not seen in this notebook because it was rendered after files already existed; the output _cannot_ be suppressed by turning off warnings or messages, because they are all print statements. 
+  * Of this output, we get a `"cell: #"` printed for each cell, and we also see that the majority also have a printed statement: `"WARNING! NOT CONVERGENT!"`.
+  This latter statement is _printed_ from a [dependency](https://github.com/cran/mixtools/blob/4af1e2789bcea7df3c1775a53cd05b37ec3185d0/R/normalmixEM.R#L129-L131)
+* More on the lack of convergence:
+  * `copyKat` has hardcoded the maximum number of iterations to 500, but the dependency has this default at 1000. 
+  It's possible we'd see convergence with more iterations.
+  * This convergence information does _not appear to be captured_ in any of the output - it is just a print statement!
+* `copyKat` [hardcodes a random seed](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/R/copykat.R#L29-L32) so we can't readily assess bias from starting conditions.
+
+Based on these drawbacks, if we want to use `copyKat` moving forward, we might consider forking the repository and modifying aspects that best suit our needs:
+  * More control over the seed
+  * Less printing, where possible
+  * Fewer output files
+  * Increasing the number of iterations (or just removing `copyKat`'s 500 limit and defaulting to the dependency's 1000)
+  * If possible, we'd like to _record and export_ which cells do not converge. 
+    * Easiest way to get this? Run `copyKat` from a script and capture all the `stdout` into a file we can parse, but that parsing will not necessarily be pleasant!
+
+
 ## Session Info
 
 ```{r}
