@@ -28,8 +28,8 @@ suppressPackageStartupMessages({
 
 # define output path and SCE file
 output_dir <-  here::here("celltype_annotation", 
-                         "analysis", 
-                         "copykat-results")
+                          "analysis", 
+                          "copykat-results")
 fs::dir_create(output_dir)
 
 copykat_sce <- file.path(output_dir,
@@ -86,19 +86,19 @@ if (file.exists(copykat_sce)) {
     
   purrr::walk(
     c("spearman", "pearson", "euclidean"), 
-    \(x) {
+    \(distance_parameter) {
       
       copykat_result <- copykat(
         rawmat = as.matrix(counts(sce)), 
         id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
         sam.name = params$library_id, 
-        distance = x, 
+        distance = distance_parameter, 
         plot.genes = FALSE,
         n.cores = params$threads
       )
       
       # save prediction to sce
-      colname <- glue::glue("copykat_{x}")
+      colname <- glue::glue("copykat_{distance_parameter}")
       colData(sce)[[colname]] <- copykat_result$prediction$copykat.pred
       
       # export full result
