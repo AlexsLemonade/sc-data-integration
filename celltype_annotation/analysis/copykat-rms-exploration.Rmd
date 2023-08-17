@@ -140,18 +140,18 @@ In other words, all `NA` values are removed from the data before calculations.
 ```{r}
 # Custom function to calculate some confusion matrix quantities, including
 # accuracy, TPR, and FPR
-calculate_confusion <- function(df, test_column) {
+calculate_confusion <- function(df, copykat_prediction_column) {
   # assumes the true column is `celltype_class`
   df |>
     # remove NA values all around
     tidyr::drop_na(celltype_class) |>
-    dplyr::filter({{test_column}} != "not.defined") |>
+    dplyr::filter({{copykat_prediction_column}} != "not.defined") |>
     # confusion matrix
     dplyr::mutate(confusion = dplyr::case_when(
-      celltype_class == "Tumor" & {{test_column}} == "aneuploid"  ~ "TP",
-      celltype_class == "Tumor" & {{test_column}} == "diploid"    ~ "FN",
-      celltype_class == "Normal" & {{test_column}} == "aneuploid" ~ "FP",
-      celltype_class == "Normal" & {{test_column}} == "diploid"   ~ "TN",
+      celltype_class == "Tumor" & {{copykat_prediction_column}} == "aneuploid"  ~ "TP",
+      celltype_class == "Tumor" & {{copykat_prediction_column}} == "diploid"    ~ "FN",
+      celltype_class == "Normal" & {{copykat_prediction_column}} == "aneuploid" ~ "FP",
+      celltype_class == "Normal" & {{copykat_prediction_column}} == "diploid"   ~ "TN",
       TRUE ~ NA_character_,
     )) |>
     # just in case..
