@@ -1,4 +1,4 @@
-submitter	submitter_binary	copykat_euclidian	copykat_pearson	copykat_spearman
+submitter	submitter_binary	copykat_euclidean	copykat_pearson	copykat_spearman
 Tumor_Myocyte-A	Tumor	diploid	diploid	diploid
 Tumor_Myocyte-A	Tumor	diploid	diploid	diploid
 Tumor_Myoblast-C	Tumor	diploid	diploid	diploid
