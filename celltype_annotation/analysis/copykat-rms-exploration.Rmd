@@ -15,7 +15,7 @@ params:
   
 This notebook explores performance of the [`copyKat`](https://github.com/navinlabcode/copykat) package for calling tumor vs. normal cells in pediatric cancer scRNA-seq data.
 Specifically, we look at a library from the `SCPCP000005` (RMS) project, where the submitter has annotated cell types which we can consider "ground truth" for the purposes of this exploration.
-We'll assess agreement between the submitter tumor/normal classification and what `copyKat` infers as tumor/normal, as well as some different `copyKat` parameter values.
+We'll assess agreement between the submitter tumor/normal classification and what `copyKat` infers as tumor/normal, across some different `copyKat` parameter values.
 
 ## Background: `copyKat` method
 
@@ -171,17 +171,16 @@ if (!(file.exists(local_submitter_sce_path))) {
 ## Compare CopyKAT distance parameters
 
 
-
 ### Run copyKat
 
-Of note, the `copyKat` `README` includes this caveat about the `"distance"` parameter:
+The `copyKat` [GitHub `README` file](https://github.com/navinlabcode/copykat/blob/master/README.md) includes this caveat about the `"distance"` parameter:
 
 > One struggling observation is that none of one clustering method could fit all datasets. In this version, I add a distance parameters for clustering that include "euclidean" distance and correlational distance, ie. 1-"pearson" and "spearman" similarity. In general, corretional distances tend to favor noisy data, while euclidean distance tends to favor data with larger CN segments.
 
 Therefore we'll begin by comparing `"euclidian"`, `"spearman"`, and `"pearson"` values for [this parameter](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/R/copykat.R#L251-L255).
 
 
-```{r message=FALSE, warning=FALSE}
+```{r}
 # Only run copykat if the final SCE does not exist
 if (file.exists(copykat_distance_sce)) {
   
@@ -271,11 +270,13 @@ copykat_df |>
 
 ```
 
+## Compare CopyKAT KS.cut parameters
 
-## Run CopyKAT across KS.cut parameters
 
-In the above analyses, we saw that correlational distance is likely to be better than euclidian.
-In this section, we'll again run `copyKat`, but this time using _only_ the "pearson" distance, at a variety of `KS.cut` parameters.
+### Run copyKat
+
+In the previous section, we saw that correlational distance is likely to be better than euclidian.
+In this section, we'll again run `copyKat`, **but this time using _only_ the "pearson" distance**, at a variety of `KS.cut` parameters.
 
 As described in the [GitHub `README` file](https://github.com/navinlabcode/copykat/blob/master/README.md), 
 
@@ -284,23 +285,25 @@ As described in the [GitHub `README` file](https://github.com/navinlabcode/copyk
 For this, we'll start with the SCE from the last section, and build it up from there with other `KS.cut` values.
 Since it was already run with default `KS.cut = 0.1`, we'll test a few additional values here and compare those to above.
 
-```{r message=FALSE, warning=FALSE}
-# Only run copykat if the final SCE does not exist
+```{r}
 if (file.exists(copykat_kscut_sce)) {
-  
+  # if the SCE exists, read it in
   sce <- readr::read_rds(copykat_kscut_sce)
+
+} else if (file.exists(copykat_distance_sce)) {
   
-} else {
+  # if only the _distance_ SCE exists, read in as a starting point
+  sce <- readr::read_rds(copykat_distance_sce)
   
-  # Otherwise, run copyKat; no need to read SCE here!
-  # but, let's clean it up a bit for this step!
+  # clean up columns for this analysis
+  sce$copykat_0.1 <- sce$copykat_pearson # no need to redo this one! 
+  sce$copykat_pearson  <- NULL
   sce$copykat_spearman <- NULL
   sce$copykat_euclidian <- NULL
-  sce$copykat_0.1 <- sce$copykat_pearson # to match columns that get created here
-
+  
+  # and run!
   purrr::walk(
-    # skip 0.1!
-    c(0.025, 0.05, 0.075, 0.125, 0.15), 
+    seq(0.025, 0.15, 0.025)[-4], # can skip 0.1
     \(kscut_value) {
       
       copykat_result <- copykat(
@@ -324,42 +327,78 @@ if (file.exists(copykat_kscut_sce)) {
     }
   )
   
-  # finally, export SCE with all copykat predictions
+  # finally, export SCE with all copykat kscut predictions
   readr::write_rds(sce, copykat_kscut_sce)
-} 
+  
+} else {
+  stop("Error: At least one of those SCE files should have existed by now!")
+}
 ```
 
-## copyKat results: Comparing distance parameters
+
+### Comparing results
+
+As before, we'll prepare the data for comparison and begin with a barplot of tumor/normal classifications across `copyKat` parameters:
+
+```{r, fig.height = 5, fig.width = 4}
+# Prepare data for comparisons
+copykat_df <- colData(sce) |>
+  as.data.frame() |>
+  # better printing 
+  tibble::as_tibble() |>
+  dplyr::select(submitter = celltype, contains("copykat")) |>
+  # remove NA submitter annotations
+  tidyr::drop_na(submitter) |>
+  dplyr::mutate(submitter_binary = ifelse(
+    stringr::str_starts(submitter, "Tumor"), 
+    "Tumor", 
+    "Normal"
+  )) 
+
+# Plot the data:
+compare_copykat_results_barplot(copykat_df) + 
+  ggtitle("Comparing KS.cut parameters")
+```
 
 
+Next, we'll look at tables for correspondence between submitter cell type annotations and `copyKat` inferences, as well as confusion matrix results for each comparison.
+For `copyKat`, "diploid" is normal and "aneuploid" is tumor.
 
+```{r}
+purrr::walk(
+  glue::glue("copykat_{seq(0.025, 0.15, 0.025)}"), 
+  \(column_name) {
+    
+  copykat_df |>
+    dplyr::select(submitter, submitter_binary, copykat = as.symbol(column_name) ) |>
+    compare_result_tables(column_name) 
+  }
+)
+```
 
 
 
 ## Conclusions
 
-`copyKat` does not seem to agree with the submitter annotations, but possibly has the best chance of success with one of the correlational distances (spearman or pearson).
+`copyKat` has the best chance of success with one of the correlational distances (spearman or pearson), and the default `KS.cut` parameter of 0.1 may indeed be a reasonable default for us (although many of the results across this parameter are similar).
 
 It is also worth noting some drawbacks of the `copyKat` package:
 
+* `copyKat` [hardcodes a random seed](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/R/copykat.R#L29-L32) so we can't readily assess bias from starting conditions.
 * It emits _a lot of output_, and we don't have much control over it! 
-  * This includes both `print()` statements and output files, some of which are optional but not all. 
+  * This includes both `print()` statements and output files, some of which are optional but not all; and it seems the optional ones may still be exported even if you turn them off?
   * The _lots and lots of output_ is not seen in this notebook because it was rendered after files already existed; the output _cannot_ be suppressed by turning off warnings or messages, because they are all print statements. 
   * Of this output, we get a `"cell: #"` printed for each cell, and we also see that the majority also have a printed statement: `"WARNING! NOT CONVERGENT!"`.
-  This latter statement is _printed_ from a [dependency](https://github.com/cran/mixtools/blob/4af1e2789bcea7df3c1775a53cd05b37ec3185d0/R/normalmixEM.R#L129-L131)
-* More on the lack of convergence:
-  * `copyKat` has hardcoded the maximum number of iterations to 500, but the dependency has this default at 1000. 
-  It's possible we'd see convergence with more iterations.
-  * This convergence information does _not appear to be captured_ in any of the output - it is just a print statement!
-* `copyKat` [hardcodes a random seed](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/R/copykat.R#L29-L32) so we can't readily assess bias from starting conditions.
+  This latter statement is _printed_ from a [dependency](https://github.com/cran/mixtools/blob/4af1e2789bcea7df3c1775a53cd05b37ec3185d0/R/normalmixEM.R#L129-L131) during the `copyKat` step to identify a baseline diploid cell population.
+* There is no clear way to assess confidence from `copyKat` output.
+  * In the `copyKay` paper, they performed bootstrapping to assess performance, which may be something we'll have to do to get some kind of confidence measure. 
+  From the paper, " Bootstrapping was performed to resample single cells and estimate the variation in detection sensitivity. On average, we estimated that 19% of CNAs were detected at 1-Mb resolution, 56% were detected at 5-Mb resolution and 88% were detected at 20-Mb resolution, which agrees with our theoretical calculation of a 5-Mb average genomic resolution."
+
 
 Based on these drawbacks, if we want to use `copyKat` moving forward, we might consider forking the repository and modifying aspects that best suit our needs:
-  * More control over the seed
-  * Less printing, where possible
-  * Fewer output files
-  * Increasing the number of iterations (or just removing `copyKat`'s 500 limit and defaulting to the dependency's 1000)
-  * If possible, we'd like to _record and export_ which cells do not converge. 
-    * Easiest way to get this? Run `copyKat` from a script and capture all the `stdout` into a file we can parse, but that parsing will not necessarily be pleasant!
+
+* More control over the seed
+* Less printing and fewer output files, where possible
 
 
 ## Session Info
