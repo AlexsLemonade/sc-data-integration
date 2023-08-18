@@ -47,6 +47,7 @@ suppressPackageStartupMessages({
   library(ggplot2)
   library(copykat) # https://github.com/navinlabcode/copykat
 })
+theme_set(theme_bw())
 
 # define output path and SCE file
 output_dir <-  here::here("celltype_annotation", 
@@ -62,6 +63,84 @@ copykat_distance_sce <- file.path(output_dir,
 copykat_kscut_sce <- file.path(output_dir,
                                   glue::glue("{params$library}_copykat_kscut_sce.rds"))
 ```
+
+The next chunk defines some functions for analyzing results. for preparing `copyKat` classification results for visualization and then making a barplot.
+
+
+```{r}
+# function to compare copykat results across values for _one_ varied parameter
+#   with a barplot
+compare_copykat_results_barplot <- function(copykat_df) {
+  
+  # prepare data frame for plotting
+  copykat_df_long <- copykat_df |>
+    tibble::rowid_to_column(var = "cell") |>
+    tidyr::pivot_longer(
+      contains("copykat"), 
+      names_to = "copykat_parameter", 
+      values_to = "prediction"
+    ) |>
+    dplyr::mutate(copykat_parameter = stringr::str_replace(copykat_parameter, 
+                                                         "copykat_", ""))
+  
+  # make, return a barplot of predictions
+  ggplot(copykat_df_long) + 
+    aes(x = submitter_binary, fill = prediction) + 
+    geom_bar(position = "fill",
+             # use alpha to see background grid
+             alpha = 0.75) + 
+    facet_grid(vars(copykat_parameter)) +
+    labs(
+      x = "Submitter annotation",
+      y = "Proportion of cells", 
+      fill = "CopyKat prediction"
+    ) + 
+    # add guideline at y=0.5
+    geom_hline(yintercept = 0.5, alpha = 0.25) 
+}
+
+
+
+# function to compare result tables both via overall counts and confusion matrix
+compare_result_tables <- function(df, run_name) {
+  # Takes data frame with three columns with fully defined values:
+  ### `submitter`: full submitter annotations
+  ### `submitter_binary`: submitter annotations reduced to tumor/normal only
+  #### `copykat`: copykat annotations, considering only diploid/aneuploid
+  # Returns overall table comparison and result from caret::confusionMatrix()
+
+  print(glue::glue("=================== {run_name} ======================"))
+  
+  # Result 1: Table comparing full results
+  print(
+    table(df$submitter, df$copykat)
+  )
+  
+  cat("\n ===================================\n ")
+  # Result 2: confusion matrix
+  
+  # remove "not.defined" from copyKat and update levels
+  df_caret <- df |> 
+    dplyr::filter(copykat != "not.defined") |>
+    # copykat values need to match submitter_binary values
+    dplyr::mutate(copykat = ifelse(
+      copykat == "diploid", "Normal", "Tumor"
+    )) |>
+    # Tumor should be first as the "positive" value
+    dplyr::mutate(
+      copykat = forcats::fct_relevel(copykat, "Tumor"),
+      submitter_binary = forcats::fct_relevel(submitter_binary, "Tumor")
+    )
+  
+  print(
+    caret::confusionMatrix(
+      table(df_caret$submitter_binary, 
+            df_caret$copykat)
+    )
+  )
+}
+```
+
 
 In the next chunk, we obtain the _submitter-annotated_ SCE from S3, if it is not already locally present.
 We'll wait to read it in when actually running `copyKat`, mostly for memory reasons.
@@ -89,15 +168,17 @@ if (!(file.exists(local_submitter_sce_path))) {
 ```
 
 
-## Run CopyKAT across distance parameters
+## Compare CopyKAT distance parameters
 
-Now, we are ready to run `copyKat` on the SCE, using the _raw expression matrix_ as described in the [GitHub `README` file](https://github.com/navinlabcode/copykat/blob/master/README.md).
 
-Of note, the `README` includes this caveat about the `"distance"` parameter:
+
+### Run copyKat
+
+Of note, the `copyKat` `README` includes this caveat about the `"distance"` parameter:
 
 > One struggling observation is that none of one clustering method could fit all datasets. In this version, I add a distance parameters for clustering that include "euclidean" distance and correlational distance, ie. 1-"pearson" and "spearman" similarity. In general, corretional distances tend to favor noisy data, while euclidean distance tends to favor data with larger CN segments.
 
-Therefore we'll compare `"euclidian"`, `"spearman"`, and `"pearson"` values for [this parameter](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/R/copykat.R#L251-L255).
+Therefore we'll begin by comparing `"euclidian"`, `"spearman"`, and `"pearson"` values for [this parameter](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/R/copykat.R#L251-L255).
 
 
 ```{r message=FALSE, warning=FALSE}
@@ -140,135 +221,55 @@ if (file.exists(copykat_distance_sce)) {
 } 
 ```
 
-## copyKat results: Comparing distance parameters
+### Comparing results
 
-First, we'll look at quick tables for correspondance between submitter cell type annotations and `copyKat` inferences.
-For `copyKat`, "diploid" is normal and "aneuploid" is tumor.
 
-```{r}
-table(sce$celltype, sce$copykat_spearman)
-```
+We'll prepare the data for comparison and begin with a barplot of tumor/normal classifications across `copyKat` parameters:
 
 ```{r}
-table(sce$celltype, sce$copykat_pearson)
-```
-
-```{r}
-table(sce$celltype, sce$copykat_euclidian)
-```
-
-### Visualization
-
-
-In this plot, we can see how overall submitter annotations compare to `copyKat` predictions.
-
-
-```{r}
-# Create a data frame that has a `celltype_class` column for a coarser view
-#  of submitter cell types. Data will be reused later, so making it here first.
+# Prepare data for comparisons
 copykat_df <- colData(sce) |>
   as.data.frame() |>
-  dplyr::select(celltype, contains("copykat")) |>
-  dplyr::mutate(celltype_class = ifelse(
-    stringr::str_starts(celltype, "Tumor"), 
+  # better printing 
+  tibble::as_tibble() |>
+  dplyr::select(submitter = celltype, contains("copykat")) |>
+  # remove NA submitter annotations
+  tidyr::drop_na(submitter) |>
+  dplyr::mutate(submitter_binary = ifelse(
+    stringr::str_starts(submitter, "Tumor"), 
     "Tumor", 
     "Normal"
   )) 
 
-# prepare data frame for plotting
-copykat_df_long <- copykat_df |>
-  tibble::rowid_to_column(var = "cell") |>
-  tidyr::drop_na(celltype_class) |>
-  tidyr::pivot_longer(
-    contains("copykat"), 
-    names_to = "copykat_distance", 
-    values_to = "prediction"
-  ) |>
-  dplyr::mutate(copykat_distance = stringr::str_replace(copykat_distance, 
-                                                       "copykat_", ""))
-
-# make a barplot of predictions
-ggplot(copykat_df_long) + 
-  aes(x = celltype_class, fill = prediction) + 
-  geom_bar(position = "fill",
-           # use alpha to see background grid
-           alpha = 0.75) + 
-  facet_grid(vars(copykat_distance)) +
-  labs(
-    x = "Submitter annotation",
-    y = "Proportion of cells", 
-    fill = "CopyKat prediction"
-  ) + 
-  # add guideline at y=0.5
-  geom_hline(yintercept = 0.5, alpha = 0.25) +
-  theme_bw()
-
+# Plot the data:
+compare_copykat_results_barplot(copykat_df) + 
+  ggtitle("Comparing distance parameters")
 ```
 
-
-### Classification metrics 
-
-Next, we'll look at some classification metrics overall, using a custom function to calculate a confusion matrix, 
-For the purposes of this analysis, we'll consider submitter-supplied annotations to be "true," and we'll consider "tumor" to be a positive result and "normal" to be a negative result.
-
-For this, we will _only consider_ cells which i) the submitter was able to classify, and ii) `copyKat` was able to classify.
-In other words, all `NA` values are removed from the data before calculations.
-
-Briefly, reported metrics can be interpreted as follows:
-
-- Accuracy: Percent of correctly-classified cells.
-- True positive rate (tpr): Proportion of true tumor cells correctly identified as being tumor.
-- False positive rate (fpr): Proportion of normal cells `copyKat` wrongly thinks are tumor cells.
-- False discovery rate (fdr): Proportion of cells that `copyKat` identifies as tumor _that really are tumor cells_.
-
+Let's also look at the binary submitter celltypes to get a sense of balance:
 
 ```{r}
-# Custom function to calculate some confusion matrix quantities, including
-# accuracy, TPR, and FPR
-calculate_confusion <- function(df, copykat_prediction_column) {
-  # assumes the true column is `celltype_class`
-  df |>
-    # remove NA values all around
-    tidyr::drop_na(celltype_class) |>
-    dplyr::filter({{copykat_prediction_column}} != "not.defined") |>
-    # confusion matrix
-    dplyr::mutate(confusion = dplyr::case_when(
-      celltype_class == "Tumor" & {{copykat_prediction_column}} == "aneuploid"  ~ "TP",
-      celltype_class == "Tumor" & {{copykat_prediction_column}} == "diploid"    ~ "FN",
-      celltype_class == "Normal" & {{copykat_prediction_column}} == "aneuploid" ~ "FP",
-      celltype_class == "Normal" & {{copykat_prediction_column}} == "diploid"   ~ "TN",
-      TRUE ~ NA_character_,
-    )) |>
-    # just in case..
-    tidyr::drop_na(confusion) |>
-    dplyr::count(confusion) |>
-    tidyr::pivot_wider(
-      names_from = "confusion", 
-      values_from = "n"
-    ) |>
-    # calculate some metrics
-    dplyr::summarize(accuracy = (TP+TN)/(TP+TN+FP+FN), 
-                     tpr      = (TP)/(TP+FN),
-                     fpr      = (FP)/(FP+TN), 
-                     fdr      = (FP)/(FP+TP))
-}
+table(copykat_df$submitter_binary)
 ```
 
-Now, we'll run the function:
+
+Next, we'll look at tables for correspondence between submitter cell type annotations and `copyKat` inferences, as well as confusion matrix results for each comparison.
+For `copyKat`, "diploid" is normal and "aneuploid" is tumor.
 
 ```{r}
-# ============== SPEARMAN distance =====================
-calculate_confusion(copykat_df, copykat_spearman)
+copykat_df |>
+  dplyr::select(submitter, submitter_binary, copykat = copykat_euclidian) |>
+  compare_result_tables("euclidian distance") 
 
-# ============== PEARSON distance =====================
-calculate_confusion(copykat_df, copykat_pearson)
+copykat_df |>
+  dplyr::select(submitter, submitter_binary, copykat = copykat_pearson) |>
+  compare_result_tables("pearson distance") 
 
-# ============== EUCLIDIAN distance =====================
-calculate_confusion(copykat_df, copykat_euclidian)
+copykat_df |>
+  dplyr::select(submitter, submitter_binary, copykat = copykat_spearman) |>
+  compare_result_tables("spearman distance") 
+
 ```
-
-
-
 
 
 ## Run CopyKAT across KS.cut parameters
