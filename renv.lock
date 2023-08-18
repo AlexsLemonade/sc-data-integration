@@ -1,6 +1,6 @@
 {
   "R": {
-    "Version": "4.2.2",
+    "Version": "4.2.3",
     "Repositories": [
       {
         "Name": "CRAN",
@@ -2440,10 +2440,10 @@
     },
     "irlba": {
       "Package": "irlba",
-      "Version": "2.3.5",
+      "Version": "2.3.5.1",
       "Source": "Repository",
       "Repository": "CRAN",
-      "Hash": "066c11bb9bc75b343f3de1ecaf3b7ba2",
+      "Hash": "acb06a47b732c6251afd16e19c3201ff",
       "Requirements": [
         "Matrix"
       ]
@@ -2876,7 +2876,7 @@
       "Package": "modeltools",
       "Version": "0.2-23",
       "Source": "Repository",
-      "Repository": "CRAN",
+      "Repository": "RSPM",
       "Hash": "f5a957c02222589bdf625a67be68b2a9",
       "Requirements": []
     },
@@ -3514,7 +3514,7 @@
       "Package": "rlang",
       "Version": "1.1.1",
       "Source": "Repository",
-      "Repository": "RSPM",
+      "Repository": "CRAN",
       "Hash": "a85c767b55f0bf9b7ad16c6d7baee5bb",
       "Requirements": []
     },
