@@ -15,7 +15,28 @@ params:
   
 This notebook explores performance of the [`copyKat`](https://github.com/navinlabcode/copykat) package for calling tumor vs. normal cells in pediatric cancer scRNA-seq data.
 Specifically, we look at a library from the `SCPCP000005` (RMS) project, where the submitter has annotated cell types which we can consider "ground truth" for the purposes of this exploration.
-We'll assess agreement between the submitter tumor/normal classification and what `copyKat` infers as tumor/normal.
+We'll assess agreement between the submitter tumor/normal classification and what `copyKat` infers as tumor/normal, as well as some different `copyKat` parameter values.
+
+## Background: `copyKat` method
+
+Reference: https://doi.org/10.1038/s41587-020-00795-2
+
+To begin, here's a brief overview of the `copyKat` approach, parly quoting the paper throughout.
+See Figure 1 in the paper for a method diagram:
+
+* `copyKat` takes the _raw expression matrix_ and stabilizes variance, smooths the outliers
+* A subset of cells is then identified to serve as a diploid baseline for subsequent identification of diploid/aneuploid
+  * Cells are pooled into clusters with hierarchical clustering, and a GMM estimtes variance of each cluster
+  * Cluster with minimal estimated variance is regarded as the "confident diploid cells"
+  * **Caution:** This may fail if data has few normal cells and/or there are few CNA events.
+  A "GMM definition mode" (sic; I think they meant "model"!) is offered to deal with this (described in paper bottom of pg 599), but implementation details to invoke this mode are thin. I _think_ it is automatically applied?
+* MCMC is used to identify chromosome breakpoints with KS tests between gene windows
+  * Significant test = probably a breakpoint
+  * Final copy numbers for each window are the posterior means of all genes spanning breakpoints
+  * These values are converted to genomic positions in 220-kb bins.
+  _`copyKat` ultimately provides these values in the outputted CNA matrix._
+* Hierarchical clustering identifies largest distance between aneuploid and diploid, but if distance not significant, they switch to the "GMM definition model" to predict tumor cells one-by-one.
+* Finally, clustering delinates clonal substructure (not particularly relevant to us) for differential expression.
 
 
 ## Set Up
