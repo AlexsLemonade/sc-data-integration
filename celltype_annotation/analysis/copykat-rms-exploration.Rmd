@@ -23,6 +23,7 @@ We'll assess agreement between the submitter tumor/normal classification and wha
 ```{r}
 suppressPackageStartupMessages({
   library(SingleCellExperiment)
+  library(ggplot2)
   library(copykat) # https://github.com/navinlabcode/copykat
 })
 
@@ -32,8 +33,13 @@ output_dir <-  here::here("celltype_annotation",
                           "copykat-results")
 fs::dir_create(output_dir)
 
-copykat_sce <- file.path(output_dir,
-                         glue::glue("{params$library}_copykat_sce.rds"))
+# Output file that compares results for different distance parameters
+copykat_distance_sce <- file.path(output_dir,
+                                  glue::glue("{params$library}_copykat_distance_sce.rds"))
+
+# Output file that compares results for different kscut parameters
+copykat_kscut_sce <- file.path(output_dir,
+                                  glue::glue("{params$library}_copykat_kscut_sce.rds"))
 ```
 
 In the next chunk, we obtain the _submitter-annotated_ SCE from S3, if it is not already locally present.
@@ -62,7 +68,7 @@ if (!(file.exists(local_submitter_sce_path))) {
 ```
 
 
-## Run CopyKAT
+## Run CopyKAT across distance parameters
 
 Now, we are ready to run `copyKat` on the SCE, using the _raw expression matrix_ as described in the [GitHub `README` file](https://github.com/navinlabcode/copykat/blob/master/README.md).
 
@@ -75,9 +81,9 @@ Therefore we'll compare `"euclidian"`, `"spearman"`, and `"pearson"` values for 
 
 ```{r message=FALSE, warning=FALSE}
 # Only run copykat if the final SCE does not exist
-if (file.exists(copykat_sce)) {
+if (file.exists(copykat_distance_sce)) {
   
-  sce <- readr::read_rds(copykat_sce)
+  sce <- readr::read_rds(copykat_distance_sce)
   
 } else {
   
@@ -91,7 +97,7 @@ if (file.exists(copykat_sce)) {
       copykat_result <- copykat(
         rawmat = as.matrix(counts(sce)), 
         id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
-        sam.name = params$library_id, 
+        sam.name = glue::glue("{params$library_id}-{distance_parameter}"), # unique name for each 
         distance = distance_parameter, 
         plot.genes = FALSE,
         n.cores = params$threads
@@ -103,17 +109,17 @@ if (file.exists(copykat_sce)) {
       
       # export full result
       output_file <- file.path(output_dir,
-                              glue::glue("{params$library}_copykat_{x}.rds"))
+                              glue::glue("{params$library}_copykat_{distance_parameter}.rds"))
       readr::write_rds(copykat_result, output_file)
     }
   )
   
   # finally, export SCE with all copykat predictions
-  readr::write_rds(sce, copykat_sce)
+  readr::write_rds(sce, copykat_distance_sce)
 } 
 ```
 
-## copyKat results
+## copyKat results: Comparing distance parameters
 
 First, we'll look at quick tables for correspondance between submitter cell type annotations and `copyKat` inferences.
 For `copyKat`, "diploid" is normal and "aneuploid" is tumor.
@@ -130,11 +136,69 @@ table(sce$celltype, sce$copykat_pearson)
 table(sce$celltype, sce$copykat_euclidian)
 ```
 
+### Visualization
 
-Next, we'll look at some classification metrics overall, using a custom function to calculate a confusion matrix.
+
+In this plot, we can see how overall submitter annotations compare to `copyKat` predictions.
+
+
+```{r}
+# Create a data frame that has a `celltype_class` column for a coarser view
+#  of submitter cell types. Data will be reused later, so making it here first.
+copykat_df <- colData(sce) |>
+  as.data.frame() |>
+  dplyr::select(celltype, contains("copykat")) |>
+  dplyr::mutate(celltype_class = ifelse(
+    stringr::str_starts(celltype, "Tumor"), 
+    "Tumor", 
+    "Normal"
+  )) 
+
+# prepare data frame for plotting
+copykat_df_long <- copykat_df |>
+  tibble::rowid_to_column(var = "cell") |>
+  tidyr::drop_na(celltype_class) |>
+  tidyr::pivot_longer(
+    contains("copykat"), 
+    names_to = "copykat_distance", 
+    values_to = "prediction"
+  ) |>
+  dplyr::mutate(copykat_distance = stringr::str_replace(copykat_distance, 
+                                                       "copykat_", ""))
+
+# make a barplot of predictions
+ggplot(copykat_df_long) + 
+  aes(x = celltype_class, fill = prediction) + 
+  geom_bar(position = "fill",
+           # use alpha to see background grid
+           alpha = 0.75) + 
+  facet_grid(vars(copykat_distance)) +
+  labs(
+    x = "Submitter annotation",
+    y = "Proportion of cells", 
+    fill = "CopyKat prediction"
+  ) + 
+  # add guideline at y=0.5
+  geom_hline(yintercept = 0.5, alpha = 0.25) +
+  theme_bw()
+
+```
+
+
+### Classification metrics 
+
+Next, we'll look at some classification metrics overall, using a custom function to calculate a confusion matrix, 
+For the purposes of this analysis, we'll consider submitter-supplied annotations to be "true," and we'll consider "tumor" to be a positive result and "normal" to be a negative result.
+
 For this, we will _only consider_ cells which i) the submitter was able to classify, and ii) `copyKat` was able to classify.
 In other words, all `NA` values are removed from the data before calculations.
 
+Briefly, reported metrics can be interpreted as follows:
+
+- Accuracy: Percent of correctly-classified cells.
+- True positive rate (tpr): Proportion of true tumor cells correctly identified as being tumor.
+- False positive rate (fpr): Proportion of normal cells `copyKat` wrongly thinks are tumor cells.
+- False discovery rate (fdr): Proportion of cells that `copyKat` identifies as tumor _that really are tumor cells_.
 
 
 ```{r}
@@ -164,32 +228,91 @@ calculate_confusion <- function(df, copykat_prediction_column) {
     # calculate some metrics
     dplyr::summarize(accuracy = (TP+TN)/(TP+TN+FP+FN), 
                      tpr      = (TP)/(TP+FN),
-                     fpr      = (FP)/(FP+TN)) 
+                     fpr      = (FP)/(FP+TN), 
+                     fdr      = (FP)/(FP+TP))
 }
 ```
 
+Now, we'll run the function:
 
 ```{r}
-# Create a data frame for performing calculations on
-copykat_df <- colData(sce) |>
-  as.data.frame() |>
-  dplyr::select(celltype, contains("copykat")) |>
-  dplyr::mutate(celltype_class = ifelse(
-    stringr::str_starts(celltype, "Tumor"), 
-    "Tumor", 
-    "Normal"
-  )) 
-
-# run confusion matrix function
-cat("============== SPEARMAN distance =====================")
+# ============== SPEARMAN distance =====================
 calculate_confusion(copykat_df, copykat_spearman)
 
-cat("============== PEARSON distance =====================")
+# ============== PEARSON distance =====================
 calculate_confusion(copykat_df, copykat_pearson)
 
-cat("============== EUCLIDIAN distance =====================")
+# ============== EUCLIDIAN distance =====================
 calculate_confusion(copykat_df, copykat_euclidian)
 ```
+
+
+
+
+
+## Run CopyKAT across KS.cut parameters
+
+In the above analyses, we saw that correlational distance is likely to be better than euclidian.
+In this section, we'll again run `copyKat`, but this time using _only_ the "pearson" distance, at a variety of `KS.cut` parameters.
+
+As described in the [GitHub `README` file](https://github.com/navinlabcode/copykat/blob/master/README.md), 
+
+> KS.cut is the segmentation parameter, ranging from 0 to 1. Increasing KS.cut decreases sensitivity, i.e. less segments/breakpoints. Usually it works in a range of 0.05-0.15.
+
+For this, we'll start with the SCE from the last section, and build it up from there with other `KS.cut` values.
+Since it was already run with default `KS.cut = 0.1`, we'll test a few additional values here and compare those to above.
+
+```{r message=FALSE, warning=FALSE}
+# Only run copykat if the final SCE does not exist
+if (file.exists(copykat_kscut_sce)) {
+  
+  sce <- readr::read_rds(copykat_kscut_sce)
+  
+} else {
+  
+  # Otherwise, run copyKat; no need to read SCE here!
+  # but, let's clean it up a bit for this step!
+  sce$copykat_spearman <- NULL
+  sce$copykat_euclidian <- NULL
+  sce$copykat_0.1 <- sce$copykat_pearson # to match columns that get created here
+
+  purrr::walk(
+    # skip 0.1!
+    c(0.025, 0.05, 0.075, 0.125, 0.15), 
+    \(kscut_value) {
+      
+      copykat_result <- copykat(
+        rawmat = as.matrix(counts(sce)), 
+        id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
+        sam.name = glue::glue("{params$library_id}-{kscut_value}"), # unique name for each 
+        distance = "pearson", 
+        KS.cut = kscut_value,
+        plot.genes = FALSE,
+        n.cores = params$threads
+      )
+      
+      # save prediction to sce
+      colname <- glue::glue("copykat_{kscut_value}")
+      colData(sce)[[colname]] <- copykat_result$prediction$copykat.pred
+      
+      # export full result
+      output_file <- file.path(output_dir,
+                              glue::glue("{params$library}_copykat_{kscut_value}.rds"))
+      readr::write_rds(copykat_result, output_file)
+    }
+  )
+  
+  # finally, export SCE with all copykat predictions
+  readr::write_rds(sce, copykat_kscut_sce)
+} 
+```
+
+## copyKat results: Comparing distance parameters
+
+
+
+
+
 
 ## Conclusions
 
