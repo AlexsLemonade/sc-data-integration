@@ -116,14 +116,7 @@ run_copykat_over_params <- function(raw_counts_matrix,
             output.seg = FALSE,
             n.cores = params$threads
           )
-          
-          # export full result
-          readr::write_rds(copykat_result, 
-                            file.path(
-                              output_directory,
-                              glue::glue("{sample_name}_copykat_distance-{distance_parameter}.rds")
-                            ))
-          
+
           # return predictions
           return(copykat_result$prediction$copykat.pred)
       })
@@ -147,13 +140,6 @@ run_copykat_over_params <- function(raw_counts_matrix,
               output.seg = FALSE,
               n.cores = params$threads
             )
-            
-            # export full result
-            readr::write_rds(copykat_result, 
-                            file.path(
-                              output_directory,
-                              glue::glue("{sample_name}_copykat_kscut-{kscut_parameter}.rds")
-                            ))
             
             # return predictions
             return(copykat_result$prediction$copykat.pred)
