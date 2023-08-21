@@ -22,7 +22,7 @@ We'll assess agreement between the submitter tumor/normal classification and wha
 
 Reference: https://doi.org/10.1038/s41587-020-00795-2
 
-To begin, here's a brief overview of the `copyKat` approach, parly quoting the paper throughout.
+To begin, here's a brief overview of the `copyKat` approach, partly quoting the paper throughout.
 See Figure 1 in the paper for a method diagram:
 
 * `copyKat` takes the _raw expression matrix_ and stabilizes variance, smooths the outliers
