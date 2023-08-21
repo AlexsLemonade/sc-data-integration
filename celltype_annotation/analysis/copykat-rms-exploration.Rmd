@@ -65,10 +65,117 @@ copykat_kscut_tsv <- file.path(output_dir,
                                 glue::glue("{params$library}_copykat_results_kscut_parameters.tsv"))
 ```
 
-The next chunk defines some functions for analyzing results. for preparing `copyKat` classification results for visualization and then making a barplot.
+The next chunk defines some functions for running `copyKat` and analyzing results.
 
 
 ```{r}
+# function to run copyKat over a user-provided range of parameter values 
+run_copykat_over_params <- function(raw_counts_matrix,
+                                    # specify defaults in overall function
+                                    distance_param = "euclidian", 
+                                    kscut_param    =  0.1, 
+                                    threads = params$threads, 
+                                    sample_name = params$library_id,
+                                    output_directory = output_dir,
+                                    copykat_df = NULL,
+                                    output_tsv = NULL) {
+  
+  # argument checks
+  if (is.null(copykat_df)) {
+    stop("Need an initiated data frame to run `run_copykat`.")
+  }
+    
+  if (is.null(output_tsv)) {
+    stop("Need a value for `output_tsv`.")
+  }
+
+  # ONLY one of the parameters can have a range of values!
+  if (length(distance_params) > 1 & length(kscut_params) > 1) {
+    stop("The `run_copykat_over_params` function needs to vary one of the parameters.")
+  }
+  
+  # Or, run with purrr::map() for a range of values and then cbind results at the end
+  
+    ### distance ####
+    if (length(distance_params) > 1) {
+      
+      copykat_names <- glue::glue("copykat_{distance_params}") # for assigning TSV column names names later
+      
+      copykat_results <- purrr::map(
+        distance_params, 
+        \(distance_parameter) {
+          
+          copykat_result <- copykat(
+            rawmat = as.matrix(counts(sce)), 
+            id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
+            sam.name = glue::glue("{params$library_id}-{distance_parameter}"), # unique name for each 
+            distance = distance_parameter, 
+            ks.cut = kscut_param, # use default, but write out to be explicit
+            # attempt to turn off some outputs..
+            plot.genes = FALSE,
+            output.seg = FALSE,
+            n.cores = params$threads
+          )
+          
+          # export full result
+          readr::write_rds(copykat_result, 
+                            file.path(
+                              output_directory,
+                              glue::glue("{sample_name}_copykat_distance-{distance_parameter}.rds")
+                            ))
+          
+          # return predictions
+          return(copykat_result$prediction$copykat.pred)
+      })
+    } else {
+      ### ks.cut ####
+      copykat_names <- glue::glue("copykat_{kscut_params}") # for assigning TSV column names names later
+
+      ### kscut ###
+      copykat_results <- purrr::map(
+          kscut_params, 
+          \(kscut_parameter) {
+            
+            copykat_result <- copykat(
+              rawmat = as.matrix(counts(sce)), 
+              id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
+              sam.name = glue::glue("{params$library_id}-{distance_parameter}"), # unique name for each 
+              distance = distance_param, # use default, but write out to be explicit
+              ks.cut = kscut_parameter,
+              # attempt to turn off some outputs..
+              plot.genes = FALSE,
+              output.seg = FALSE,
+              n.cores = params$threads
+            )
+            
+            # export full result
+            readr::write_rds(copykat_result, 
+                            file.path(
+                              output_directory,
+                              glue::glue("{sample_name}_copykat_kscut-{kscut_parameter}.rds")
+                            ))
+            
+            # return predictions
+            return(copykat_result$prediction$copykat.pred)
+      })
+    }
+  
+    # name the results
+    names(copykat_results) <- copykat_names
+  
+    # Bind up all the columns
+     copykat_df <- dplyr::bind_cols(
+       copykat_df, 
+       copykat_results
+     ) |>
+      # remove submitter NAs
+    tidyr::drop_na(submitter)
+}
+
+
+
+
+
 # function to compare copykat results across values for _one_ varied parameter
 #   with a barplot
 compare_copykat_results_barplot <- function(copykat_df) {
@@ -103,15 +210,19 @@ compare_copykat_results_barplot <- function(copykat_df) {
 
 
 # function to compare result tables both via overall counts and confusion matrix
-compare_result_tables <- function(df, run_name) {
-  # Takes data frame with three columns with fully defined values:
+compare_result_tables <- function(copykat_result_column, df) {
+  # Takes data frame (_second argument_) with three columns with fully defined values:
   ### `submitter`: full submitter annotations
   ### `submitter_binary`: submitter annotations reduced to tumor/normal only
-  #### `copykat`: copykat annotations, considering only diploid/aneuploid
+  #### `copykat_result_column` (first argument): column containing copykat annotations, 
+  #       considering only diploid/aneuploid
   # Returns overall table comparison and result from caret::confusionMatrix()
 
-  print(glue::glue("=================== {run_name} ======================"))
-  
+  cat(glue::glue("================== {copykat_result_column} ===================="))
+
+  # copy the column for convenience
+  df$copykat <- df[[copykat_result_column]]
+
   # Result 1: Table comparing full results
   print(
     table(df$submitter, df$copykat)
@@ -167,18 +278,43 @@ if (!(file.exists(local_submitter_sce_path))) {
   sync_call <- glue::glue('op run -- aws s3 sync {params$s3_submitter_data_dir} {params$local_data_dir}/{params$sample_id} --exclude "*" --include "{submitter_annotated_sce_file}"')
   system(sync_call, ignore.stdout = TRUE) 
 }
+```
 
+Now, we'll read in the SCE and prepare for `copyKat` inference.
+
+```{r}
 # read in initial SCE
-# if results have already been generated this won't actually be used,
-#  but it's not too big to have in memory even if that's the case.
 sce <- readr::read_rds(local_submitter_sce_path)
 
 # use a small SCE for testing, if specified
 if (params$test) {
   sce <- sce[, 1:50]
 }
+
+# pull out count matrix
+raw_counts <- counts(sce)
+
+# Initiate TSV for storing results
+copykat_df <- tibble::tibble(
+  submitter = sce$celltype, 
+  # and a binary version for later classification assessment
+  submitter_binary = ifelse(
+  stringr::str_starts(submitter, "Tumor"), 
+    "Tumor", 
+    "Normal"
+  )
+)
+
+# Now we can remove the SCE
+rm(sce)
 ```
 
+
+Let's first get a sense of balance in the data from the submitter annotations:
+
+```{r}
+table(copykat_df$submitter_binary)
+```
 
 ## Compare CopyKAT distance parameters
 
@@ -200,96 +336,40 @@ if (file.exists(copykat_distance_tsv)) {
   
 } else {
 
-  # Initialize dataframe for storing copykat results
-  copykat_df <- tibble::tibble(
-    submitter = sce$celltype, 
-    # and a binary version for later classification assessment
-    submitter_binary = ifelse(
-      stringr::str_starts(submitter, "Tumor"), 
-      "Tumor", 
-      "Normal"
-    )
-  )
-  
   distance_parameters <- c("spearman", "pearson", "euclidan")
-  
-  copykat_results <- purrr::map(
-    distance_parameters, 
-    \(distance_parameter) {
+
       
-      copykat_result <- copykat(
-        rawmat = as.matrix(counts(sce)), 
-        id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
-        sam.name = glue::glue("{params$library_id}-{distance_parameter}"), # unique name for each 
-        distance = distance_parameter, 
-        # attempt to turn off some outputs..
-        plot.genes = FALSE,
-        output.seg = FALSE,
-        n.cores = params$threads
-      )
-      
-      # export full result
-      output_file <- file.path(output_dir,
-                              glue::glue("{params$library}_copykat_{distance_parameter}.rds"))
-      readr::write_rds(copykat_result, output_file)
-      
-            
-      # return predictions
-      return(copykat_result$prediction$copykat.pred)
-    }
-  )
+  # run and save final predictions to the df, which is also exported as TSV
+  copykat_df <- run_copykat_over_params(raw_counts, 
+                                        distance_param = distance_parameters, 
+                                        copykat_df = copykat_df, 
+                                        output_tsv = copykat_distance_tsv)
   
-  names(copykat_results) <- glue::glue("copykat_{distance_parameters}")
-  
-  # Bind up all the columns
-  copykat_df <- dplyr::bind_cols(
-    copykat_df, 
-    copykat_results
-  )
-  
-  # finally, export TSV with all copykat predictions
-  readr::write_tsv(copykat_df, copykat_distance_tsv)
-} 
+}
 ```
 
 ### Comparing results
 
 
-We'll prepare the data for comparison and begin with a barplot of tumor/normal classifications across `copyKat` parameters:
+We'll begin with a barplot of tumor/normal classifications across `copyKat` parameters:
 
 ```{r}
-# Remove NA submitter values before assessment
-copykat_df <- copykat_df |>
-  tidyr::drop_na(submitter)
-
 # Plot the data:
 compare_copykat_results_barplot(copykat_df) + 
   ggtitle("Comparing distance parameters")
 ```
 
-Let's also look at the binary submitter celltypes to get a sense of balance:
-
-```{r}
-table(copykat_df$submitter_binary)
-```
-
-
 Next, we'll look at tables for correspondence between submitter cell type annotations and `copyKat` inferences, as well as confusion matrix results for each comparison.
 For `copyKat`, "diploid" is normal and "aneuploid" is tumor.
 
 ```{r}
-copykat_df |>
-  dplyr::select(submitter, submitter_binary, copykat = copykat_euclidean) |>
-  compare_result_tables("euclidean distance") 
-
-copykat_df |>
-  dplyr::select(submitter, submitter_binary, copykat = copykat_pearson) |>
-  compare_result_tables("pearson distance") 
-
-copykat_df |>
-  dplyr::select(submitter, submitter_binary, copykat = copykat_spearman) |>
-  compare_result_tables("spearman distance") 
-
+purrr::walk(
+  # column names of interest
+  names(copykat_df)[stringr::str_starts(names(copykat_df), "copykat_")], 
+  compare_result_tables,
+  # shared argument
+  copykat_df
+)
 ```
 
 ## Compare CopyKAT KS.cut parameters
@@ -324,45 +404,13 @@ if (file.exists(copykat_kscut_tsv)) {
       copykat_0.1 = copykat_pearson
     )
 
-  kscut_values <- seq(0.025, 0.15, 0.025)[-4] # can skip 0.1
-  
-  copykat_results <- purrr::map(
-    kscut_values, 
-    \(kscut_value) {
+  kscut_parameters <- seq(0.025, 0.15, 0.025)[-4] # can skip 0.1
       
-      copykat_result <- copykat(
-        rawmat = as.matrix(counts(sce)), 
-        id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
-        sam.name = glue::glue("{params$library_id}-{kscut_value}"), # unique name for each 
-        distance = "pearson",
-        KS.cut = kscut_value,
-        # attempt to turn off some outputs..
-        plot.genes = FALSE,
-        output.seg = FALSE,
-        n.cores = params$threads
-      )
-      
-      # export full result
-      output_file <- file.path(output_dir,
-                              glue::glue("{params$library}_copykat_{kscut_value}.rds"))
-      readr::write_rds(copykat_result, output_file)
-      
-            
-      # return predictions
-      return(copykat_result$prediction$copykat.pred)
-    }
-  )
-  
-  names(copykat_results) <- glue::glue("copykat_{kscut_values}")
-  
-  # Bind up all the columns
-  copykat_df <- dplyr::bind_cols(
-    copykat_df, 
-    copykat_results
-  )
-  
-  # finally, export TSV with all copykat predictions
-  readr::write_tsv(copykat_df, copykat_kscut_tsv)
+  # run and save final predictions to the df, which is also exported as TSV
+  copykat_df <- run_copykat_over_params(raw_counts, 
+                                        kscut_param = kscut_parameters, 
+                                        copykat_df = copykat_df, 
+                                        output_tsv = copykat_kscut_tsv)
 } else {
   stop("Error: At least one of those TSV files should have existed by now!")
 }
@@ -371,13 +419,9 @@ if (file.exists(copykat_kscut_tsv)) {
 
 ### Comparing results
 
-As before, we'll prepare the data for comparison and begin with a barplot of tumor/normal classifications across `copyKat` parameters:
+As before, begin with a barplot of tumor/normal classifications across `copyKat` parameters:
 
 ```{r, fig.height = 5, fig.width = 4}
-# Remove NA submitter values before assessment
-copykat_df <- copykat_df |>
-  tidyr::drop_na(submitter)
-
 # Plot the data:
 compare_copykat_results_barplot(copykat_df) + 
   ggtitle("Comparing KS.cut parameters")
@@ -389,13 +433,11 @@ For `copyKat`, "diploid" is normal and "aneuploid" is tumor.
 
 ```{r}
 purrr::walk(
-  glue::glue("copykat_{seq(0.025, 0.15, 0.025)}"), 
-  \(column_name) {
-    
-  copykat_df |>
-    dplyr::select(submitter, submitter_binary, copykat = as.symbol(column_name) ) |>
-    compare_result_tables(column_name) 
-  }
+  # column names of interest
+  names(copykat_df)[stringr::str_starts(names(copykat_df), "copykat_")], 
+  compare_result_tables,
+  # shared argument
+  copykat_df
 )
 ```
 
