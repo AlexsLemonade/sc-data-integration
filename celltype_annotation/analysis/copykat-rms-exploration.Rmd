@@ -56,7 +56,7 @@ output_dir <-  here::here("celltype_annotation",
                           "copykat-results")
 fs::dir_create(output_dir)
 
-# Output file that compares results for different distance parameters
+# TSV output file that compares results for different distance parameters
 copykat_distance_tsv <- file.path(output_dir,
                                 glue::glue("{params$library}_copykat_results_distance_parameters.tsv"))
 
@@ -210,15 +210,17 @@ compare_copykat_results_barplot <- function(copykat_df) {
 
 
 # function to compare result tables both via overall counts and confusion matrix
-compare_result_tables <- function(copykat_result_column, df) {
+compare_result_tables <- function(copykat_result_column, df, output_dir, output_name) {
   # Takes data frame (_second argument_) with three columns with fully defined values:
   ### `submitter`: full submitter annotations
   ### `submitter_binary`: submitter annotations reduced to tumor/normal only
   #### `copykat_result_column` (first argument): column containing copykat annotations, 
   #       considering only diploid/aneuploid
+  # `output_dir` and `output_name` are the directory and name to use for saving an RDS file
+  #  with confusion matrix results
   # Returns overall table comparison and result from caret::confusionMatrix()
 
-  cat(glue::glue("================== {copykat_result_column} ===================="))
+  cat(glue::glue("\n\n================== {copykat_result_column} ===================="))
 
   # copy the column for convenience
   df$copykat <- df[[copykat_result_column]]
@@ -228,8 +230,8 @@ compare_result_tables <- function(copykat_result_column, df) {
     table(df$submitter, df$copykat)
   )
   
-  cat("\n ===================================\n ")
   # Result 2: confusion matrix
+  cat("\n")
   
   # remove "not.defined" from copyKat and update levels
   df_caret <- df |> 
@@ -245,11 +247,16 @@ compare_result_tables <- function(copykat_result_column, df) {
       submitter_binary = forcats::fct_relevel(submitter_binary, "Tumor")
     )
   
-  print(
-    caret::confusionMatrix(
-      table(df_caret$submitter_binary, 
-            df_caret$copykat)
-    )
+  confusion <-  caret::confusionMatrix(
+    table(df_caret$submitter_binary, 
+          df_caret$copykat)
+  )
+  print(confusion)
+  
+  # Save to file
+  readr::write_rds(
+    confusion, 
+    file.path(output_dir, glue::glue("{output_name}_{copykat_result_column}_confusion-matrix.rds"))
   )
 }
 ```
@@ -367,8 +374,10 @@ purrr::walk(
   # column names of interest
   names(copykat_df)[stringr::str_starts(names(copykat_df), "copykat_")], 
   compare_result_tables,
-  # shared argument
-  copykat_df
+  # shared arguments
+  copykat_df, 
+  output_dir, 
+  params$library_id
 )
 ```
 
@@ -436,8 +445,10 @@ purrr::walk(
   # column names of interest
   names(copykat_df)[stringr::str_starts(names(copykat_df), "copykat_")], 
   compare_result_tables,
-  # shared argument
-  copykat_df
+  # shared arguments
+  copykat_df, 
+  output_dir, 
+  params$library_id
 )
 ```
 
