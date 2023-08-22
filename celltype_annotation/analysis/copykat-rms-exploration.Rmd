@@ -37,8 +37,17 @@ See Figure 1 in the paper for a method diagram:
   * These values are converted to genomic positions in 220-kb bins.
   _`copyKat` ultimately provides these values in the outputted CNA matrix._
 * Hierarchical clustering identifies largest distance between aneuploid and diploid, but if distance not significant, they switch to the "GMM definition model" to predict tumor cells one-by-one.
-* Finally, clustering delinates clonal substructure (not particularly relevant to us) for differential expression.
+* Finally, clustering delineates clonal substructure (not particularly relevant to us) for differential expression.
 
+## Interpreting results
+
+In this notebook, one approach we'll use to evaluate performance is a confusion matrix. 
+Among the statistics reported in the confusion matrix, we are particularly interested in these:
+
+* **Kappa**: Quantifies agreement in a classification model, where close to 1 is nearly perfect, and less than 0 is worse agreement that random chance.
+* **Balanced accuracy**: Averaged accuracy across both minority and majority classes; a more robust measure of accuracy for imbalanced data like we have here. Ranges from 0-1.
+
+We'd like to see high kappa and balanced accuracy values, each close to 1.
 
 ## Set Up
 
@@ -249,8 +258,6 @@ compare_result_tables <- function(copykat_result_column, df, output_dir, output_
 
 
 In the next chunk, we obtain the _submitter-annotated_ SCE from S3, if it is not already locally present.
-We'll wait to read it in when actually running `copyKat`, mostly for memory reasons.
-
 
 ```{r}
 # make local data directory if it doesn't exist
@@ -331,7 +338,6 @@ if (file.exists(copykat_distance_tsv)) {
 
   distance_parameters <- c("spearman", "pearson", "euclidan")
 
-      
   # run and save final predictions to the df, which is also exported as TSV
   copykat_df <- run_copykat_over_params(raw_counts, 
                                         distance_param = distance_parameters, 
@@ -442,9 +448,12 @@ purrr::walk(
 
 ## Conclusions
 
-`copyKat` has the best chance of success with one of the correlational distances (spearman or pearson), and the default `KS.cut` parameter of 0.1 may indeed be a reasonable default for us (although many of the results across this parameter are similar).
 
-It is also worth noting some drawbacks of the `copyKat` package:
+For _all_ inferences performed here, _all_ `kappa` values are negative, implying worse performance than a random classifier, and balanced accuracy was never higher than ~0.44. 
+The performance was best (in terms of balanced accuracy) when using correlational distance (spearman or pearson) vs euclidian, and there were not strong differences across values of `KS.cut` parameters.
+Regardless of some improvements under certain parameterizations, performance was overall poor on this data. 
+
+It is also worth noting some aspects of the `copyKat` package:
 
 * `copyKat` [hardcodes a random seed](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/R/copykat.R#L29-L32) so we can't readily assess bias from starting conditions.
 * It emits _a lot of output_, and we don't have much control over it! 
