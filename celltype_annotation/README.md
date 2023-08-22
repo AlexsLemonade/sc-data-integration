@@ -26,6 +26,8 @@ However instead of using public references for marker gene sets, we use `scran::
 7. `03-cell-assign-combined-markers.Rmd`: This notebook is follow-up to the exploration in `01-cell-assign-sarcoma.Rmd`.
 In the notebook, cell type annotations using different sets of marker genes from `PanglaoDB` are compared to submitter annotations.
 
+8. `copykat-rms-exploration.Rmd`: This notebook explores the usage of `CopyKAT` for identifying tumor vs. normal cells in Rhabdomyosarcoma samples from `SCPCP000005`.
+
 ## Scripts
 
 This folder contains any scripts used for cell type annotation.

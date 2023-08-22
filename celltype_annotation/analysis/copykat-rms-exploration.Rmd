@@ -1,0 +1,481 @@
+---
+title: "CopyKAT: Rhabdomyosarcoma cell type tumor vs normal inference for `r {params$library_id}`"
+output: 
+  html_notebook:
+  toc: true
+toc_float: true
+params:
+  s3_singler_data_dir: "s3://nextflow-ccdl-results/scpca/processed/results/SCPCP000005" 
+  s3_submitter_data_dir: "s3://sc-data-integration/scpca/celltype_sce"
+  local_data_dir: "../data"
+  library_id: "SCPCL000488"
+  sample_id: "SCPCS000262"
+  test: FALSE
+  threads: 4
+---
+  
+This notebook explores performance of the [`copyKat`](https://github.com/navinlabcode/copykat) package for calling tumor vs. normal cells in pediatric cancer scRNA-seq data.
+Specifically, we look at a library from the `SCPCP000005` (RMS) project, where the submitter has annotated cell types which we can consider "ground truth" for the purposes of this exploration.
+We'll assess agreement between the submitter tumor/normal classification and what `copyKat` infers as tumor/normal, across some different `copyKat` parameter values.
+
+## Background: `copyKat` method
+
+Reference: https://doi.org/10.1038/s41587-020-00795-2
+
+To begin, here's a brief overview of the `copyKat` approach, partly quoting the paper throughout.
+See Figure 1 in the paper for a method diagram:
+
+* `copyKat` takes the _raw expression matrix_ and stabilizes variance, smooths the outliers
+* A subset of cells is then identified to serve as a diploid baseline for subsequent identification of diploid/aneuploid
+  * Cells are pooled into clusters with hierarchical clustering, and a GMM estimtes variance of each cluster
+  * Cluster with minimal estimated variance is regarded as the "confident diploid cells"
+  * **Caution:** This may fail if data has few normal cells and/or there are few CNA events.
+  A "GMM definition mode" (sic; I think they meant "model"!) is offered to deal with this (described in paper bottom of pg 599), but implementation details to invoke this mode are thin. I _think_ it is automatically applied?
+* MCMC is used to identify chromosome breakpoints with KS tests between gene windows
+  * Significant test = probably a breakpoint
+  * Final copy numbers for each window are the posterior means of all genes spanning breakpoints
+  * These values are converted to genomic positions in 220-kb bins.
+  _`copyKat` ultimately provides these values in the outputted CNA matrix._
+* Hierarchical clustering identifies largest distance between aneuploid and diploid, but if distance not significant, they switch to the "GMM definition model" to predict tumor cells one-by-one.
+* Finally, clustering delineates clonal substructure (not particularly relevant to us) for differential expression.
+
+
+## Set Up
+
+```{r}
+suppressPackageStartupMessages({
+  library(SingleCellExperiment)
+  library(ggplot2)
+  library(copykat) # https://github.com/navinlabcode/copykat
+})
+theme_set(theme_bw())
+
+# define output path and SCE file
+output_dir <-  here::here("celltype_annotation", 
+                          "analysis", 
+                          "copykat-results")
+fs::dir_create(output_dir)
+
+# TSV output file that compares results for different distance parameters
+copykat_distance_tsv <- file.path(output_dir,
+                                glue::glue("{params$library}_copykat_results_distance_parameters.tsv"))
+
+# Output file that compares results for different kscut parameters
+copykat_kscut_tsv <- file.path(output_dir,
+                                glue::glue("{params$library}_copykat_results_kscut_parameters.tsv"))
+```
+
+The next chunk defines some functions for running `copyKat` and analyzing results.
+
+
+```{r}
+# function to run copyKat over a user-provided range of parameter values 
+run_copykat_over_params <- function(raw_counts_matrix,
+                                    # specify defaults in overall function
+                                    distance_param = "euclidian", 
+                                    kscut_param    =  0.1, 
+                                    threads = params$threads, 
+                                    sample_name = params$library_id,
+                                    output_directory = output_dir,
+                                    copykat_df = NULL,
+                                    output_tsv = NULL) {
+  
+  # argument checks
+  if (is.null(copykat_df)) {
+    stop("Need an initiated data frame to run `run_copykat`.")
+  }
+    
+  if (is.null(output_tsv)) {
+    stop("Need a value for `output_tsv`.")
+  }
+
+  # ONLY one of the parameters can have a range of values!
+  if (length(distance_params) > 1 & length(kscut_params) > 1) {
+    stop("The `run_copykat_over_params` function needs to vary one of the parameters.")
+  }
+  
+  # Or, run with purrr::map() for a range of values and then cbind results at the end
+  
+    ### distance ####
+    if (length(distance_params) > 1) {
+      
+      copykat_names <- glue::glue("copykat_{distance_params}") # for assigning TSV column names names later
+      
+      copykat_results <- purrr::map(
+        distance_params, 
+        \(distance_parameter) {
+          
+          copykat_result <- copykat(
+            rawmat = as.matrix(counts(sce)), 
+            id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
+            sam.name = glue::glue("{params$library_id}-{distance_parameter}"), # unique name for each 
+            distance = distance_parameter, 
+            ks.cut = kscut_param, # use default, but write out to be explicit
+            # attempt to turn off some outputs..
+            plot.genes = FALSE,
+            output.seg = FALSE,
+            n.cores = params$threads
+          )
+
+          # return predictions
+          return(copykat_result$prediction$copykat.pred)
+      })
+    } else {
+      ### ks.cut ####
+      copykat_names <- glue::glue("copykat_{kscut_params}") # for assigning TSV column names names later
+
+      ### kscut ###
+      copykat_results <- purrr::map(
+          kscut_params, 
+          \(kscut_parameter) {
+            
+            copykat_result <- copykat(
+              rawmat = as.matrix(counts(sce)), 
+              id.type = "E", # we have Ensembl gene ids, not the default gene symbols ("S")
+              sam.name = glue::glue("{params$library_id}-{distance_parameter}"), # unique name for each 
+              distance = distance_param, # use default, but write out to be explicit
+              ks.cut = kscut_parameter,
+              # attempt to turn off some outputs..
+              plot.genes = FALSE,
+              output.seg = FALSE,
+              n.cores = params$threads
+            )
+            
+            # return predictions
+            return(copykat_result$prediction$copykat.pred)
+      })
+    }
+  
+    # name the results
+    names(copykat_results) <- copykat_names
+  
+    # Bind up all the columns
+     copykat_df <- dplyr::bind_cols(
+       copykat_df, 
+       copykat_results
+     ) |>
+      # remove submitter NAs
+    tidyr::drop_na(submitter)
+}
+
+
+
+
+
+# function to compare copykat results across values for _one_ varied parameter
+#   with a barplot
+compare_copykat_results_barplot <- function(copykat_df) {
+  
+  # prepare data frame for plotting
+  copykat_df_long <- copykat_df |>
+    tibble::rowid_to_column(var = "cell") |>
+    tidyr::pivot_longer(
+      contains("copykat"), 
+      names_to = "copykat_parameter", 
+      values_to = "prediction"
+    ) |>
+    dplyr::mutate(copykat_parameter = stringr::str_replace(copykat_parameter, 
+                                                         "copykat_", ""))
+  
+  # make, return a barplot of predictions
+  ggplot(copykat_df_long) + 
+    aes(x = submitter_binary, fill = prediction) + 
+    geom_bar(position = "fill",
+             # use alpha to see background grid
+             alpha = 0.75) + 
+    facet_grid(vars(copykat_parameter)) +
+    labs(
+      x = "Submitter annotation",
+      y = "Proportion of cells", 
+      fill = "CopyKat prediction"
+    ) + 
+    # add guideline at y=0.5
+    geom_hline(yintercept = 0.5, alpha = 0.25) 
+}
+
+
+
+# function to compare result tables both via overall counts and confusion matrix
+compare_result_tables <- function(copykat_result_column, df, output_dir, output_name) {
+  # Takes data frame (_second argument_) with three columns with fully defined values:
+  ### `submitter`: full submitter annotations
+  ### `submitter_binary`: submitter annotations reduced to tumor/normal only
+  #### `copykat_result_column` (first argument): column containing copykat annotations, 
+  #       considering only diploid/aneuploid
+  # `output_dir` and `output_name` are the directory and name to use for saving an RDS file
+  #  with confusion matrix results
+  # Returns overall table comparison and result from caret::confusionMatrix()
+
+  cat(glue::glue("\n\n================== {copykat_result_column} ===================="))
+
+  # copy the column for convenience
+  df$copykat <- df[[copykat_result_column]]
+
+  # Result 1: Table comparing full results
+  print(
+    table(df$submitter, df$copykat)
+  )
+  
+  # Result 2: confusion matrix
+  cat("\n")
+  
+  # remove "not.defined" from copyKat and update levels
+  df_caret <- df |> 
+    dplyr::filter(copykat != "not.defined") |>
+    # copykat values need to match submitter_binary values
+    dplyr::mutate(copykat = ifelse(
+      # use str_detect for test data
+      stringr::str_detect(copykat,"diploid"), "Normal", "Tumor"
+    )) |>
+    # Tumor should be first as the "positive" value
+    dplyr::mutate(
+      copykat = forcats::fct_relevel(copykat, "Tumor"),
+      submitter_binary = forcats::fct_relevel(submitter_binary, "Tumor")
+    )
+  
+  confusion <-  caret::confusionMatrix(
+    table(df_caret$submitter_binary, 
+          df_caret$copykat)
+  )
+  print(confusion)
+  
+  # Save to file
+  readr::write_rds(
+    confusion, 
+    file.path(output_dir, glue::glue("{output_name}_{copykat_result_column}_confusion-matrix.rds"))
+  )
+}
+```
+
+
+In the next chunk, we obtain the _submitter-annotated_ SCE from S3, if it is not already locally present.
+
+```{r}
+# make local data directory if it doesn't exist
+if (!dir.exists(params$local_data_dir)) {
+  dir.create(params$local_data_dir, recursive = TRUE)
+}
+
+# build path to submitter annotated sce file 
+submitter_annotated_sce_file <- glue::glue("{params$library_id}_processed_celltype.rds")
+
+
+local_submitter_sce_path <- file.path(params$local_data_dir,
+                                      params$sample_id,
+                                      submitter_annotated_sce_file)
+
+# get submitter sce from S3 if not already present locally
+if (!(file.exists(local_submitter_sce_path))) {
+  sync_call <- glue::glue('op run -- aws s3 sync {params$s3_submitter_data_dir} {params$local_data_dir}/{params$sample_id} --exclude "*" --include "{submitter_annotated_sce_file}"')
+  system(sync_call, ignore.stdout = TRUE) 
+}
+```
+
+Now, we'll read in the SCE and prepare for `copyKat` inference.
+
+```{r}
+# read in initial SCE
+sce <- readr::read_rds(local_submitter_sce_path)
+
+# use a small SCE for testing, if specified
+if (params$test) {
+  sce <- sce[, 1:50]
+}
+
+# pull out count matrix
+raw_counts <- counts(sce)
+
+# Initiate TSV for storing results
+copykat_df <- tibble::tibble(
+  submitter = sce$celltype, 
+  # and a binary version for later classification assessment
+  submitter_binary = ifelse(
+  stringr::str_starts(submitter, "Tumor"), 
+    "Tumor", 
+    "Normal"
+  )
+)
+
+# Now we can remove the SCE
+rm(sce)
+```
+
+
+Let's first get a sense of balance in the data from the submitter annotations:
+
+```{r}
+table(copykat_df$submitter_binary)
+```
+
+## Compare CopyKAT distance parameters
+
+
+### Run copyKat
+
+The `copyKat` [GitHub `README` file](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/README.md?plain=1#L67) includes this caveat about the `"distance"` parameter:
+
+> One struggling observation is that none of one clustering method could fit all datasets. In this version, I add a distance parameters for clustering that include "euclidean" distance and correlational distance, ie. 1-"pearson" and "spearman" similarity. In general, corretional distances tend to favor noisy data, while euclidean distance tends to favor data with larger CN segments.
+
+Therefore we'll begin by comparing `"euclidean"`, `"spearman"`, and `"pearson"` values for [this parameter](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/R/copykat.R#L251-L255).
+
+
+```{r}
+# Only run copykat if the final TSV does not exist
+if (file.exists(copykat_distance_tsv)) {
+  
+  copykat_df <- readr::read_tsv(copykat_distance_tsv)
+  
+} else {
+
+  distance_parameters <- c("spearman", "pearson", "euclidan")
+
+  # run and save final predictions to the df, which is also exported as TSV
+  copykat_df <- run_copykat_over_params(raw_counts, 
+                                        distance_param = distance_parameters, 
+                                        copykat_df = copykat_df, 
+                                        output_tsv = copykat_distance_tsv)
+  
+}
+```
+
+### Comparing results
+
+
+We'll begin with a barplot of tumor/normal classifications across `copyKat` parameters:
+
+```{r}
+# Plot the data:
+compare_copykat_results_barplot(copykat_df) + 
+  ggtitle("Comparing distance parameters")
+```
+
+Next, we'll look at tables for correspondence between submitter cell type annotations and `copyKat` inferences, as well as confusion matrix results for each comparison.
+For `copyKat`, "diploid" is normal and "aneuploid" is tumor.
+
+Among the statistics reported in the confusion matrix, we are particularly interested in these:
+
+* **Kappa**: Quantifies agreement in a classification model, where close to 1 is nearly perfect, and less than 0 is worse agreement that random chance.
+* **Balanced accuracy**: Averaged accuracy across both minority and majority classes; a more robust measure of accuracy for imbalanced data like we have here. Ranges from 0-1.
+
+We'd like to see high kappa and balanced accuracy values, each close to 1.
+
+```{r}
+purrr::walk(
+  # column names of interest
+  names(copykat_df)[stringr::str_starts(names(copykat_df), "copykat_")], 
+  compare_result_tables,
+  # shared arguments
+  copykat_df, 
+  output_dir, 
+  params$library_id
+)
+```
+
+## Compare CopyKAT KS.cut parameters
+
+
+### Run copyKat
+
+In the previous section, we saw that correlational distance is likely to be better than euclidean.
+In this section, we'll again run `copyKat`, **but this time using _only_ the "pearson" distance**, at a variety of `KS.cut` parameters.
+
+As described in the [GitHub `README` file](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/README.md?plain=1#L61), 
+
+> KS.cut is the segmentation parameter, ranging from 0 to 1. Increasing KS.cut decreases sensitivity, i.e. less segments/breakpoints. Usually it works in a range of 0.05-0.15.
+
+For this, we'll start with the SCE from the last section, and build it up from there with other `KS.cut` values.
+Since it was already run with default `KS.cut = 0.1`, we'll test a few additional values here and compare those to above.
+
+```{r}
+if (file.exists(copykat_kscut_tsv)) {
+  # if the TSV exists, read it in
+  copykat_df <- readr::read_tsv(copykat_kscut_tsv)
+
+} else if (file.exists(copykat_distance_tsv)) {
+  
+  # if only the _distance_ tsv exists, read in as a starting point
+  copykat_df <- readr::read_tsv(copykat_distance_tsv)
+  
+  # clean up columns for this analysis
+  copykat_df <- copykat_df |>
+    dplyr::select(
+      contains("submitter"),
+      copykat_0.1 = copykat_pearson
+    )
+
+  kscut_parameters <- seq(0.025, 0.15, 0.025)[-4] # can skip 0.1
+      
+  # run and save final predictions to the df, which is also exported as TSV
+  copykat_df <- run_copykat_over_params(raw_counts, 
+                                        kscut_param = kscut_parameters, 
+                                        copykat_df = copykat_df, 
+                                        output_tsv = copykat_kscut_tsv)
+} else {
+  stop("Error: At least one of those TSV files should have existed by now!")
+}
+```
+
+
+### Comparing results
+
+As before, begin with a barplot of tumor/normal classifications across `copyKat` parameters:
+
+```{r, fig.height = 5, fig.width = 4}
+# Plot the data:
+compare_copykat_results_barplot(copykat_df) + 
+  ggtitle("Comparing KS.cut parameters")
+```
+
+
+Next, we'll look at tables for correspondence between submitter cell type annotations and `copyKat` inferences, as well as confusion matrix results for each comparison.
+For `copyKat`, "diploid" is normal and "aneuploid" is tumor.
+
+As before, for the confusion matrix results, we'd like to see `kappa` and `balanced accuracy` values be close to 1, and we definitely don't want to see negative `kappa` values.
+
+```{r}
+purrr::walk(
+  # column names of interest
+  names(copykat_df)[stringr::str_starts(names(copykat_df), "copykat_")], 
+  compare_result_tables,
+  # shared arguments
+  copykat_df, 
+  output_dir, 
+  params$library_id
+)
+```
+
+
+
+## Conclusions
+
+
+For _all_ inferences performed here, _all_ `kappa` values are negative, implying worse performance than a random classifier, and balanced accuracy was never higher than ~0.44. 
+The performance was best (in terms of balanced accuracy) when using correlational distance (spearman or pearson) vs euclidian, and there were not strong differences across values of `KS.cut` parameters.
+Regardless of some improvements under certain parameterizations, performance was overall poor on this data. 
+
+It is also worth noting some aspects of the `copyKat` package:
+
+* `copyKat` [hardcodes a random seed](https://github.com/navinlabcode/copykat/blob/b795ff793522499f814f6ae282aad1aab790902f/R/copykat.R#L29-L32) so we can't readily assess bias from starting conditions.
+* It emits _a lot of output_, and we don't have much control over it! 
+  * This includes both `print()` statements and output files, some of which are optional but not all; and it seems the optional ones may still be exported even if you turn them off?
+  * The _lots and lots of output_ is not seen in this notebook because it was rendered after files already existed; the output _cannot_ be suppressed by turning off warnings or messages, because they are all print statements. 
+  * Of this output, we get a `"cell: #"` printed for each cell, and we also see that the majority also have a printed statement: `"WARNING! NOT CONVERGENT!"`.
+  This latter statement is _printed_ from a [dependency](https://github.com/cran/mixtools/blob/4af1e2789bcea7df3c1775a53cd05b37ec3185d0/R/normalmixEM.R#L129-L131) during the `copyKat` step to identify a baseline diploid cell population.
+* There is no clear way to assess confidence from `copyKat` output.
+  * _That said_, when you run this notebook with the test parameter as `TRUE`, you may notice that cells are no longer annotated `"diploid"` or `"aneuploid"` but instead as `"c1:diploid:low.conf"` and `"c2:aneuploid:low.conf"`, respectively. 
+  For the test runs, `copyKat` was unable to determine a reliable baseline for diploid cells, so everything was annotated as unreliable
+  * This is a form of a "confidence," and as the full SCE does not give these `"low.conf"` annotations, that tells us that `copyKat` feels confident in the results run on the full SCE.
+
+
+
+Based on these drawbacks, if we want to use `copyKat` moving forward, we might consider forking the repository and modifying aspects that best suit our needs:
+
+* More control over the seed
+* Less printing and fewer output files, where possible
+
+
+## Session Info
+
+```{r}
+sessionInfo()
+```
