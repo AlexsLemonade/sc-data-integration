@@ -39,15 +39,6 @@ See Figure 1 in the paper for a method diagram:
 * Hierarchical clustering identifies largest distance between aneuploid and diploid, but if distance not significant, they switch to the "GMM definition model" to predict tumor cells one-by-one.
 * Finally, clustering delineates clonal substructure (not particularly relevant to us) for differential expression.
 
-## Interpreting results
-
-In this notebook, one approach we'll use to evaluate performance is a confusion matrix. 
-Among the statistics reported in the confusion matrix, we are particularly interested in these:
-
-* **Kappa**: Quantifies agreement in a classification model, where close to 1 is nearly perfect, and less than 0 is worse agreement that random chance.
-* **Balanced accuracy**: Averaged accuracy across both minority and majority classes; a more robust measure of accuracy for imbalanced data like we have here. Ranges from 0-1.
-
-We'd like to see high kappa and balanced accuracy values, each close to 1.
 
 ## Set Up
 
@@ -361,6 +352,13 @@ compare_copykat_results_barplot(copykat_df) +
 Next, we'll look at tables for correspondence between submitter cell type annotations and `copyKat` inferences, as well as confusion matrix results for each comparison.
 For `copyKat`, "diploid" is normal and "aneuploid" is tumor.
 
+Among the statistics reported in the confusion matrix, we are particularly interested in these:
+
+* **Kappa**: Quantifies agreement in a classification model, where close to 1 is nearly perfect, and less than 0 is worse agreement that random chance.
+* **Balanced accuracy**: Averaged accuracy across both minority and majority classes; a more robust measure of accuracy for imbalanced data like we have here. Ranges from 0-1.
+
+We'd like to see high kappa and balanced accuracy values, each close to 1.
+
 ```{r}
 purrr::walk(
   # column names of interest
@@ -431,6 +429,8 @@ compare_copykat_results_barplot(copykat_df) +
 
 Next, we'll look at tables for correspondence between submitter cell type annotations and `copyKat` inferences, as well as confusion matrix results for each comparison.
 For `copyKat`, "diploid" is normal and "aneuploid" is tumor.
+
+As before, for the confusion matrix results, we'd like to see `kappa` and `balanced accuracy` values be close to 1, and we definitely don't want to see negative `kappa` values.
 
 ```{r}
 purrr::walk(
