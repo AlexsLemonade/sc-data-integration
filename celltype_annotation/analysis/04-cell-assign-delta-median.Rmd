@@ -218,7 +218,7 @@ However, it is not a linear relationship between marker genes and cell type assi
 Looking at these plots may highlight cell types that `CellAssign` is less confident in. 
 If there are cases with increased gene expression of a set of marker genes in two cell types, then you may expect that defining those two cell types would be more difficult. 
 
-```{r warning=FALSE,message=FALSE}
+```{r fig.height = 10, warning=FALSE,message=FALSE}
 # look at rms marker gene expression
 plot_marker_gene_exp(ref_mtx = rms_ref,
                      combined_results = rms_results_df,
@@ -231,7 +231,7 @@ In the tumor cells (Tumor_Myoblast and Tumor_Myocyte specifically), there is hig
 I would associated this with some of the misassignment that is happening between those two cell classes. 
 (see `02-cell-assign-sarcoma-marker-genes.Rmd`)
 
-```{r warning=FALSE,message=FALSE}
+```{r fig.height = 20,warning=FALSE,message=FALSE}
 # look at combined muscle reference 
 plot_marker_gene_exp(ref_mtx = combined_muscle_ref,
                      combined_results = rms_results_df,
