@@ -32,7 +32,7 @@ This means that high marker gene expression is required for `CellAssign` to assi
 
 ## Set Up
 
-```{r}
+```{r message=FALSE}
 library(SingleCellExperiment)
 library(ggplot2)
 
@@ -41,7 +41,7 @@ function_file <- file.path("..", "utils", "cellassign-helper-functions.R")
 source(function_file)
 ```
 
-```{r}
+```{r message=FALSE}
 # Set up paths 
 cellassign_results_dir <- file.path("cellassign_results")
 
@@ -62,13 +62,13 @@ rms_preds_files <- list(
 )
 ```
 
-```{r}
+```{r message=FALSE} 
 # read in prediction files  
 blood_predictions <- purrr::map(blood_preds_files, readr::read_tsv)
 rms_predictions <- purrr::map(rms_preds_files, readr::read_tsv)
 ```
 
-```{r}
+```{r message=FALSE}
 # grab annotated sce objects for use later 
 data_dir <- file.path("..", "data")
 blood_annotated_rds <- file.path(data_dir, "SCPCS000221", "SCPCL000295_annotated.rds")
@@ -80,7 +80,7 @@ rms_sce <- readr::read_rds(rms_annotated_rds)
 ```
 
 
-```{r}
+```{r message=FALSE}
 # read in reference files 
 # we will use these later to look at marker genes specific to each reference
 ref_dir <- file.path("..", "references")
@@ -89,6 +89,86 @@ blood_no_bcells_ref <- readr::read_csv(file.path(ref_dir, "FL_celltype_ensembl-n
 combined_muscle_ref <- readr::read_csv(file.path(ref_dir, "panglao_combined_mtx.csv"))
 rms_ref <- readr::read_csv(file.path(ref_dir, "rms_broad_markers_mtx.csv"))
 ```
+
+## Probability scores 
+
+Because `CellAssign` directly outputs probabilities, rather than an arbitrary score, let's just look directly at the probabilities first.
+
+Here we will plot the entire distribution of probabilities for each cell type. 
+For each cell type, we label which cells were assigned to the cell type indicatd on the x-axis with the `assigned_celltype` label. 
+We are looking for all cells with high probability of being assigned to a given cell type to be assigned to that cell type. 
+Additionally, the probability of them being assigned to a different cell type should be low. 
+
+For all of these plots the probability will be shown on the x-axis and the cell type on the y-axis.
+The color indicates the whether or not the probability was the top probability used to assign the cell type.
+
+```{r}
+# get the cell type assignments
+# based on cell type with the highest probability 
+blood_celltype <- purrr::map(blood_predictions, get_celltype_assignments) |>
+  dplyr::bind_rows(.id = "reference")
+
+rms_celltype <- purrr::map(rms_predictions, get_celltype_assignments) |>
+  dplyr::bind_rows(.id = "reference")
+```
+
+
+### Blood probability
+
+```{r}
+# separate by cell type
+plot_probability(blood_celltype,
+                 blood_predictions)
+```
+
+### RMS probability
+
+
+```{r fig.height=5}
+# separate by cell type
+plot_probability(rms_celltype,
+                 rms_predictions)
+```
+
+Overall it appears that there is a larger difference between the distribution of probabilities for the non-assigned cell type and the assigned cell type in sarcoma when using the `rms_markers` reference over the combined muscle reference. 
+This fits with the expectation that the cell types found in `rms_markers` are more appropriate than the cell types in the muscle reference. 
+
+## Marker gene expression 
+
+Because `CellAssign` strictly looks for increased expression of defined marker genes to assign cell types, here I specifically look at the expression of the marker genes in each reference across the assigned cell types. 
+I would expect that the marker genes for a cell type would be highly expressed in cells that are assigned to that cell type and have lower expression in other cell types. 
+
+However, it is not a linear relationship between marker genes and cell type assignment, so not having high expression in all genes may be expected. 
+Looking at these plots may highlight cell types that `CellAssign` is less confident in. 
+If there are cases with increased gene expression of a set of marker genes in two cell types, then you may expect that defining those two cell types would be more difficult. 
+
+Here we will only look at the RMS marker gene expression because the blood reference only has a very small number of marker genes. 
+
+```{r fig.height = 10, warning=FALSE,message=FALSE}
+# look at rms marker gene expression
+plot_marker_gene_exp(ref_mtx = rms_ref,
+                     celltype_assignments = rms_celltype,
+                     ref_name = "rms_markers",
+                     annotated_sce = rms_sce) +
+  labs(title = "RMS Marker Genes Reference")
+```
+
+Here we see that expression of marker genes for non-tumor cells (e.g., Fibroblasts and Vascular Endothelium) is pretty defined to only the assigned cell types. 
+In the tumor cells (Tumor_Myoblast and Tumor_Myocyte specifically), there is high expression of both marker gene sets.
+I would associated this with some of the misassignment that is happening between those two cell classes. 
+(see `02-cell-assign-sarcoma-marker-genes.Rmd`)
+
+```{r fig.height = 25,warning=FALSE,message=FALSE}
+# look at combined muscle reference 
+plot_marker_gene_exp(ref_mtx = combined_muscle_ref,
+                     celltype_assignments = rms_celltype,
+                     ref_name = "combined_muscle",
+                     annotated_sce = rms_sce) +
+  labs(title = "RMS Combined muscle Reference")
+```
+
+The trend of marker genes being higher in the assigned cell type is present, but definitely not as clear with this reference.
+I don't think this helps us discern which cell types have been confidently assigned. 
 
 ## Median Delta
 
@@ -99,14 +179,11 @@ The higher the median delta score, the larger the difference between the probabi
 We will compare the distribution of delta median scores across references used and cell types. 
 If a reference is more appropriate, we would expect a higher distribution of delta median scores. 
 
+### Blood median delta
+
 ```{r}
 # calculate the blood median delta probability 
 blood_median_delta <- purrr::map(blood_predictions, get_median_delta_cellassign) |>
-  dplyr::bind_rows(.id = "reference")
-
-# get the actual cell type assignments 
-# based on cell type with the highest probability 
-blood_celltype <- purrr::map(blood_predictions, get_celltype_assignments) |>
   dplyr::bind_rows(.id = "reference")
 
 # combine into a single data frame for plotting
@@ -123,13 +200,11 @@ plot_median_delta(blood_results_df, color_group = "reference")
 plot_median_delta(blood_results_df)
 ```
 
+### RMS median delta
+
 ```{r}
 # median delta for rms data
 rms_median_delta <- purrr::map(rms_predictions, get_median_delta_cellassign) |>
-  dplyr::bind_rows(.id = "reference")
-
-# actual cell type calls
-rms_celltype <- purrr::map(rms_predictions, get_celltype_assignments) |>
   dplyr::bind_rows(.id = "reference")
 
 # combine into a single data frame
@@ -155,103 +230,12 @@ For sarcoma, the reference produced from using marker genes specific to the data
 However, if we break it down by cell type, we generally see that the delta median scores are high across each cell type. 
 This means that when a cell is called a specific type, the probability of the cell type being the best assignment is high. 
 
-## Probability scores 
-
-Because `CellAssign` directly outputs probabilities, rather than an arbitrary score, let's just look directly at the probabilities. 
-
-Here we will plot the entire distribution of probabilities for each cell type. 
-For each cell type, we label which cells were assigned to the cell type indicatd on the x-axis with the `top_celltype` label. 
-We are looking for all cells with high probability of being assigned to a given cell type to be assigned to that cell type. 
-Additionally, the probability of them being assigned to a different cell type should be low. 
-
-```{r}
-# create combined data frame with all prediction scores 
-combined_predictions_results <- join_cellassign_results(blood_celltype, 
-                                                        blood_predictions) |> 
-  dplyr::bind_rows() |> 
-  # only show probabilities associated with the called celltype 
-  dplyr::filter(predicted_celltype == celltype)
-
-# plot comparing the probabilities associatd with assigned cell types in blood
-ggplot(combined_predictions_results, aes(x = reference, y = probability)) +
-        ggforce::geom_sina(size = 0.5, alpha = 0.2) +
-        theme_bw()
-```
-
-
-```{r}
-# separate by cell type
-plot_probability(blood_celltype,
-                 blood_predictions)
-```
-```{r}
-combined_predictions_results <- join_cellassign_results(rms_celltype, 
-                                                        rms_predictions) |> 
-  dplyr::bind_rows() |> 
-  # only show probabilities associated with the called celltype 
-  dplyr::filter(predicted_celltype == celltype)
-  
-# plot comparing the probabilities associatd with assigned cell types in rms
-ggplot(combined_predictions_results, aes(x = reference, y = probability)) +
-        ggforce::geom_sina(size = 0.5, alpha = 0.2) +
-        theme_bw()
-```
-
-
-```{r}
-# separate by cell type
-plot_probability(rms_celltype,
-                 rms_predictions)
-```
-
-Overall it appears that the distribution of probabilities is slightly higher in sarcoma when using the `rms_markers` reference over the combined muscle reference. 
-This fits with the expectation that the cell types found in `rms_markers` are more appropriate than the cell types in the muscle reference. 
-
-Additionally, when looking at the distribution of probabilities by cell type, we see that overall cells with a high probability in a specific cell type have a low probability in other cell types. 
-This is consistent with the median delta score showing high differences between the top probability and the median probability for each cell. 
-
-## Marker gene expression 
-
-Because `CellAssign` strictly looks for increased expression of defined marker genes to assign cell types, here I specifically look at the expression of the marker genes in each reference across the assigned cell types. 
-I would expect that the marker genes for a cell type would be highly expressed in cells that are assigned to that cell type and have lower expression in other cell types. 
-
-However, it is not a linear relationship between marker genes and cell type assignment, so not having high expression in all genes may be expected. 
-Looking at these plots may highlight cell types that `CellAssign` is less confident in. 
-If there are cases with increased gene expression of a set of marker genes in two cell types, then you may expect that defining those two cell types would be more difficult. 
-
-```{r fig.height = 10, warning=FALSE,message=FALSE}
-# look at rms marker gene expression
-plot_marker_gene_exp(ref_mtx = rms_ref,
-                     combined_results = rms_results_df,
-                     ref_name = "rms_markers",
-                     annotated_sce = rms_sce) +
-  labs(title = "RMS Marker Genes Reference")
-```
-Here we see that expression of marker genes for non-tumor cells (e.g., Fibroblasts and Vascular Endothelium) is pretty defined to only the assigned cell types. 
-In the tumor cells (Tumor_Myoblast and Tumor_Myocyte specifically), there is high expression of both marker gene sets.
-I would associated this with some of the misassignment that is happening between those two cell classes. 
-(see `02-cell-assign-sarcoma-marker-genes.Rmd`)
-
-```{r fig.height = 20,warning=FALSE,message=FALSE}
-# look at combined muscle reference 
-plot_marker_gene_exp(ref_mtx = combined_muscle_ref,
-                     combined_results = rms_results_df,
-                     ref_name = "combined_muscle",
-                     annotated_sce = rms_sce) +
-  labs(title = "RMS Combined muscle Reference")
-```
-
-Looking at this, it looks like Myocytes have high expression of myocyte specific marker genes. 
-However, they also have high expression of many other marker genes.
-Perhaps that is why `CellAssign` is having trouble assigning myocytes (and other cell types) using this reference.
-
 ## Conclusions
 
-- Looking at the delta median prediction/probability score appears to be high across all cell types, regardless of quality of cell type assignment, at least in the libraries and references examined here. 
-- The distribution of the probability appears to be helpful in distinguishing good vs. bad references. 
-However, when looking across assigned cell types, probabilities still generally are high for the assigned cell type. 
+- The distribution of the probability appears to be helpful in displaying confidence in cell type cells.
+Cell types with a large difference between the distribution of probabilities associated with the cell type call and the other probabilities are more likely to be good assignments.
 - Looking at the marker gene expression non-tumor cells appear to have more distinct expression of marker genes than tumor cells.
-The reference that has fewer cell types is easier to interpret, but perhaps looking at marker gene expression would be helpful for users evaluating cell type assignment? 
+- Looking at the delta median prediction/probability score appears to be high across all cell types, regardless of quality of cell type assignment, at least in the libraries and references examined here. 
 
 ## Session Info
 

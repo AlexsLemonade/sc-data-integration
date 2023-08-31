@@ -103,10 +103,10 @@ plot_median_delta <- function(celltype_results,
   
   # sina plot of delta median score for cellassign
   # color_group is on the x-axis and used for calculating stats 
-  delta_plot <- ggplot(celltype_results, aes(x = !!rlang::sym(color_group), y = median_delta)) +
+  delta_plot <- ggplot(celltype_results, aes(x = {{color_group}}, y = median_delta)) +
     ggforce::geom_sina(size = 0.5, alpha = 0.2) +
     stat_summary(
-      aes(group = color_group),
+      aes(group = {{color_group}}),
       color = "black",
       # median and quartiles for point range
       fun = "median",
@@ -141,13 +141,13 @@ join_cellassign_results <- function(celltype_assignments,
                     dplyr::left_join(celltype, by = "barcode") |>
                     # indicate which is the assigned cell type
                     dplyr::rename(
-                      "predicted_celltype" = "celltype"
+                      "assigned_celltype" = "celltype"
                     ) |>
-                    tidyr::pivot_longer(!c("barcode", "predicted_celltype", "prediction", "reference"),
+                    tidyr::pivot_longer(!c("barcode", "assigned_celltype", "prediction", "reference"),
                                         names_to = "celltype",
                                         values_to = "probability") |>
                     # create a column to use for coloring points by if they are associated with the cell type that gets assigned
-                    dplyr::mutate(top_celltype = dplyr::if_else(predicted_celltype == celltype, TRUE, FALSE))
+                    dplyr::mutate(assigned_celltype = dplyr::if_else(assigned_celltype == celltype, TRUE, FALSE))
                 })
   
   return(combined_predictions_results)
@@ -159,8 +159,7 @@ join_cellassign_results <- function(celltype_assignments,
 # points are colored by if they are assigned to the cell type on the x-axis or not
 # input is dataframe with all celltype assignments and list of all predictions
 plot_probability <- function(celltype_assignments,
-                             all_predictions,
-                             color_group = "top_celltype"){
+                             all_predictions){
  
   # combine results into one singular list of data frames 
   # one for each reference 
@@ -169,22 +168,8 @@ plot_probability <- function(celltype_assignments,
   
   prob_plot <- combined_predictions_results |> 
     purrr::imap(\(plot_df, ref_name) {
-      ggplot(plot_df, aes(x = celltype, y = probability, group = celltype, color = !!rlang::sym(color_group))) +
-        ggforce::geom_sina(size = 0.5, alpha = 0.2) +
-        stat_summary(
-          aes(group = celltype),
-          color = "black",
-          # median and quartiles for point range
-          fun = "median",
-          fun.min = function(x) {
-            quantile(x, 0.25)
-          },
-          fun.max = function(x) {
-            quantile(x, 0.75)
-          },
-          geom = "pointrange",
-          size = 0.1
-        ) +
+      ggplot(plot_df, aes(x = probability, y = celltype, fill = assigned_celltype)) +
+        ggridges::geom_density_ridges(alpha = 0.5) +
         theme_bw() + 
         guides(x = guide_axis(angle = 90),
                colour = guide_legend(override.aes = list(size = 2, alpha = 1))) +
@@ -197,11 +182,11 @@ plot_probability <- function(celltype_assignments,
 
 # plot expression of marker genes for each assigned cell type 
 # input is binary reference matrix with marker genes as rows and cell types as columns
-# all results dataframe 
+# cell type assignments with `reference`, `barcode`, and `celltype` column
 # name of reference 
 # sce object to use for pulling out gene expression values 
 plot_marker_gene_exp <- function(ref_mtx,
-                                 combined_results,
+                                 celltype_assignments,
                                  ref_name,
                                  annotated_sce){
   
@@ -221,7 +206,7 @@ plot_marker_gene_exp <- function(ref_mtx,
                                      \(ref_genes_df, celltype){
                                        
                                        # filter the results to the specified cell type
-                                       results_df <- combined_results |>
+                                       results_df <- celltype_assignments |>
                                          dplyr::filter(reference == ref_name,
                                                        celltype == celltype) |>
                                          # rename to avoid confusion with ref gene cell types 
@@ -238,22 +223,42 @@ plot_marker_gene_exp <- function(ref_mtx,
                                                              names_to = "barcode",
                                                              values_to = "gene_expression") |>
                                          dplyr::left_join(results_df, by = c("barcode")) |>
+                                         dplyr::mutate(match_celltype_assignment = dplyr::if_else(assigned_celltype == celltype, 
+                                                                                                  "Assigned celltype", 
+                                                                                                  "Other cells")) |>
                                          # calculate mean gene expression for each gene and cell type
-                                         dplyr::group_by(assigned_celltype, ensembl_id) |>
+                                         dplyr::group_by(match_celltype_assignment, ensembl_id) |>
                                          dplyr::summarise(mean_gene_exp = mean(gene_expression))
                                        
                                      }) |>
     dplyr::bind_rows(.id = "ref_gene_celltype") |>
     # remove any cell types in the reference that are not found in our data 
-    dplyr::filter(ref_gene_celltype %in% combined_results$celltype)
+    dplyr::filter(ref_gene_celltype %in% celltype_assignments$celltype)
   
   # make a faceted plot for each ref celltype 
   # plot the mean expression of each marker gene across all annotated cell types 
-  gene_exp_plot <- ggplot(all_ref_gene_exp, aes(x = assigned_celltype, y = mean_gene_exp)) +
-    ggforce::geom_sina(size = 0.5, alpha = 0.5) +
-    facet_wrap(vars(ref_gene_celltype), ncol = 2) +
+  gene_exp_plot <- ggplot(all_ref_gene_exp, aes(x = match_celltype_assignment, y = mean_gene_exp)) +
+    geom_violin( fill = "grey") + 
+    facet_wrap(vars(ref_gene_celltype), ncol = 3) +
+    stat_summary(
+      aes(group = match_celltype_assignment),
+      color = "black",
+      # median and quartiles for point range
+      fun = "median",
+      fun.min = function(x) {
+        quantile(x, 0.25)
+      },
+      fun.max = function(x) {
+        quantile(x, 0.75)
+      },
+      geom = "pointrange",
+      position = position_dodge(width = 0.9),
+      size = 0.1
+    ) +
     theme_bw() +
-    guides(x = guide_axis(angle = 90))
+    theme(text = element_text(size = 16)) +
+    guides(x = guide_axis(angle = 90)) +
+    labs(x = "")
   
   return(gene_exp_plot)
 }
