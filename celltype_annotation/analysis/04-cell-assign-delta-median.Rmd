@@ -192,7 +192,7 @@ blood_results_df <- dplyr::left_join(blood_celltype, blood_median_delta)
 
 ```{r}
 # compare references to each other 
-plot_median_delta(blood_results_df, color_group = "reference")
+plot_median_delta(blood_results_df, color_group = reference)
 ```
 
 ```{r}
@@ -213,7 +213,7 @@ rms_results_df <- dplyr::left_join(rms_celltype, rms_median_delta)
 
 ```{r}
 # compare across references used 
-plot_median_delta(rms_results_df, color_group = "reference")
+plot_median_delta(rms_results_df, color_group = reference)
 ```
 
 ```{r}

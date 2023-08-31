@@ -99,7 +99,7 @@ get_median_delta_cellassign <- function(cellassign_predictions){
 # also indicate what to color points by, default is celltype 
 # input dataframe must contain `median_delta` column to color points by 
 plot_median_delta <- function(celltype_results,
-                              color_group = "celltype"){
+                              color_group = celltype){
   
   # sina plot of delta median score for cellassign
   # color_group is on the x-axis and used for calculating stats 
