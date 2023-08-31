@@ -28,6 +28,9 @@ In the notebook, cell type annotations using different sets of marker genes from
 
 8. `copykat-rms-exploration.Rmd`: This notebook explores the usage of `CopyKAT` for identifying tumor vs. normal cells in Rhabdomyosarcoma samples from `SCPCP000005`.
 
+9. `04-cell-assign-delta-median.Rmd`: This notebook examines ways to evaluate confidence in the cell type assignments that are obtained from using `CellAssign`. 
+The notebook uses the cell types annotated in `marker-gene-celltype-exploration.Rmd` ,`02-cell-assign-sarcoma-marker-genes.Rmd`, and `03-cell-assign-combined-markers.Rmd`.
+
 ## Scripts
 
 This folder contains any scripts used for cell type annotation.
