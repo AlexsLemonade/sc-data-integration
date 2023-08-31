@@ -12,7 +12,7 @@ In particular, we would like to see if we can use a similar delta median metric 
 The delta median metric is calculated by taking the top score or prediction from `CellAssign` and subtracting the median prediction for each cell in the dataset. 
 
 This notebook will look at `CellAssign` results from previous analysis.
-In particular, we will read in the results from running `CellAssign` with a blood cancer dataset (see `marker-gene-celltype-exploration.Rmd`) and a sarcoma dataset (see `02-cell-assign-sarcoma-marker-genes.Rmd` and `03-cell-assign-combined-markers.Rmd`).
+In particular, we will read in the results from running `CellAssign` with a blood cancer dataset (see [`marker-gene-celltype-exploration.Rmd`](marker-gene-celltype-exploration.Rmd)) and a sarcoma dataset (see [`02-cell-assign-sarcoma-marker-genes.Rmd`](02-cell-assign-sarcoma-marker-genes.Rmd) and [`03-cell-assign-combined-markers.Rmd`](03-cell-assign-combined-markers.Rmd)).
 
 For the blood cancer dataset, we used a follicular lymphoma reference with and without B-cells (referred to as `all_cells` or `no_bcells`).
 For the sarcoma dataset, we used either the combination of cell types from immune and muscle in PanglaoDB (`combined_muscle`) and a reference obtained from calculating the marker gene expression for each submitter assigned cell type (`rms_markers`). 
@@ -22,11 +22,12 @@ A few things to keep in mind:
 - Here the output of `CellAssign` is a prediction, instead of a score. 
 This prediction value can be equated to a probability and is on a 0-1 scale.
 From the [`CellAssign` paper](https://doi.org/10.1038/s41592-019-0529-1): 
+
 > Using this information, CellAssign employs a hierarchical statistical framework to compute the probability that each cell belongs to the modeled cell types, while jointly estimating all model parameters using an expectation-maximization inference algorithm.
 
 - `CellAssign` looks for high expression of indicated marker genes.
 It cannot assign classes based on low or medium expression of a marker gene. 
-This assumes that any marker genes used in the reference should be highly expressed in the cell types that are assigned. 
+This means that high marker gene expression is required for `CellAssign` to assign cells to the given cell type. 
 
 
 ## Set Up
