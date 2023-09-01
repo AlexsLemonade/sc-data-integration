@@ -170,6 +170,7 @@ plot_probability <- function(celltype_assignments,
     purrr::imap(\(plot_df, ref_name) {
       ggplot(plot_df, aes(x = probability, y = celltype, fill = assigned_celltype)) +
         ggridges::geom_density_ridges(alpha = 0.5) +
+        ggridges::stat_density_ridges(quantile_lines = TRUE, quantiles = 2) +
         theme_bw() + 
         guides(x = guide_axis(angle = 90),
                colour = guide_legend(override.aes = list(size = 2, alpha = 1))) +
